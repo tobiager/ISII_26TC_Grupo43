@@ -1,94 +1,38 @@
-# 🏥 Sistema Hospitalario - Gestión de Pacientes
+<p align="center">
+    <img src="./assets/clinicks.png" alt="Clinicks Banner" width="1500"/>
+</p>
 
-## 📌 Descripción
+# Clinicks - Sistema de Gestión Hospitalaria
 
-Este proyecto corresponde al **trabajo de campo de Ingeniería de Software 2**, cuyo objetivo es el desarrollo de la funcionalidad principal de un sistema hospitalario: la **Gestión de Pacientes**.
+**Clinicks** es una plataforma integral de gestión hospitalaria diseñada para optimizar la operativa diaria en centros de salud. El sistema permite la centralización de historiales clínicos, el seguimiento de pacientes en tiempo real y la gestión eficiente de recursos hospitalarios, garantizando la trazabilidad de la información médica.
 
-El sistema permitirá registrar, administrar y consultar información de pacientes dentro de un entorno hospitalario, facilitando el trabajo del personal médico, enfermeros y administrativos.
+## Características Principales
 
----
+* **Gestión de Pacientes:** Registro completo, edición y seguimiento de estados (internación, tratamiento, alta).
+* **Historial Clínico Digital:** Registro cronológico de consultas, diagnósticos y procedimientos realizados.
+* **Gestión de Hospitalización:** Control de disponibilidad de camas, asignación de habitaciones por pisos y traslados.
+* **Seguridad y Roles:** Acceso restringido mediante autenticación JWT para médicos, enfermeros y administrativos.
 
-## 🎯 Objetivo
+## Stack Tecnológico
 
-Desarrollar un módulo funcional que permita:
+El sistema está construido bajo una arquitectura robusta y escalable:
 
-- Registrar nuevos pacientes
-- Editar información de pacientes
-- Asignar habitaciones
-- Registrar egreso de pacientes
-- Mantener un historial de cada paciente
+* **Frontend:** [React](https://reactjs.org/) + [TypeScript](https://www.typescriptlang.org/) + [Tailwind CSS](https://tailwindcss.com/)
+* **Backend:** [Java](https://www.java.com/) con [Spring Boot](https://spring.io/projects/spring-boot)
+* **Persistencia:** [PostgreSQL](https://www.postgresql.org/)
+* **Seguridad:** Spring Security + JSON Web Tokens (JWT)
+* **Infraestructura:** Despliegue en Vercel (Front) y Supabase (Backend)
 
----
 
-## 🚀 Alcance del proyecto
-
-En esta etapa del trabajo práctico, el desarrollo se enfoca exclusivamente en la épica:
-
-👉 **Gestión de Pacientes**
-
-No se incluyen otros módulos del sistema hospitalario (consultas médicas, procedimientos, etc.), ya que serán considerados en futuras iteraciones.
-
----
-
-## 🧩 Funcionalidades principales
-
-- ✅ Alta de pacientes  
-- ✅ Edición de datos personales  
-- ✅ Asignación de habitaciones  
-- ✅ Registro de egreso  
-- ✅ Persistencia de datos  
+## Documentación del Proyecto
+Puedes encontrar los detalles técnicos en la carpeta `/docs`:
+* **ERD:** Modelo Entidad-Relación normalizado.
+* **Diccionario de Datos:** Detalle de cada tabla y restricción del sistema.
+* **Arquitectura:** Diagramas de flujo y estructura de red.
 
 ---
 
-## 🛠️ Tecnologías (a definir por el equipo)
+> [!NOTE]
+> Este proyecto fue desarrollado como Trabajo de Campo para la cátedra de **Ingeniería de Software 2 (2026)** en la Licenciatura en Sistemas de Información - **UNNE**.
 
-- Frontend: (ej: React, HTML/CSS/JS)
-- Backend: (ej: Node.js, Java, etc.)
-- Base de datos: (ej: MySQL, PostgreSQL)
-
----
-
-## 📂 Estructura del proyecto (ejemplo)
-```text
-/frontend
-/backend
-/docs
-```
-
----
-
-## 📑 Documentación
-
-Toda la documentación del proyecto (requisitos, backlog, diagramas, etc.) se encuentra en el siguiente enlace:
-
-👉 https://drive.google.com/drive/u/0/folders/1-CmBn_G2f9rsut-0KiFnJ6OZFh-cLiwp
-
----
-
-## 👥 Integrantes
-
-- Orban, Tobias Naim  
-- Zini, Samuel Nehuen
-
----
-
-## ⚙️ Metodología
-
-Se utiliza **Scrum** como metodología de desarrollo, trabajando con:
-
-- Sprints
-- Product Backlog
-- Historias de usuario
-- Entregas incrementales
-
----
-
-## 📌 Estado del proyecto
-
-🚧 En desarrollo  
-
----
-
-## 📬 Contacto
-
-Para consultas o sugerencias, comunicarse con el equipo de desarrollo.
+**Grupo Nº 43** Integrantes: *Zini, Samuel Nehuen* & *Orban, Tobias Naim*

@@ -1,0 +1,25 @@
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# Herramientas de IA (como pediste)
+.CLAUDE
+.claude/
+
+# Backend (Java/Maven)
+backend/target/
+backend/.mvn/
+backend/*.jar
+
+# Frontend (Node)
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+#db diagram
+*.diagram
