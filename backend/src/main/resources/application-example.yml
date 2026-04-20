@@ -1,0 +1,27 @@
+spring:
+  datasource:
+    # Usa las variables del .env, con los valores de Supabase como backup
+    url: ${DATABASE_URL:}
+    username: ${DATABASE_USERNAME:}
+    password: ${DATABASE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: none # Mantenemos esto en none porque usas schema.sql manualmente
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    open-in-view: false
+
+server:
+  port: 8080
+
+logging:
+  level:
+    com.clinicks: DEBUG
+    org.hibernate.SQL: DEBUG
+    # Esta línea es clave para ver qué datos se están mandando en los queries
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE

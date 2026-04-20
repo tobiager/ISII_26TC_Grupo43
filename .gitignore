@@ -25,3 +25,4 @@ Thumbs.db
 *.diagram
 
 .env
+backend/src/main/resources/application.yml
