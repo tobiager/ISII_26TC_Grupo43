@@ -37,7 +37,7 @@ export default function PatientTable({ patients, onView, onEdit, onDelete }: Pat
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-gray-100">
-            {['Paciente', 'DNI', 'Edad', 'Tipo Sangre', 'Obra Social', 'Estado', 'Última Visita', ''].map(h => (
+            {['Paciente', 'DNI', 'Edad', 'Tipo Sangre', 'Obra Social', 'Estado', 'Última Visita', 'Acciones'].map(h => (
               <th key={h} className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide pb-3 pr-4 last:pr-0">
                 {h}
               </th>
@@ -103,7 +103,7 @@ export default function PatientTable({ patients, onView, onEdit, onDelete }: Pat
                 <td className="py-4 pr-4 text-gray-500">{formatDate(p.ultimaVisita)}</td>
 
                 <td className="py-4">
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1">
                     {p.estado === 'Internado' && (
                       <span className="flex items-center gap-1 text-xs text-amber-600 border border-amber-200 bg-amber-50 px-2 py-1 rounded-md font-medium mr-1">
                         <LogOut size={12} />
@@ -112,21 +112,21 @@ export default function PatientTable({ patients, onView, onEdit, onDelete }: Pat
                     )}
                     <button
                       onClick={() => onView(p)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                      className="p-1.5 rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
                       title="Ver información"
                     >
                       <Eye size={15} />
                     </button>
                     <button
                       onClick={() => onEdit(p)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                      className="p-1.5 rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
                       title="Editar paciente"
                     >
                       <Pencil size={15} />
                     </button>
                     <button
                       onClick={() => onDelete(p)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      className="p-1.5 rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
                       title="Dar de baja"
                     >
                       <Trash2 size={15} />

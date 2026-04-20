@@ -7,8 +7,6 @@ import com.clinicks.exception.PacienteNotFoundException;
 import com.clinicks.model.*;
 import com.clinicks.repository.*;
 import com.clinicks.service.PacienteService;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,17 +24,15 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PacienteServiceImpl implements PacienteService {
 
-    @PersistenceContext
-    private EntityManager entityManager;
-
-    private final PacienteRepository                pacienteRepository;
-    private final ObraSocialRepository              obraSocialRepository;
-    private final AfiliacionObraSocialRepository    afiliacionRepository;
-    private final TelefonoRepository                telefonoRepository;
-    private final AlergiaRepository                 alergiaRepository;
-    private final PacienteAlergiaRepository         antecedenteMedicoRepository;
-    private final ContactoEmergenciaRepository      contactoEmergenciaRepository;
-    private final LocalidadRepository               localidadRepository;
+    private final PacienteRepository             pacienteRepository;
+    private final ObraSocialRepository           obraSocialRepository;
+    private final AfiliacionObraSocialRepository afiliacionRepository;
+    private final TelefonoRepository             telefonoRepository;
+    private final AlergiaRepository              alergiaRepository;
+    private final EnfermedadCronicaRepository    enfermedadCronicaRepository;
+    private final AntecedenteFamiliarRepository  antecedenteFamiliarRepository;
+    private final ContactoEmergenciaRepository   contactoEmergenciaRepository;
+    private final LocalidadRepository            localidadRepository;
 
     // ─── LISTAR ────────────────────────────────────────────────────────────────
 
@@ -82,7 +78,6 @@ public class PacienteServiceImpl implements PacienteService {
 
         FichaMedica fichaMedica = FichaMedica.builder()
                 .tipoSangre(dto.getTipoSangre())
-                .antecedentesText(buildAntecedentesText(dto))
                 .build();
 
         Localidad localidad = resolveLocalidad(dto.getIdLocalidad());
@@ -109,7 +104,12 @@ public class PacienteServiceImpl implements PacienteService {
 
         Paciente saved = pacienteRepository.save(paciente);
 
-        saveAlergias(saved.getFichaMedica(), dto.getAlergias());
+        FichaMedica ficha = saved.getFichaMedica();
+        populateAlergias(ficha, dto.getAlergias());
+        populateEnfermedades(ficha, dto.getEnfermedadesCronicas());
+        populateAntecedentes(ficha, dto.getAntecedentesFamiliares());
+        pacienteRepository.save(saved);
+
         saveTelefono(saved, dto.getTelefono());
         saveContactoEmergencia(saved, dto);
 
@@ -142,15 +142,20 @@ public class PacienteServiceImpl implements PacienteService {
         if (StringUtils.hasText(dto.getTipoSangre())) {
             ficha.setTipoSangre(dto.getTipoSangre());
         }
-        ficha.setAntecedentesText(buildAntecedentesText(dto));
+
+        ficha.getAlergias().clear();
+        ficha.getEnfermedadesCronicas().clear();
+        ficha.getAntecedentesFamiliares().clear();
+        populateAlergias(ficha, dto.getAlergias());
+        populateEnfermedades(ficha, dto.getEnfermedadesCronicas());
+        populateAntecedentes(ficha, dto.getAntecedentesFamiliares());
 
         if (paciente.getResidencia() != null && paciente.getResidencia().getDomicilio() != null) {
             Domicilio domicilio = paciente.getResidencia().getDomicilio();
             if (StringUtils.hasText(dto.getDireccion())) {
                 domicilio.setCalle(dto.getDireccion());
             }
-            Localidad localidad = resolveLocalidad(dto.getIdLocalidad());
-            domicilio.setLocalidad(localidad);
+            domicilio.setLocalidad(resolveLocalidad(dto.getIdLocalidad()));
         }
 
         paciente.setDni(dto.getDni());
@@ -158,17 +163,10 @@ public class PacienteServiceImpl implements PacienteService {
 
         Paciente saved = pacienteRepository.save(paciente);
 
-        // Flush ensures DELETEs are sent to DB before INSERTs, avoiding unique constraint violations
-        antecedenteMedicoRepository.deleteAllByFichaMedica(saved.getFichaMedica());
-        entityManager.flush();
-        saveAlergias(saved.getFichaMedica(), dto.getAlergias());
-
         telefonoRepository.deleteAllByPaciente(saved);
-        entityManager.flush();
         saveTelefono(saved, dto.getTelefono());
 
         contactoEmergenciaRepository.deleteAllByPaciente(saved);
-        entityManager.flush();
         saveContactoEmergencia(saved, dto);
 
         return mapPacienteToDTO(saved);
@@ -202,24 +200,46 @@ public class PacienteServiceImpl implements PacienteService {
                 .orElseThrow(() -> new PacienteNotFoundException(id));
     }
 
-    private String buildAntecedentesText(PacienteRequestDTO dto) {
-        // Combina enfermedades crónicas y antecedente familiar en el campo texto
-        StringBuilder sb = new StringBuilder();
-        if (StringUtils.hasText(dto.getEnfermedadesCronicas())) {
-            sb.append("Enf. crónicas: ").append(dto.getEnfermedadesCronicas().trim());
+    private void populateAlergias(FichaMedica ficha, List<String> nombres) {
+        if (nombres == null || nombres.isEmpty()) return;
+        for (String nombre : nombres) {
+            String t = nombre.trim();
+            if (t.isEmpty()) continue;
+            Alergia alergia = alergiaRepository.findByNombreAlergiaIgnoreCase(t)
+                    .orElseGet(() -> alergiaRepository.save(
+                            Alergia.builder().nombreAlergia(t).build()));
+            ficha.getAlergias().add(alergia);
         }
-        if (StringUtils.hasText(dto.getAntecedenteFamiliar())) {
-            if (sb.length() > 0) sb.append(" | ");
-            sb.append("Antec. familiar: ").append(dto.getAntecedenteFamiliar().trim());
+    }
+
+    private void populateEnfermedades(FichaMedica ficha, List<String> nombres) {
+        if (nombres == null || nombres.isEmpty()) return;
+        for (String nombre : nombres) {
+            String t = nombre.trim();
+            if (t.isEmpty()) continue;
+            EnfermedadCronica ec = enfermedadCronicaRepository.findByNombreEnfermedadIgnoreCase(t)
+                    .orElseGet(() -> enfermedadCronicaRepository.save(
+                            EnfermedadCronica.builder().nombreEnfermedad(t).build()));
+            ficha.getEnfermedadesCronicas().add(ec);
         }
-        return sb.length() > 0 ? sb.toString() : null;
+    }
+
+    private void populateAntecedentes(FichaMedica ficha, List<String> nombres) {
+        if (nombres == null || nombres.isEmpty()) return;
+        for (String nombre : nombres) {
+            String t = nombre.trim();
+            if (t.isEmpty()) continue;
+            AntecedenteFamiliar af = antecedenteFamiliarRepository.findByNombreEnfermedadIgnoreCase(t)
+                    .orElseGet(() -> antecedenteFamiliarRepository.save(
+                            AntecedenteFamiliar.builder().nombreEnfermedad(t).build()));
+            ficha.getAntecedentesFamiliares().add(af);
+        }
     }
 
     private Localidad resolveLocalidad(Integer idLocalidad) {
         if (idLocalidad != null) {
             return localidadRepository.findById(idLocalidad).orElse(null);
         }
-        // Fallback: usar primera localidad disponible (domicilio NOT NULL en schema)
         return localidadRepository.findAll().stream().findFirst().orElse(null);
     }
 
@@ -239,7 +259,6 @@ public class PacienteServiceImpl implements PacienteService {
 
         if (obraSocial == null) return null;
 
-        // Si tiene número de afiliado, crear/reusar afiliación
         if (StringUtils.hasText(dto.getNroAfiliado())) {
             String nro = dto.getNroAfiliado().trim();
             ObraSocial finalObraSocial = obraSocial;
@@ -253,7 +272,6 @@ public class PacienteServiceImpl implements PacienteService {
                     ));
         }
 
-        // Obra social sin número de afiliado: generar número genérico único
         String nroGenerado = obraSocial.getNombreObra().toUpperCase().replaceAll("\\s+", "-")
                 + "-" + dto.getDni();
         ObraSocial finalOS = obraSocial;
@@ -265,25 +283,6 @@ public class PacienteServiceImpl implements PacienteService {
                                 .obraSocial(finalOS)
                                 .build()
                 ));
-    }
-
-    private void saveAlergias(FichaMedica fichaMedica, List<String> nombres) {
-        if (nombres == null || nombres.isEmpty()) return;
-        for (String nombre : nombres) {
-            String trimmed = nombre.trim();
-            if (trimmed.isEmpty()) continue;
-            Alergia alergia = alergiaRepository
-                    .findByNombreAlergiaIgnoreCase(trimmed)
-                    .orElseGet(() -> alergiaRepository.save(
-                            Alergia.builder().nombreAlergia(trimmed).build()
-                    ));
-            antecedenteMedicoRepository.save(
-                    PacienteAlergia.builder()
-                            .fichaMedica(fichaMedica)
-                            .alergia(alergia)
-                            .build()
-            );
-        }
     }
 
     private void saveTelefono(Paciente paciente, String numero) {
@@ -320,8 +319,6 @@ public class PacienteServiceImpl implements PacienteService {
                 ? p.getUltimaVisita().toLocalDateTime().toLocalDate()
                 : null;
 
-        List<String> alergias = parseAlergias(p.getAlergias());
-
         return PacienteResponseDTO.builder()
                 .id(p.getIdPaciente())
                 .nombre(p.getNombrePersona())
@@ -331,7 +328,7 @@ public class PacienteServiceImpl implements PacienteService {
                 .edad(calcularEdad(fechaNacimiento))
                 .fechaNacimiento(fechaNacimiento)
                 .tipoSangre(p.getTipoSangre())
-                .alergias(alergias)
+                .alergias(parseAlergias(p.getAlergias()))
                 .obraSocial(p.getNombreObra())
                 .idObraSocial(p.getIdObraSocial())
                 .nroAfiliado(p.getNroAfiliado())
@@ -346,10 +343,21 @@ public class PacienteServiceImpl implements PacienteService {
                 ? p.getPersona().getFechaNacimiento().toLocalDate()
                 : null;
 
-        List<String> alergias = antecedenteMedicoRepository.findByFichaMedica(p.getFichaMedica())
-                .stream()
-                .filter(am -> am.getAlergia() != null)
-                .map(am -> am.getAlergia().getNombreAlergia())
+        FichaMedica ficha = p.getFichaMedica();
+
+        List<String> alergias = ficha.getAlergias().stream()
+                .map(Alergia::getNombreAlergia)
+                .sorted()
+                .collect(Collectors.toList());
+
+        List<String> enfermedades = ficha.getEnfermedadesCronicas().stream()
+                .map(EnfermedadCronica::getNombreEnfermedad)
+                .sorted()
+                .collect(Collectors.toList());
+
+        List<String> antecedentes = ficha.getAntecedentesFamiliares().stream()
+                .map(AntecedenteFamiliar::getNombreEnfermedad)
+                .sorted()
                 .collect(Collectors.toList());
 
         String telPersonal = telefonoRepository
@@ -368,20 +376,6 @@ public class PacienteServiceImpl implements PacienteService {
         AfiliacionObraSocial afl = p.getAfiliacion();
         ObraSocial os = afl != null ? afl.getObraSocial() : null;
 
-        // Parsear antecedentes del texto libre (separados por " | ")
-        String antecText = p.getFichaMedica().getAntecedentesText();
-        String enfermedades = null;
-        String antFamiliar = null;
-        if (StringUtils.hasText(antecText)) {
-            for (String part : antecText.split("\\|")) {
-                String t = part.trim();
-                if (t.startsWith("Enf. crónicas: "))
-                    enfermedades = t.substring("Enf. crónicas: ".length());
-                else if (t.startsWith("Antec. familiar: "))
-                    antFamiliar = t.substring("Antec. familiar: ".length());
-            }
-        }
-
         return PacienteResponseDTO.builder()
                 .id(p.getIdPaciente())
                 .nombre(p.getPersona().getNombrePersona())
@@ -390,10 +384,10 @@ public class PacienteServiceImpl implements PacienteService {
                 .dni(p.getDni())
                 .edad(calcularEdad(fechaNacimiento))
                 .fechaNacimiento(fechaNacimiento)
-                .tipoSangre(p.getFichaMedica().getTipoSangre())
+                .tipoSangre(ficha.getTipoSangre())
                 .alergias(alergias)
                 .enfermedadesCronicas(enfermedades)
-                .antecedenteFamiliar(antFamiliar)
+                .antecedentesFamiliares(antecedentes)
                 .obraSocial(os != null ? os.getNombreObra() : null)
                 .idObraSocial(os != null ? os.getIdObraSocial() : null)
                 .nroAfiliado(afl != null ? afl.getNumeroAfiliado() : null)

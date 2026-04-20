@@ -30,27 +30,22 @@ public class PacienteRequestDTO {
     @Pattern(regexp = "^(A|B|AB|O)[+-]$", message = "Tipo de sangre inválido. Valores: A+, A-, B+, B-, AB+, AB-, O+, O-")
     private String tipoSangre;
 
-    // Lista de nombres de alergias (tabla alergia + paciente_alergia N:M)
     private List<String> alergias = new ArrayList<>();
 
-    private String enfermedadesCronicas;
-    private String antecedenteFamiliar;
+    private List<String> enfermedadesCronicas = new ArrayList<>();
 
-    // Teléfono personal
+    private List<String> antecedentesFamiliares = new ArrayList<>();
+
     private String telefono;
 
-    // Dirección: calle en texto libre + localidad seleccionada del selector
     private String direccion;
 
-    // ID de la localidad seleccionada (de la tabla localidad)
     private Integer idLocalidad;
 
-    // Contacto de emergencia → tabla contacto_emergencia
     private String contactoEmergenciaNombre;
     private String contactoEmergenciaTelefono;
     private String contactoEmergenciaParentesco;
 
-    // Obra social
     private Integer idObraSocial;
     private String nombreObraSocial;
     private String nroAfiliado;

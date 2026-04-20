@@ -20,14 +20,13 @@ public class PacienteResponseDTO {
 
     private String tipoSangre;
     private List<String> alergias;
-    private String enfermedadesCronicas;
-    private String antecedenteFamiliar;
+    private List<String> enfermedadesCronicas;
+    private List<String> antecedentesFamiliares;
 
     private String obraSocial;
     private Integer idObraSocial;
     private String nroAfiliado;
 
-    // Estado calculado: Ambulatorio | Internado | Egresado
     private String estado;
     private String numeroHabitacion;
     private LocalDate ultimaVisita;
@@ -35,13 +34,11 @@ public class PacienteResponseDTO {
     private String telefono;
     private String direccion;
 
-    // Ubicación estructurada (de domicilio → localidad → provincia)
     private Integer idLocalidad;
     private String nombreLocalidad;
     private Integer idProvincia;
     private String nombreProvincia;
 
-    // Contacto de emergencia (tabla contacto_emergencia)
     private String contactoEmergenciaNombre;
     private String contactoEmergenciaTelefono;
     private String contactoEmergenciaParentesco;

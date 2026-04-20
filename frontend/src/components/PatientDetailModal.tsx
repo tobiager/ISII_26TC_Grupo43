@@ -130,23 +130,31 @@ export default function PatientDetailModal({ patient, onClose }: PatientDetailMo
           </section>
 
           {/* Antecedentes */}
-          {(patient.enfermedadesCronicas || patient.antecedenteFamiliar) && (
+          {((patient.enfermedadesCronicas?.length ?? 0) > 0 || (patient.antecedentesFamiliares?.length ?? 0) > 0) && (
             <section>
               <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
                 <Heart size={13} />
                 Antecedentes Médicos
               </h3>
               <div className="space-y-2">
-                {patient.enfermedadesCronicas && (
+                {(patient.enfermedadesCronicas?.length ?? 0) > 0 && (
                   <div className="bg-amber-50 border border-amber-100 rounded-xl p-3">
-                    <p className="text-xs font-medium text-amber-700 mb-1">Enfermedades crónicas</p>
-                    <p className="text-sm text-gray-700">{patient.enfermedadesCronicas}</p>
+                    <p className="text-xs font-medium text-amber-700 mb-2">Enfermedades crónicas</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {patient.enfermedadesCronicas!.map(e => (
+                        <span key={e} className="bg-amber-100 text-amber-800 text-xs font-medium px-2.5 py-1 rounded-full">{e}</span>
+                      ))}
+                    </div>
                   </div>
                 )}
-                {patient.antecedenteFamiliar && (
-                  <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
-                    <p className="text-xs font-medium text-blue-700 mb-1">Antecedente familiar</p>
-                    <p className="text-sm text-gray-700">{patient.antecedenteFamiliar}</p>
+                {(patient.antecedentesFamiliares?.length ?? 0) > 0 && (
+                  <div className="bg-purple-50 border border-purple-100 rounded-xl p-3">
+                    <p className="text-xs font-medium text-purple-700 mb-2">Antecedentes familiares</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {patient.antecedentesFamiliares!.map(a => (
+                        <span key={a} className="bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-1 rounded-full">{a}</span>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

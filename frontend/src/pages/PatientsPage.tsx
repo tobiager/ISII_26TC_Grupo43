@@ -33,6 +33,7 @@ export default function PatientsPage() {
   const [showDeleted, setShowDeleted] = useState(false)
   const [deletedPatients, setDeletedPatients] = useState<Patient[]>([])
   const [loadingDeleted, setLoadingDeleted] = useState(false)
+  const [fetchError, setFetchError] = useState(false)
 
   useEffect(() => {
     const ctrl = new AbortController()
@@ -45,10 +46,13 @@ export default function PatientsPage() {
   const fetchPatients = useCallback(async () => {
     try {
       setLoading(true)
+      setFetchError(false)
       const data = await patientService.getAll()
       setPatients(data)
     } catch {
       toast.error('No se pudieron cargar los pacientes')
+      setPatients([])
+      setFetchError(true)
     } finally {
       setLoading(false)
     }
@@ -71,9 +75,9 @@ export default function PatientsPage() {
   const stats = useMemo(() => ({
     total: patients.length,
     internados: patients.filter(p => p.estado === 'Internado').length,
-    camasDisponibles: 7, // TODO: conectar con endpoint de habitaciones
-    registrosTotales: patients.length + 10, // placeholder
-  }), [patients])
+    camasDisponibles: fetchError ? 0 : 7,
+    registrosTotales: fetchError ? 0 : patients.length + 10,
+  }), [patients, fetchError])
 
   const openCreate = () => {
     setEditingPatient(null)
@@ -395,7 +399,7 @@ export default function PatientsPage() {
                       <th className="pb-3 font-medium">DNI</th>
                       <th className="pb-3 font-medium">Edad</th>
                       <th className="pb-3 font-medium">Obra Social</th>
-                      <th className="pb-3 font-medium"></th>
+                      <th className="pb-3 font-medium">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -406,19 +410,19 @@ export default function PatientsPage() {
                             <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500 flex-shrink-0">
                               {p.nombre?.[0]}{p.apellido?.[0]}
                             </div>
-                            <span className="font-medium text-gray-500 line-through decoration-gray-400">
+                            <span className="font-medium text-gray-900">
                               {p.nombreCompleto}
                             </span>
                           </div>
                         </td>
-                        <td className="py-3 pr-4 text-gray-400 font-mono">{p.dni}</td>
-                        <td className="py-3 pr-4 text-gray-400">{p.edad} años</td>
-                        <td className="py-3 pr-4 text-gray-400">{p.obraSocial ?? '—'}</td>
+                        <td className="py-3 pr-4 text-gray-900 font-mono">{p.dni}</td>
+                        <td className="py-3 pr-4 text-gray-900">{p.edad} años</td>
+                        <td className="py-3 pr-4 text-gray-900">{p.obraSocial ?? '—'}</td>
                         <td className="py-3">
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center gap-1">
                             <button
                               onClick={() => setViewingPatient(p)}
-                              className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                              className="p-1.5 rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
                               title="Ver informacion"
                             >
                               <Eye size={14} />

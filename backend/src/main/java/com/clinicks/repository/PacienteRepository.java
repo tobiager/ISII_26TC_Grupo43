@@ -42,8 +42,8 @@ public interface PacienteRepository extends JpaRepository<Paciente, Integer> {
         JOIN ficha_medica fm   ON p.id_ficha_medica = fm.id_ficha_medica
         LEFT JOIN afiliacion_obra_social afl ON p.id_afiliacion    = afl.id_afiliacion
         LEFT JOIN obra_social os             ON afl.id_obra_social  = os.id_obra_social
-        LEFT JOIN antecedente_medico am      ON fm.id_ficha_medica  = am.id_ficha_medica
-        LEFT JOIN alergia al                 ON am.id_alergia       = al.id_alergia
+        LEFT JOIN ficha_alergia fa           ON fm.id_ficha_medica  = fa.id_ficha_medica
+        LEFT JOIN alergia al                 ON fa.id_alergia       = al.id_alergia
         LEFT JOIN (
             SELECT DISTINCT ON (id_paciente) *
             FROM historial_medico
@@ -82,8 +82,8 @@ public interface PacienteRepository extends JpaRepository<Paciente, Integer> {
         JOIN ficha_medica fm   ON p.id_ficha_medica = fm.id_ficha_medica
         LEFT JOIN afiliacion_obra_social afl ON p.id_afiliacion    = afl.id_afiliacion
         LEFT JOIN obra_social os             ON afl.id_obra_social  = os.id_obra_social
-        LEFT JOIN antecedente_medico am      ON fm.id_ficha_medica  = am.id_ficha_medica
-        LEFT JOIN alergia al                 ON am.id_alergia       = al.id_alergia
+        LEFT JOIN ficha_alergia fa           ON fm.id_ficha_medica  = fa.id_ficha_medica
+        LEFT JOIN alergia al                 ON fa.id_alergia       = al.id_alergia
         WHERE p.deleted_at IS NOT NULL
         GROUP BY p.id_paciente, per.nombre_persona, per.apellido_persona, per.fecha_nacimiento,
                  p.dni, afl.numero_afiliado, fm.tipo_sangre, os.nombre_obra, os.id_obra_social

@@ -8,8 +8,8 @@ export interface Patient {
   fechaNacimiento: string
   tipoSangre: string
   alergias: string[]
-  enfermedadesCronicas: string | null
-  antecedenteFamiliar: string | null
+  enfermedadesCronicas: string[] | null
+  antecedentesFamiliares: string[] | null
   obraSocial: string | null
   idObraSocial: number | null
   nroAfiliado: string | null
@@ -36,8 +36,8 @@ export interface PatientRequest {
   fechaNacimiento: string
   tipoSangre: string
   alergias: string[]
-  enfermedadesCronicas: string
-  antecedenteFamiliar: string
+  enfermedadesCronicas: string[]
+  antecedentesFamiliares: string[]
   telefono: string
   direccion: string
   idLocalidad: number | ''

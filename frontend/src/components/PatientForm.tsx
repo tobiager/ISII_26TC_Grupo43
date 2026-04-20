@@ -14,23 +14,27 @@ interface PatientFormProps {
 
 const today = new Date().toISOString().split('T')[0]
 
-type FormFields = Omit<PatientRequest, 'alergias'> & { idProvincia: number | '' }
+type FormFields = Omit<PatientRequest, 'alergias' | 'enfermedadesCronicas' | 'antecedentesFamiliares'> & {
+  idProvincia: number | ''
+}
 
 export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: PatientFormProps) {
-  const [alergias, setAlergias]           = useState<string[]>([])
-  const [alergiaNueva, setAlergiaNueva]   = useState('')
-  const [provincias, setProvincias]       = useState<Provincia[]>([])
-  const [localidades, setLocalidades]     = useState<Localidad[]>([])
-  const [obrasSociales, setObrasSociales] = useState<ObraSocial[]>([])
-  const [loadingLoc, setLoadingLoc]       = useState(false)
-  // Flag para no limpiar idLocalidad durante la inicializacion al editar
+  const [alergias, setAlergias]                     = useState<string[]>([])
+  const [alergiaNueva, setAlergiaNueva]             = useState('')
+  const [enfermedades, setEnfermedades]             = useState<string[]>([])
+  const [enfermedadNueva, setEnfermedadNueva]       = useState('')
+  const [antecedentes, setAntecedentes]             = useState<string[]>([])
+  const [antecedenteNuevo, setAntecedenteNuevo]     = useState('')
+  const [provincias, setProvincias]                 = useState<Provincia[]>([])
+  const [localidades, setLocalidades]               = useState<Localidad[]>([])
+  const [obrasSociales, setObrasSociales]           = useState<ObraSocial[]>([])
+  const [loadingLoc, setLoadingLoc]                 = useState(false)
   const isInitializing = useRef(false)
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } =
     useForm<FormFields>({
       defaultValues: {
         nombre: '', apellido: '', dni: '', fechaNacimiento: '', tipoSangre: '',
-        enfermedadesCronicas: '', antecedenteFamiliar: '',
         telefono: '', direccion: '',
         idProvincia: '', idLocalidad: '',
         contactoEmergenciaNombre: '', contactoEmergenciaTelefono: '', contactoEmergenciaParentesco: '',
@@ -41,7 +45,6 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
   const idProvinciaWatch  = watch('idProvincia')
   const idObraSocialWatch = watch('idObraSocial')
 
-  // ── Cargar provincias y obras sociales al montar ──────────────────────────
   useEffect(() => {
     const ctrl = new AbortController()
     Promise.all([
@@ -54,7 +57,6 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
     return () => ctrl.abort()
   }, [])
 
-  // ── Cuando cambia la provincia, recargar localidades ──────────────────────
   useEffect(() => {
     if (!idProvinciaWatch) { setLocalidades([]); return }
     const ctrl = new AbortController()
@@ -62,8 +64,6 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
     locationService.getLocalidades(Number(idProvinciaWatch), ctrl.signal)
       .then(locs => {
         setLocalidades(locs)
-        // Solo limpiar la localidad si el usuario cambio la provincia manualmente,
-        // no durante la carga inicial del formulario de edicion
         if (!isInitializing.current) {
           setValue('idLocalidad', '')
         }
@@ -73,7 +73,6 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
     return () => ctrl.abort()
   }, [idProvinciaWatch, setValue])
 
-  // ── Pre-llenar formulario al editar ───────────────────────────────────────
   useEffect(() => {
     if (patient) {
       isInitializing.current = true
@@ -81,8 +80,6 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
         nombre: patient.nombre, apellido: patient.apellido,
         dni: patient.dni, fechaNacimiento: patient.fechaNacimiento ?? '',
         tipoSangre: patient.tipoSangre,
-        enfermedadesCronicas: patient.enfermedadesCronicas ?? '',
-        antecedenteFamiliar: patient.antecedenteFamiliar ?? '',
         telefono: patient.telefono ?? '', direccion: patient.direccion ?? '',
         idProvincia: patient.idProvincia ?? '',
         idLocalidad: patient.idLocalidad ?? '',
@@ -94,20 +91,17 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
         nroAfiliado: patient.nroAfiliado ?? '',
       })
       setAlergias(Array.isArray(patient.alergias) ? patient.alergias : [])
+      setEnfermedades(Array.isArray(patient.enfermedadesCronicas) ? patient.enfermedadesCronicas : [])
+      setAntecedentes(Array.isArray(patient.antecedentesFamiliares) ? patient.antecedentesFamiliares : [])
 
-      // Pre-cargar localidades si hay provincia; luego restaurar localidad seleccionada
       if (patient.idProvincia) {
         locationService.getLocalidades(patient.idProvincia)
           .then(locs => {
             setLocalidades(locs)
-            if (patient.idLocalidad) {
-              setValue('idLocalidad', patient.idLocalidad)
-            }
+            if (patient.idLocalidad) setValue('idLocalidad', patient.idLocalidad)
           })
           .catch(() => {})
-          .finally(() => {
-            isInitializing.current = false
-          })
+          .finally(() => { isInitializing.current = false })
       } else {
         isInitializing.current = false
         setLocalidades([])
@@ -116,21 +110,37 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
       isInitializing.current = false
       reset()
       setAlergias([])
+      setEnfermedades([])
+      setAntecedentes([])
       setLocalidades([])
     }
   }, [patient, reset, setValue])
 
-  // ── Alergias ──────────────────────────────────────────────────────────────
-  const addAlergia = () => {
-    const t = alergiaNueva.trim()
-    if (t && !alergias.map(a => a.toLowerCase()).includes(t.toLowerCase()))
-      setAlergias(prev => [...prev, t])
-    setAlergiaNueva('')
+  const addItem = (
+    value: string,
+    list: string[],
+    setter: React.Dispatch<React.SetStateAction<string[]>>,
+    resetInput: () => void,
+  ) => {
+    const t = value.trim()
+    if (t && !list.map(x => x.toLowerCase()).includes(t.toLowerCase())) {
+      setter(prev => [...prev, t])
+    }
+    resetInput()
   }
+
+  const removeItem = (value: string, setter: React.Dispatch<React.SetStateAction<string[]>>) =>
+    setter(prev => prev.filter(x => x !== value))
 
   const handleFormSubmit = ({ idProvincia: _unused, idObraSocial, ...data }: FormFields) => {
     const finalIdObraSocial = String(idObraSocial) === 'nueva' ? '' : idObraSocial
-    onSubmit({ ...data, idObraSocial: finalIdObraSocial as number | '', alergias })
+    onSubmit({
+      ...data,
+      idObraSocial: finalIdObraSocial as number | '',
+      alergias,
+      enfermedadesCronicas: enfermedades,
+      antecedentesFamiliares: antecedentes,
+    })
   }
 
   const inputCls = (err?: boolean) =>
@@ -263,36 +273,43 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
       </div>
 
       {/* Alergias */}
-      <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-        <p className="text-sm font-semibold text-red-700 mb-3">Alergias</p>
-        <div className="flex gap-2 mb-3">
-          <input
-            value={alergiaNueva}
-            onChange={e => setAlergiaNueva(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addAlergia() } }}
-            className="flex-1 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
-            placeholder="Ej: Penicilina"
-          />
-          <button type="button" onClick={addAlergia}
-            className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors">
-            <Plus size={18} />
-          </button>
-        </div>
-        {alergias.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {alergias.map(a => (
-              <span key={a} className="inline-flex items-center gap-1 bg-red-100 text-red-700 text-xs font-medium px-2.5 py-1 rounded-full">
-                {a}
-                <button type="button" onClick={() => setAlergias(prev => prev.filter(x => x !== a))}>
-                  <X size={12} />
-                </button>
-              </span>
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs text-red-400">Sin alergias registradas</p>
-        )}
-      </div>
+      <TagInput
+        label="Alergias"
+        colorScheme="red"
+        items={alergias}
+        inputValue={alergiaNueva}
+        placeholder="Ej: Penicilina"
+        onInputChange={setAlergiaNueva}
+        onAdd={() => addItem(alergiaNueva, alergias, setAlergias, () => setAlergiaNueva(''))}
+        onRemove={v => removeItem(v, setAlergias)}
+        emptyText="Sin alergias registradas"
+      />
+
+      {/* Enfermedades Crónicas */}
+      <TagInput
+        label="Enfermedades Crónicas"
+        colorScheme="amber"
+        items={enfermedades}
+        inputValue={enfermedadNueva}
+        placeholder="Ej: Diabetes tipo 2"
+        onInputChange={setEnfermedadNueva}
+        onAdd={() => addItem(enfermedadNueva, enfermedades, setEnfermedades, () => setEnfermedadNueva(''))}
+        onRemove={v => removeItem(v, setEnfermedades)}
+        emptyText="Sin enfermedades crónicas registradas"
+      />
+
+      {/* Antecedentes Familiares */}
+      <TagInput
+        label="Antecedentes Familiares"
+        colorScheme="purple"
+        items={antecedentes}
+        inputValue={antecedenteNuevo}
+        placeholder="Ej: Hipertensión"
+        onInputChange={setAntecedenteNuevo}
+        onAdd={() => addItem(antecedenteNuevo, antecedentes, setAntecedentes, () => setAntecedenteNuevo(''))}
+        onRemove={v => removeItem(v, setAntecedentes)}
+        emptyText="Sin antecedentes familiares registrados"
+      />
 
       {/* Contacto de Emergencia */}
       <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4">
@@ -370,5 +387,59 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
         </button>
       </div>
     </form>
+  )
+}
+
+const colorSchemes = {
+  red:    { border: 'border-red-200',    bg: 'bg-red-50',    label: 'text-red-700',    inputBorder: 'border-red-200',    inputFocus: 'focus:border-red-400 focus:ring-red-100',    tag: 'bg-red-100 text-red-700'    },
+  amber:  { border: 'border-amber-200',  bg: 'bg-amber-50',  label: 'text-amber-700',  inputBorder: 'border-amber-200',  inputFocus: 'focus:border-amber-400 focus:ring-amber-100',  tag: 'bg-amber-100 text-amber-700'  },
+  purple: { border: 'border-purple-200', bg: 'bg-purple-50', label: 'text-purple-700', inputBorder: 'border-purple-200', inputFocus: 'focus:border-purple-400 focus:ring-purple-100', tag: 'bg-purple-100 text-purple-700' },
+}
+
+interface TagInputProps {
+  label: string
+  colorScheme: keyof typeof colorSchemes
+  items: string[]
+  inputValue: string
+  placeholder: string
+  emptyText: string
+  onInputChange: (v: string) => void
+  onAdd: () => void
+  onRemove: (v: string) => void
+}
+
+function TagInput({ label, colorScheme, items, inputValue, placeholder, emptyText, onInputChange, onAdd, onRemove }: TagInputProps) {
+  const c = colorSchemes[colorScheme]
+  return (
+    <div className={`rounded-xl border ${c.border} ${c.bg} p-4`}>
+      <p className={`text-sm font-semibold ${c.label} mb-3`}>{label}</p>
+      <div className="flex gap-2 mb-3">
+        <input
+          value={inputValue}
+          onChange={e => onInputChange(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); onAdd() } }}
+          className={`flex-1 rounded-lg border ${c.inputBorder} bg-white px-3 py-2 text-sm outline-none focus:ring-2 ${c.inputFocus}`}
+          placeholder={placeholder}
+        />
+        <button type="button" onClick={onAdd}
+          className={`p-2 rounded-lg ${c.tag} hover:opacity-80 transition-opacity`}>
+          <Plus size={18} />
+        </button>
+      </div>
+      {items.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {items.map(item => (
+            <span key={item} className={`inline-flex items-center gap-1 ${c.tag} text-xs font-medium px-2.5 py-1 rounded-full`}>
+              {item}
+              <button type="button" onClick={() => onRemove(item)}>
+                <X size={12} />
+              </button>
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className={`text-xs ${c.label} opacity-60`}>{emptyText}</p>
+      )}
+    </div>
   )
 }

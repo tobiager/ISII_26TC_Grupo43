@@ -30,7 +30,6 @@ CREATE TABLE alergia (
   CONSTRAINT uq_alergia_nombre UNIQUE (nombre_alergia)
 );
 
--- NUEVAS TABLAS MAESTRAS SEGÚN EL DER
 CREATE TABLE enfermedad_cronica (
   id_enfermedad_cronica INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   nombre_enfermedad VARCHAR(200) NOT NULL
@@ -72,7 +71,7 @@ CREATE TABLE residencia (
 );
 
 -- ============================================================
--- 3. AFILIACIÓN (Adaptada del DER)
+-- 3. AFILIACIÓN
 -- ============================================================
 
 CREATE TABLE afiliacion_obra_social (
@@ -87,7 +86,7 @@ CREATE TABLE afiliacion_obra_social (
 );
 
 -- ============================================================
--- 4. ENTIDADES PRINCIPALES Y FICHA MÉDICA
+-- 4. ENTIDADES PRINCIPALES Y FICHA MÉDICA (ACTUALIZADO N:M)
 -- ============================================================
 
 CREATE TABLE persona (
@@ -101,21 +100,33 @@ CREATE TABLE persona (
 CREATE TABLE ficha_medica (
   id_ficha_medica INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   tipo_sangre VARCHAR(3) NOT NULL,
-  antecedentes_familiares_text TEXT, -- Campo opcional del DER
+  antecedentes_familiares_text TEXT, 
   CONSTRAINT ck_tipo_sangre CHECK (tipo_sangre IN ('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'))
 );
 
--- TABLA DE NEXO PARA ANTECEDENTES (Según el DER)
-CREATE TABLE antecedente_medico (
-  id_antecedente_medico INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+-- TABLAS DE NEXO PARA PERMITIR MÚLTIPLES REGISTROS (Diagrama)
+CREATE TABLE ficha_alergia (
   id_ficha_medica INT NOT NULL,
-  id_alergia INT,
-  id_enfermedad_cronica INT,
-  id_antecedente_familiar INT,
-  CONSTRAINT fk_am_ficha FOREIGN KEY (id_ficha_medica) REFERENCES ficha_medica(id_ficha_medica),
-  CONSTRAINT fk_am_alergia FOREIGN KEY (id_alergia) REFERENCES alergia(id_alergia),
-  CONSTRAINT fk_am_enfermedad FOREIGN KEY (id_enfermedad_cronica) REFERENCES enfermedad_cronica(id_enfermedad_cronica),
-  CONSTRAINT fk_am_familiar FOREIGN KEY (id_antecedente_familiar) REFERENCES antecedente_familiar(id_antecedente_familiar)
+  id_alergia INT NOT NULL,
+  PRIMARY KEY (id_ficha_medica, id_alergia),
+  CONSTRAINT fk_fa_ficha FOREIGN KEY (id_ficha_medica) REFERENCES ficha_medica(id_ficha_medica) ON DELETE CASCADE,
+  CONSTRAINT fk_fa_alergia FOREIGN KEY (id_alergia) REFERENCES alergia(id_alergia) ON DELETE CASCADE
+);
+
+CREATE TABLE ficha_enfermedad_cronica (
+  id_ficha_medica INT NOT NULL,
+  id_enfermedad_cronica INT NOT NULL,
+  PRIMARY KEY (id_ficha_medica, id_enfermedad_cronica),
+  CONSTRAINT fk_fec_ficha FOREIGN KEY (id_ficha_medica) REFERENCES ficha_medica(id_ficha_medica) ON DELETE CASCADE,
+  CONSTRAINT fk_fec_enfermedad FOREIGN KEY (id_enfermedad_cronica) REFERENCES enfermedad_cronica(id_enfermedad_cronica) ON DELETE CASCADE
+);
+
+CREATE TABLE ficha_antecedente_familiar (
+  id_ficha_medica INT NOT NULL,
+  id_antecedente_familiar INT NOT NULL,
+  PRIMARY KEY (id_ficha_medica, id_antecedente_familiar),
+  CONSTRAINT fk_faf_ficha FOREIGN KEY (id_ficha_medica) REFERENCES ficha_medica(id_ficha_medica) ON DELETE CASCADE,
+  CONSTRAINT fk_faf_familiar FOREIGN KEY (id_antecedente_familiar) REFERENCES antecedente_familiar(id_antecedente_familiar) ON DELETE CASCADE
 );
 
 CREATE TABLE paciente (
@@ -124,7 +135,7 @@ CREATE TABLE paciente (
   id_persona INT NOT NULL,
   id_residencia INT NOT NULL,
   id_ficha_medica INT NOT NULL,
-  id_afiliacion INT, -- Agregado: Relación con Obra Social según DER
+  id_afiliacion INT,
   deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
   CONSTRAINT fk_paciente_persona FOREIGN KEY (id_persona) REFERENCES persona(id_persona),
   CONSTRAINT fk_paciente_residencia FOREIGN KEY (id_residencia) REFERENCES residencia(id_residencia),
@@ -143,7 +154,7 @@ CREATE TABLE usuario (
   id_usuario INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   email VARCHAR(200) NOT NULL,
   pass VARCHAR(200) NOT NULL,
-  autorizacion VARCHAR(50), -- Agregado según el DER
+  autorizacion VARCHAR(50),
   id_rol INT NOT NULL,
   id_persona INT NOT NULL,
   deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
@@ -154,7 +165,7 @@ CREATE TABLE usuario (
 );
 
 -- ============================================================
--- 6. ATENCIÓN MÉDICA E INTERNACIÓN (Resto del esquema original)
+-- 6. ATENCIÓN MÉDICA E INTERNACIÓN
 -- ============================================================
 
 CREATE TABLE contacto_emergencia (
@@ -245,6 +256,10 @@ ALTER TABLE paciente ENABLE ROW LEVEL SECURITY;
 ALTER TABLE historial_medico ENABLE ROW LEVEL SECURITY;
 ALTER TABLE registro_clinico ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ficha_medica ENABLE ROW LEVEL SECURITY;
+-- Nuevas tablas de nexo con RLS
+ALTER TABLE ficha_alergia ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ficha_enfermedad_cronica ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ficha_antecedente_familiar ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "solo_autenticados_activos" ON paciente 
 FOR ALL TO authenticated USING (deleted_at IS NULL);
@@ -252,3 +267,7 @@ FOR ALL TO authenticated USING (deleted_at IS NULL);
 CREATE POLICY "solo_autenticados" ON historial_medico FOR ALL TO authenticated USING (true);
 CREATE POLICY "solo_autenticados" ON registro_clinico FOR ALL TO authenticated USING (true);
 CREATE POLICY "solo_autenticados" ON ficha_medica FOR ALL TO authenticated USING (true);
+-- Políticas para las tablas de nexo
+CREATE POLICY "solo_autenticados" ON ficha_alergia FOR ALL TO authenticated USING (true);
+CREATE POLICY "solo_autenticados" ON ficha_enfermedad_cronica FOR ALL TO authenticated USING (true);
+CREATE POLICY "solo_autenticados" ON ficha_antecedente_familiar FOR ALL TO authenticated USING (true);
