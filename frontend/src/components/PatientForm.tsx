@@ -2,11 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Plus, X, Loader2, Trash2, Info } from 'lucide-react'
+import { toast } from 'sonner'
 import type { EmergencyContact, Patient, PatientRequest } from '../types/patient'
 import { BLOOD_TYPES } from '../types/patient'
 import { locationService, type Provincia, type Localidad, type ObraSocial } from '../services/locationService'
 import { patientService } from '../services/patientService'
-import { patientSchema, SOLO_LETRAS, TELEFONO_REGEX } from '../validations/patientSchema'
+import {
+  patientSchema, TELEFONO_REGEX,
+  CONTACT_NOMBRE_MAX, CONTACT_PARENTESCO_MAX, CONTACT_TELEFONO_MAX,
+} from '../validations/patientSchema'
 import type { PatientFormValues } from '../validations/patientSchema'
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -21,6 +25,33 @@ interface PatientFormProps {
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
 const today = new Date().toISOString().split('T')[0]
+
+// ─── Teclas siempre permitidas (navegación y edición) ────────────────────────
+
+const ALLOWED_KEYS = [
+  'Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+  'Tab', 'Enter', 'Home', 'End',
+]
+
+function blockNonDigits(e: React.KeyboardEvent<HTMLInputElement>) {
+  if (e.ctrlKey || e.metaKey) return
+  if (!ALLOWED_KEYS.includes(e.key) && !/^\d$/.test(e.key)) e.preventDefault()
+}
+
+function blockInvalidPhone(e: React.KeyboardEvent<HTMLInputElement>) {
+  if (e.ctrlKey || e.metaKey) return
+  if (!ALLOWED_KEYS.includes(e.key) && !/^[\d\s\-()+.]$/.test(e.key)) e.preventDefault()
+}
+
+function blockInvalidAfiliado(e: React.KeyboardEvent<HTMLInputElement>) {
+  if (e.ctrlKey || e.metaKey) return
+  if (!ALLOWED_KEYS.includes(e.key) && !/^[a-zA-Z0-9\s\-/.]$/.test(e.key)) e.preventDefault()
+}
+
+function blockNonLetters(e: React.KeyboardEvent<HTMLInputElement>) {
+  if (e.ctrlKey || e.metaKey) return
+  if (!ALLOWED_KEYS.includes(e.key) && !/^[a-záéíóúüñA-ZÁÉÍÓÚÜÑ\s'-]$/.test(e.key)) e.preventDefault()
+}
 
 const DEFAULT_VALUES: Partial<PatientFormValues> = {
   nombre: '',
@@ -71,11 +102,25 @@ function UniqueHint({ text }: { text: string }) {
 
 // ─── Validación de contactos de emergencia ────────────────────────────────────
 
-function validateContactos(list: EmergencyContact[]): Record<number, string> {
-  const errs: Record<number, string> = {}
+function validateContactos(list: EmergencyContact[]): Record<string, string> {
+  const errs: Record<string, string> = {}
   list.forEach((c, i) => {
-    if (c.telefono && !TELEFONO_REGEX.test(c.telefono)) {
-      errs[i] = 'Formato inválido — solo números, espacios, guiones o paréntesis'
+    if (!c.nombre.trim()) {
+      errs[`${i}_nombre`] = 'El nombre es obligatorio'
+    } else if (c.nombre.trim().length > CONTACT_NOMBRE_MAX) {
+      errs[`${i}_nombre`] = `Máximo ${CONTACT_NOMBRE_MAX} caracteres`
+    }
+    if (!c.telefono.trim()) {
+      errs[`${i}_telefono`] = 'El teléfono es obligatorio'
+    } else if (c.telefono.trim().length > CONTACT_TELEFONO_MAX) {
+      errs[`${i}_telefono`] = `Máximo ${CONTACT_TELEFONO_MAX} caracteres`
+    } else if (!TELEFONO_REGEX.test(c.telefono)) {
+      errs[`${i}_telefono`] = 'Solo números, espacios, guiones o paréntesis'
+    }
+    if (!c.parentesco.trim()) {
+      errs[`${i}_parentesco`] = 'El parentesco es obligatorio'
+    } else if (c.parentesco.trim().length > CONTACT_PARENTESCO_MAX) {
+      errs[`${i}_parentesco`] = `Máximo ${CONTACT_PARENTESCO_MAX} caracteres`
     }
   })
   return errs
@@ -93,7 +138,7 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
   const [antecedenteNuevo, setAntecedenteNuevo] = useState('')
 
   const [contactos, setContactos] = useState<EmergencyContact[]>([])
-  const [contactosErr, setContactosErr] = useState<Record<number, string>>({})
+  const [contactosErr, setContactosErr] = useState<Record<string, string>>({})
 
   // Listas de selección (carga asíncrona)
   const [provincias, setProvincias] = useState<Provincia[]>([])
@@ -290,12 +335,13 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
 
   const updateContacto = (idx: number, field: keyof EmergencyContact, value: string) => {
     setContactos(prev => prev.map((c, i) => i === idx ? { ...c, [field]: value } : c))
+    const key = `${idx}_${field}`
     setContactosErr(prev => {
       const next = { ...prev }
       if (field === 'telefono' && value && !TELEFONO_REGEX.test(value)) {
-        next[idx] = 'Formato inválido — solo números, espacios, guiones o paréntesis'
+        next[key] = 'Solo números, espacios, guiones o paréntesis'
       } else {
-        delete next[idx]
+        delete next[key]
       }
       return next
     })
@@ -304,11 +350,13 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
   const removeContacto = (idx: number) => {
     setContactos(prev => prev.filter((_, i) => i !== idx))
     setContactosErr(prev => {
-      const next: Record<number, string> = {}
+      const next: Record<string, string> = {}
       Object.entries(prev).forEach(([k, v]) => {
-        const ki = Number(k)
-        if (ki < idx) next[ki] = v
-        else if (ki > idx) next[ki - 1] = v
+        const sep = k.indexOf('_')
+        const ki = Number(k.substring(0, sep))
+        const field = k.substring(sep + 1)
+        if (ki < idx) next[k] = v
+        else if (ki > idx) next[`${ki - 1}_${field}`] = v
       })
       return next
     })
@@ -316,22 +364,26 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
 
   // ── Submit ───────────────────────────────────────────────────────────────────
 
-  const handleFormSubmit = (data: PatientFormValues) => {
-    // Validar teléfonos de contactos antes de enviar y campos vacíos
-    const phoneErrors = validateContactos(contactos)
-    let hasEmptyFields = false
-    contactos.forEach((c, i) => {
-      if (!c.nombre.trim() || !c.telefono.trim() || !c.parentesco.trim()) {
-        phoneErrors[i] = 'Completá todos los campos (Nombre, Teléfono, Parentesco)'
-        hasEmptyFields = true
-      }
-    })
+  const onInvalidSubmit = () => {
+    toast.error('Corregí los errores del formulario antes de continuar')
+  }
 
-    if (Object.keys(phoneErrors).length > 0) {
-      setContactosErr(phoneErrors)
+  const handleFormSubmit = (data: PatientFormValues) => {
+    const contactErrors = validateContactos(contactos)
+
+    if (Object.keys(contactErrors).length > 0) {
+      setContactosErr(contactErrors)
+      toast.error('Revisá los datos de los contactos de emergencia')
       return
     }
-    if (dniExists || afiliadoExists) return
+    if (dniExists) {
+      toast.error('El DNI ingresado ya está registrado en el sistema')
+      return
+    }
+    if (afiliadoExists) {
+      toast.error('El número de afiliado ya está registrado para esta Obra Social')
+      return
+    }
 
     const idObraSocial = data.idObraSocial === 'nueva' ? '' : data.idObraSocial
 
@@ -373,7 +425,7 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
   // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} noValidate className="space-y-5">
+    <form onSubmit={handleSubmit(handleFormSubmit, onInvalidSubmit)} noValidate className="space-y-5">
 
       {/* ── Nombre + Apellido ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-4">
@@ -411,13 +463,14 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
           </label>
           <div className="relative">
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               {...register('dni')}
               onBlur={handleDniBlur}
+              onKeyDown={blockNonDigits}
+              maxLength={8}
               className={inputCls(!!(errors.dni || dniExists))}
               placeholder="12345678"
-              min={1000000}
-              max={99999999}
             />
             {checkingDni && (
               <Loader2 size={13} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-blue-400" />
@@ -467,6 +520,8 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
             <label className="block text-xs text-gray-600 mb-1">Número</label>
             <input
               {...register('telefono')}
+              onKeyDown={blockInvalidPhone}
+              maxLength={25}
               className={inputCls(!!errors.telefono)}
               placeholder="11-1234-5678"
               inputMode="tel"
@@ -679,41 +734,60 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
                 <input
                   value={contacto.nombre}
                   onChange={e => updateContacto(idx, 'nombre', e.target.value)}
+                  onKeyDown={blockNonLetters}
+                  maxLength={CONTACT_NOMBRE_MAX}
                   className={cls(
-                    'w-full rounded-lg border px-2 py-1.5 text-sm outline-none focus:border-yellow-400 bg-yellow-50/50',
-                    'border-yellow-200',
+                    'w-full rounded-lg border px-2 py-1.5 text-sm outline-none bg-yellow-50/50',
+                    contactosErr[`${idx}_nombre`]
+                      ? 'border-red-400 focus:border-red-500'
+                      : 'border-yellow-200 focus:border-yellow-400',
                   )}
                   placeholder="Rosa González"
                 />
+                {contactosErr[`${idx}_nombre`] && (
+                  <p className="mt-0.5 text-xs text-red-600 flex items-center gap-1"><Info size={10} /> {contactosErr[`${idx}_nombre`]}</p>
+                )}
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Teléfono</label>
                 <input
                   value={contacto.telefono}
                   onChange={e => updateContacto(idx, 'telefono', e.target.value)}
+                  onKeyDown={blockInvalidPhone}
                   inputMode="tel"
+                  maxLength={CONTACT_TELEFONO_MAX}
                   className={cls(
                     'w-full rounded-lg border px-2 py-1.5 text-sm outline-none bg-yellow-50/50',
-                    contactosErr[idx]
+                    contactosErr[`${idx}_telefono`]
                       ? 'border-red-400 focus:border-red-500'
                       : 'border-yellow-200 focus:border-yellow-400',
                   )}
                   placeholder="11-9999-8888"
                 />
+                {contactosErr[`${idx}_telefono`] && (
+                  <p className="mt-0.5 text-xs text-red-600 flex items-center gap-1"><Info size={10} /> {contactosErr[`${idx}_telefono`]}</p>
+                )}
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Parentesco</label>
                 <input
                   value={contacto.parentesco}
                   onChange={e => updateContacto(idx, 'parentesco', e.target.value)}
-                  className="w-full rounded-lg border border-yellow-200 bg-yellow-50/50 px-2 py-1.5 text-sm outline-none focus:border-yellow-400"
+                  onKeyDown={blockNonLetters}
+                  maxLength={CONTACT_PARENTESCO_MAX}
+                  className={cls(
+                    'w-full rounded-lg border px-2 py-1.5 text-sm outline-none bg-yellow-50/50',
+                    contactosErr[`${idx}_parentesco`]
+                      ? 'border-red-400 focus:border-red-500'
+                      : 'border-yellow-200 focus:border-yellow-400',
+                  )}
                   placeholder="Esposa"
                 />
+                {contactosErr[`${idx}_parentesco`] && (
+                  <p className="mt-0.5 text-xs text-red-600 flex items-center gap-1"><Info size={10} /> {contactosErr[`${idx}_parentesco`]}</p>
+                )}
               </div>
             </div>
-            {contactosErr[idx] && (
-              <p className="mt-1 text-xs text-red-600 flex items-center gap-1"><Info size={11} /> {contactosErr[idx]}</p>
-            )}
           </div>
         ))}
       </div>
@@ -755,6 +829,8 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
                 <input
                   {...register('nroAfiliado')}
                   onBlur={handleAfiliadoBlur}
+                  onKeyDown={blockInvalidAfiliado}
+                  maxLength={50}
                   className={inputCls(!!(errors.nroAfiliado || afiliadoExists))}
                   placeholder="OSDE-001234"
                 />
@@ -781,6 +857,8 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
               <input
                 {...register('nroAfiliado')}
                 onBlur={handleAfiliadoBlur}
+                onKeyDown={blockInvalidAfiliado}
+                maxLength={50}
                 className={inputCls(!!(errors.nroAfiliado || afiliadoExists))}
                 placeholder="Nro. de afiliado"
               />
@@ -803,9 +881,11 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
           <label className="block text-xs text-gray-600 mb-1">Fecha de Vencimiento de la Afiliación</label>
           <input
             type="date"
+            min={today}
             {...register('fechaVencimientoAfiliacion')}
-            className={inputCls()}
+            className={inputCls(!!errors.fechaVencimientoAfiliacion)}
           />
+          <FieldError msg={errors.fechaVencimientoAfiliacion?.message} />
         </div>
       </div>
 

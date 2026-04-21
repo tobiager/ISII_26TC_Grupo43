@@ -8,6 +8,14 @@ export const SOLO_LETRAS = /^[a-záéíóúüñA-ZÁÉÍÓÚÜÑ\s''`-]+$/
 /** Teléfono: dígitos, espacios, guiones, paréntesis, +, punto */
 export const TELEFONO_REGEX = /^[\d\s\-()+.]+$/
 
+/** Nro. Afiliado: letras, dígitos, guiones, barras, puntos y espacios */
+export const NRO_AFILIADO_REGEX = /^[a-zA-Z0-9\s\-/.]+$/
+
+/** Límites de longitud para campos de contactos de emergencia */
+export const CONTACT_NOMBRE_MAX = 200
+export const CONTACT_PARENTESCO_MAX = 100
+export const CONTACT_TELEFONO_MAX = 25
+
 // ─── Coerciones para campos numéricos opcionales ─────────────────────────────
 
 /**
@@ -121,9 +129,22 @@ export const patientSchema = z
 
     nombreObraSocial: z.string().max(100, 'Máximo 100 caracteres').default(''),
 
-    nroAfiliado: z.string().max(50, 'Máximo 50 caracteres').default(''),
+    nroAfiliado: z
+      .string()
+      .max(50, 'Máximo 50 caracteres')
+      .refine(
+        (v) => v === '' || NRO_AFILIADO_REGEX.test(v),
+        'Solo se permiten letras, números, guiones, barras y espacios',
+      )
+      .default(''),
 
-    fechaVencimientoAfiliacion: z.string().default(''),
+    fechaVencimientoAfiliacion: z
+      .string()
+      .refine(
+        (v) => !v || new Date(v) >= new Date(new Date().toISOString().split('T')[0]),
+        'La fecha de vencimiento no puede ser anterior a hoy',
+      )
+      .default(''),
 
     // ── Ficha médica ──────────────────────────────────────────────────────────
     antecedentesText: z.string().max(2000, 'Máximo 2000 caracteres').default(''),
