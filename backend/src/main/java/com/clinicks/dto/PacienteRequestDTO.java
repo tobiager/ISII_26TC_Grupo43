@@ -1,5 +1,6 @@
 package com.clinicks.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
@@ -31,22 +32,28 @@ public class PacienteRequestDTO {
     private String tipoSangre;
 
     private List<String> alergias = new ArrayList<>();
-
     private List<String> enfermedadesCronicas = new ArrayList<>();
-
     private List<String> antecedentesFamiliares = new ArrayList<>();
+    private String antecedentesText;
 
     private String telefono;
 
-    private String direccion;
+    @Pattern(regexp = "^(personal|emergencia)$", message = "El tipo de teléfono debe ser 'personal' o 'emergencia'")
+    private String tipoTelefono;
 
+    private String direccion;
+    private Integer numeroDireccion;
+    private Integer piso;
     private Integer idLocalidad;
 
-    private String contactoEmergenciaNombre;
-    private String contactoEmergenciaTelefono;
-    private String contactoEmergenciaParentesco;
+    @Pattern(regexp = "^(permanente|transitorio)$", message = "El tipo de residencia debe ser 'permanente' o 'transitorio'")
+    private String tipoResidencia;
+
+    @Valid
+    private List<ContactoEmergenciaDTO> contactosEmergencia = new ArrayList<>();
 
     private Integer idObraSocial;
     private String nombreObraSocial;
     private String nroAfiliado;
+    private LocalDate fechaVencimientoAfiliacion;
 }

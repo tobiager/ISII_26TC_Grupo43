@@ -65,5 +65,25 @@ public class PacienteController {
         pacienteService.restaurarPaciente(id);
         return ResponseEntity.ok(Map.of("mensaje", "Paciente restaurado correctamente"));
     }
+
+    // GET /api/pacientes/existe-dni?dni=&excluirId= — Verifica unicidad de DNI para validación en frontend
+    @GetMapping("/existe-dni")
+    public ResponseEntity<Map<String, Boolean>> existeDni(
+            @RequestParam Integer dni,
+            @RequestParam(required = false) Integer excluirId) {
+        boolean existe = pacienteService.existeDni(dni, excluirId);
+        return ResponseEntity.ok(Map.of("existe", existe));
+    }
+
+    // GET /api/pacientes/existe-afiliado — Verifica unicidad de Nro Afiliado por Obra Social
+    @GetMapping("/existe-afiliado")
+    public ResponseEntity<Map<String, Boolean>> existeAfiliado(
+            @RequestParam String nroAfiliado,
+            @RequestParam(required = false) Integer idObraSocial,
+            @RequestParam(required = false) String nombreObraSocial,
+            @RequestParam(required = false) Integer excluirId) {
+        boolean existe = pacienteService.existeAfiliado(nroAfiliado, idObraSocial, nombreObraSocial, excluirId);
+        return ResponseEntity.ok(Map.of("existe", existe));
+    }
 }
 

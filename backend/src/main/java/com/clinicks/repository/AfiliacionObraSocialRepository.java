@@ -8,5 +8,5 @@ import java.util.Optional;
 
 @Repository
 public interface AfiliacionObraSocialRepository extends JpaRepository<AfiliacionObraSocial, Integer> {
-    Optional<AfiliacionObraSocial> findByNumeroAfiliado(String numeroAfiliado);
+    Optional<AfiliacionObraSocial> findByNumeroAfiliadoAndObraSocial(String numeroAfiliado, com.clinicks.model.ObraSocial obraSocial);
 }

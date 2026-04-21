@@ -1,5 +1,6 @@
 package com.clinicks.service.impl;
 
+import com.clinicks.dto.ContactoEmergenciaDTO;
 import com.clinicks.dto.PacienteRequestDTO;
 import com.clinicks.dto.PacienteResponseDTO;
 import com.clinicks.exception.DniDuplicadoException;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.Period;
 import java.util.Arrays;
@@ -33,6 +35,7 @@ public class PacienteServiceImpl implements PacienteService {
     private final AntecedenteFamiliarRepository  antecedenteFamiliarRepository;
     private final ContactoEmergenciaRepository   contactoEmergenciaRepository;
     private final LocalidadRepository            localidadRepository;
+    private final HistorialMedicoRepository      historialMedicoRepository;
 
     // ─── LISTAR ────────────────────────────────────────────────────────────────
 
@@ -61,6 +64,34 @@ public class PacienteServiceImpl implements PacienteService {
         return mapPacienteToDTO(paciente);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public boolean existeDni(Integer dni, Integer excluirId) {
+        if (excluirId != null) {
+            return pacienteRepository.existsByDniAndIdPacienteNot(dni, excluirId);
+        }
+        return pacienteRepository.existsByDni(dni);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean existeAfiliado(String nroAfiliado, Integer idObraSocial, String nombreObraSocial, Integer excluirId) {
+        if (!StringUtils.hasText(nroAfiliado)) return false;
+        
+        if (idObraSocial != null) {
+            return pacienteRepository.existsByAfiliacionAndObraSocialId(nroAfiliado, idObraSocial, excluirId);
+        } else if (StringUtils.hasText(nombreObraSocial)) {
+            return pacienteRepository.existsByAfiliacionAndObraSocialNombre(nroAfiliado, nombreObraSocial.trim(), excluirId);
+        }
+        return false;
+    }
+
+    private void validarAfiliadoUnico(PacienteRequestDTO dto, Integer idExcluir) {
+        if (existeAfiliado(dto.getNroAfiliado(), dto.getIdObraSocial(), dto.getNombreObraSocial(), idExcluir)) {
+            throw new com.clinicks.exception.AfiliadoDuplicadoException(dto.getNroAfiliado());
+        }
+    }
+
     // ─── CREAR ─────────────────────────────────────────────────────────────────
 
     @Override
@@ -70,6 +101,8 @@ public class PacienteServiceImpl implements PacienteService {
             throw new DniDuplicadoException(dto.getDni());
         }
 
+        validarAfiliadoUnico(dto, null);
+
         Persona persona = Persona.builder()
                 .nombrePersona(dto.getNombre().trim())
                 .apellidoPersona(dto.getApellido().trim())
@@ -78,18 +111,23 @@ public class PacienteServiceImpl implements PacienteService {
 
         FichaMedica fichaMedica = FichaMedica.builder()
                 .tipoSangre(dto.getTipoSangre())
+                .antecedentesText(dto.getAntecedentesText())
                 .build();
 
         Localidad localidad = resolveLocalidad(dto.getIdLocalidad());
 
         Domicilio domicilio = Domicilio.builder()
-                .calle(StringUtils.hasText(dto.getDireccion()) ? dto.getDireccion() : "Sin dirección")
-                .numero(0)
+                .calle(StringUtils.hasText(dto.getDireccion()) ? dto.getDireccion().trim() : "Sin dirección")
+                .numero(dto.getNumeroDireccion() != null ? dto.getNumeroDireccion() : 0)
+                .piso(dto.getPiso())
                 .localidad(localidad)
                 .build();
 
+        String tipoResidencia = StringUtils.hasText(dto.getTipoResidencia())
+                ? dto.getTipoResidencia() : "permanente";
+
         Residencia residencia = Residencia.builder()
-                .tipoResidencia("permanente")
+                .tipoResidencia(tipoResidencia)
                 .domicilio(domicilio)
                 .build();
 
@@ -110,8 +148,18 @@ public class PacienteServiceImpl implements PacienteService {
         populateAntecedentes(ficha, dto.getAntecedentesFamiliares());
         pacienteRepository.save(saved);
 
-        saveTelefono(saved, dto.getTelefono());
-        saveContactoEmergencia(saved, dto);
+        saveTelefono(saved, dto.getTelefono(), dto.getTipoTelefono());
+        saveContactosEmergencia(saved, dto.getContactosEmergencia());
+
+        // Inicializar historial médico automáticamente al crear paciente
+        if (!historialMedicoRepository.existsByPaciente(saved)) {
+            historialMedicoRepository.save(HistorialMedico.builder()
+                    .paciente(saved)
+                    .estadoHistorial("activo")
+                    .fechaCreacion(LocalDateTime.now())
+                    .fechaActualizacion(LocalDateTime.now())
+                    .build());
+        }
 
         return mapPacienteToDTO(saved);
     }
@@ -126,6 +174,8 @@ public class PacienteServiceImpl implements PacienteService {
         if (pacienteRepository.existsByDniAndIdPacienteNot(dto.getDni(), id)) {
             throw new DniDuplicadoException(dto.getDni());
         }
+
+        validarAfiliadoUnico(dto, id);
 
         Persona persona = paciente.getPersona();
         if (StringUtils.hasText(dto.getNombre())) {
@@ -142,6 +192,7 @@ public class PacienteServiceImpl implements PacienteService {
         if (StringUtils.hasText(dto.getTipoSangre())) {
             ficha.setTipoSangre(dto.getTipoSangre());
         }
+        ficha.setAntecedentesText(dto.getAntecedentesText());
 
         ficha.getAlergias().clear();
         ficha.getEnfermedadesCronicas().clear();
@@ -153,9 +204,17 @@ public class PacienteServiceImpl implements PacienteService {
         if (paciente.getResidencia() != null && paciente.getResidencia().getDomicilio() != null) {
             Domicilio domicilio = paciente.getResidencia().getDomicilio();
             if (StringUtils.hasText(dto.getDireccion())) {
-                domicilio.setCalle(dto.getDireccion());
+                domicilio.setCalle(dto.getDireccion().trim());
             }
+            if (dto.getNumeroDireccion() != null) {
+                domicilio.setNumero(dto.getNumeroDireccion());
+            }
+            domicilio.setPiso(dto.getPiso());
             domicilio.setLocalidad(resolveLocalidad(dto.getIdLocalidad()));
+
+            if (StringUtils.hasText(dto.getTipoResidencia())) {
+                paciente.getResidencia().setTipoResidencia(dto.getTipoResidencia());
+            }
         }
 
         paciente.setDni(dto.getDni());
@@ -164,10 +223,10 @@ public class PacienteServiceImpl implements PacienteService {
         Paciente saved = pacienteRepository.save(paciente);
 
         telefonoRepository.deleteAllByPaciente(saved);
-        saveTelefono(saved, dto.getTelefono());
+        saveTelefono(saved, dto.getTelefono(), dto.getTipoTelefono());
 
         contactoEmergenciaRepository.deleteAllByPaciente(saved);
-        saveContactoEmergencia(saved, dto);
+        saveContactosEmergencia(saved, dto.getContactosEmergencia());
 
         return mapPacienteToDTO(saved);
     }
@@ -259,54 +318,49 @@ public class PacienteServiceImpl implements PacienteService {
 
         if (obraSocial == null) return null;
 
-        if (StringUtils.hasText(dto.getNroAfiliado())) {
-            String nro = dto.getNroAfiliado().trim();
-            ObraSocial finalObraSocial = obraSocial;
-            return afiliacionRepository.findByNumeroAfiliado(nro)
-                    .orElseGet(() -> afiliacionRepository.save(
-                            AfiliacionObraSocial.builder()
-                                    .numeroAfiliado(nro)
-                                    .fechaAlta(LocalDate.now())
-                                    .obraSocial(finalObraSocial)
-                                    .build()
-                    ));
-        }
+        String nro = StringUtils.hasText(dto.getNroAfiliado())
+                ? dto.getNroAfiliado().trim()
+                : obraSocial.getNombreObra().toUpperCase().replaceAll("\\s+", "-") + "-" + dto.getDni();
 
-        String nroGenerado = obraSocial.getNombreObra().toUpperCase().replaceAll("\\s+", "-")
-                + "-" + dto.getDni();
         ObraSocial finalOS = obraSocial;
-        return afiliacionRepository.findByNumeroAfiliado(nroGenerado)
+        LocalDate vencimiento = dto.getFechaVencimientoAfiliacion();
+
+        return afiliacionRepository.findByNumeroAfiliadoAndObraSocial(nro, finalOS)
+                .map(existing -> {
+                    existing.setFechaVencimiento(vencimiento);
+                    return afiliacionRepository.save(existing);
+                })
                 .orElseGet(() -> afiliacionRepository.save(
                         AfiliacionObraSocial.builder()
-                                .numeroAfiliado(nroGenerado)
+                                .numeroAfiliado(nro)
                                 .fechaAlta(LocalDate.now())
+                                .fechaVencimiento(vencimiento)
                                 .obraSocial(finalOS)
                                 .build()
                 ));
     }
 
-    private void saveTelefono(Paciente paciente, String numero) {
+    private void saveTelefono(Paciente paciente, String numero, String tipo) {
         if (!StringUtils.hasText(numero)) return;
+        String tipoFinal = StringUtils.hasText(tipo) ? tipo : "personal";
         telefonoRepository.save(Telefono.builder()
                 .numeroTelefono(numero.trim())
-                .tipoTelefono("personal")
+                .tipoTelefono(tipoFinal)
                 .paciente(paciente)
                 .build());
     }
 
-    private void saveContactoEmergencia(Paciente paciente, PacienteRequestDTO dto) {
-        if (!StringUtils.hasText(dto.getContactoEmergenciaNombre())
-                && !StringUtils.hasText(dto.getContactoEmergenciaTelefono())) return;
-
-        contactoEmergenciaRepository.save(ContactoEmergencia.builder()
-                .paciente(paciente)
-                .nombreCompleto(StringUtils.hasText(dto.getContactoEmergenciaNombre())
-                        ? dto.getContactoEmergenciaNombre().trim() : "Sin nombre")
-                .parentesco(StringUtils.hasText(dto.getContactoEmergenciaParentesco())
-                        ? dto.getContactoEmergenciaParentesco().trim() : "Sin parentesco")
-                .telefonoCelular(StringUtils.hasText(dto.getContactoEmergenciaTelefono())
-                        ? dto.getContactoEmergenciaTelefono().trim() : "Sin teléfono")
-                .build());
+    private void saveContactosEmergencia(Paciente paciente, List<ContactoEmergenciaDTO> contactos) {
+        if (contactos == null || contactos.isEmpty()) return;
+        for (ContactoEmergenciaDTO c : contactos) {
+            if (!StringUtils.hasText(c.getNombre()) && !StringUtils.hasText(c.getTelefono())) continue;
+            contactoEmergenciaRepository.save(ContactoEmergencia.builder()
+                    .paciente(paciente)
+                    .nombreCompleto(StringUtils.hasText(c.getNombre()) ? c.getNombre().trim() : "Sin nombre")
+                    .parentesco(StringUtils.hasText(c.getParentesco()) ? c.getParentesco().trim() : "Sin parentesco")
+                    .telefonoCelular(StringUtils.hasText(c.getTelefono()) ? c.getTelefono().trim() : "Sin teléfono")
+                    .build());
+        }
     }
 
     // ─── MAPPERS ───────────────────────────────────────────────────────────────
@@ -335,6 +389,7 @@ public class PacienteServiceImpl implements PacienteService {
                 .estado(p.getEstado() != null ? p.getEstado() : "Ambulatorio")
                 .numeroHabitacion(p.getNumeroHabitacion())
                 .ultimaVisita(ultimaVisita)
+                .contactosEmergencia(Collections.emptyList())
                 .build();
     }
 
@@ -360,18 +415,24 @@ public class PacienteServiceImpl implements PacienteService {
                 .sorted()
                 .collect(Collectors.toList());
 
-        String telPersonal = telefonoRepository
-                .findByPacienteAndTipoTelefono(p, "personal")
-                .map(Telefono::getNumeroTelefono)
-                .orElse(null);
+        Telefono tel = telefonoRepository.findByPaciente(p).stream().findFirst().orElse(null);
 
-        ContactoEmergencia contacto = contactoEmergenciaRepository.findByPaciente(p)
-                .stream().findFirst().orElse(null);
+        List<ContactoEmergenciaDTO> contactos = contactoEmergenciaRepository.findByPaciente(p)
+                .stream()
+                .map(c -> ContactoEmergenciaDTO.builder()
+                        .nombre(c.getNombreCompleto())
+                        .telefono(c.getTelefonoCelular())
+                        .parentesco(c.getParentesco())
+                        .build())
+                .collect(Collectors.toList());
 
         Domicilio dom = p.getResidencia() != null ? p.getResidencia().getDomicilio() : null;
-        String direccion    = dom != null ? dom.getCalle() : null;
+        String calle      = dom != null ? dom.getCalle() : null;
+        Integer numDir    = dom != null ? dom.getNumero() : null;
+        Integer piso      = dom != null ? dom.getPiso() : null;
         Localidad localidad = dom != null ? dom.getLocalidad() : null;
         Provincia provincia = localidad != null ? localidad.getProvincia() : null;
+        String tipoResidencia = p.getResidencia() != null ? p.getResidencia().getTipoResidencia() : null;
 
         AfiliacionObraSocial afl = p.getAfiliacion();
         ObraSocial os = afl != null ? afl.getObraSocial() : null;
@@ -388,19 +449,23 @@ public class PacienteServiceImpl implements PacienteService {
                 .alergias(alergias)
                 .enfermedadesCronicas(enfermedades)
                 .antecedentesFamiliares(antecedentes)
+                .antecedentesText(ficha.getAntecedentesText())
                 .obraSocial(os != null ? os.getNombreObra() : null)
                 .idObraSocial(os != null ? os.getIdObraSocial() : null)
                 .nroAfiliado(afl != null ? afl.getNumeroAfiliado() : null)
+                .fechaVencimientoAfiliacion(afl != null ? afl.getFechaVencimiento() : null)
                 .estado("Ambulatorio")
-                .telefono(telPersonal)
-                .direccion(direccion)
+                .telefono(tel != null ? tel.getNumeroTelefono() : null)
+                .tipoTelefono(tel != null ? tel.getTipoTelefono() : null)
+                .direccion(calle)
+                .numeroDireccion(numDir)
+                .piso(piso)
+                .tipoResidencia(tipoResidencia)
                 .idLocalidad(localidad != null ? localidad.getIdLocalidad() : null)
                 .nombreLocalidad(localidad != null ? localidad.getNombreLocalidad() : null)
                 .idProvincia(provincia != null ? provincia.getIdProvincia() : null)
                 .nombreProvincia(provincia != null ? provincia.getNombreProvincia() : null)
-                .contactoEmergenciaNombre(contacto != null ? contacto.getNombreCompleto() : null)
-                .contactoEmergenciaTelefono(contacto != null ? contacto.getTelefonoCelular() : null)
-                .contactoEmergenciaParentesco(contacto != null ? contacto.getParentesco() : null)
+                .contactosEmergencia(contactos)
                 .build();
     }
 

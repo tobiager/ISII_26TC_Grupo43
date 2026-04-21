@@ -1,3 +1,9 @@
+export interface EmergencyContact {
+  nombre: string
+  telefono: string
+  parentesco: string
+}
+
 export interface Patient {
   id: number
   nombre: string
@@ -10,23 +16,25 @@ export interface Patient {
   alergias: string[]
   enfermedadesCronicas: string[] | null
   antecedentesFamiliares: string[] | null
+  antecedentesText: string | null
   obraSocial: string | null
   idObraSocial: number | null
   nroAfiliado: string | null
+  fechaVencimientoAfiliacion: string | null
   estado: 'Ambulatorio' | 'Internado' | 'Egresado'
   numeroHabitacion: string | null
   ultimaVisita: string | null
   telefono: string | null
+  tipoTelefono: string | null
   direccion: string | null
-  // Ubicación estructurada (localidad → provincia)
+  numeroDireccion: number | null
+  piso: number | null
+  tipoResidencia: string | null
   idLocalidad: number | null
   nombreLocalidad: string | null
   idProvincia: number | null
   nombreProvincia: string | null
-  // Contacto de emergencia
-  contactoEmergenciaNombre: string | null
-  contactoEmergenciaTelefono: string | null
-  contactoEmergenciaParentesco: string | null
+  contactosEmergencia: EmergencyContact[]
 }
 
 export interface PatientRequest {
@@ -38,15 +46,19 @@ export interface PatientRequest {
   alergias: string[]
   enfermedadesCronicas: string[]
   antecedentesFamiliares: string[]
+  antecedentesText: string
   telefono: string
+  tipoTelefono: string
   direccion: string
+  numeroDireccion: number | ''
+  piso: number | ''
+  tipoResidencia: string
   idLocalidad: number | ''
-  contactoEmergenciaNombre: string
-  contactoEmergenciaTelefono: string
-  contactoEmergenciaParentesco: string
+  contactosEmergencia: EmergencyContact[]
   idObraSocial: number | ''
   nombreObraSocial: string
   nroAfiliado: string
+  fechaVencimientoAfiliacion: string
 }
 
 export const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const

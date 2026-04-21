@@ -18,6 +18,32 @@ public interface PacienteRepository extends JpaRepository<Paciente, Integer> {
 
     boolean existsByDniAndIdPacienteNot(Integer dni, Integer idPaciente);
 
+    @Query("""
+        SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END 
+        FROM Paciente p
+        JOIN p.afiliacion a
+        WHERE a.numeroAfiliado = :nroAfiliado
+        AND a.obraSocial.idObraSocial = :idObraSocial
+        AND p.deletedAt IS NULL
+        AND (:excluirId IS NULL OR p.idPaciente != :excluirId)
+    """)
+    boolean existsByAfiliacionAndObraSocialId(@Param("nroAfiliado") String nroAfiliado, 
+                                              @Param("idObraSocial") Integer idObraSocial, 
+                                              @Param("excluirId") Integer excluirId);
+
+    @Query("""
+        SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END 
+        FROM Paciente p
+        JOIN p.afiliacion a
+        WHERE a.numeroAfiliado = :nroAfiliado
+        AND LOWER(a.obraSocial.nombreObra) = LOWER(:nombreObra)
+        AND p.deletedAt IS NULL
+        AND (:excluirId IS NULL OR p.idPaciente != :excluirId)
+    """)
+    boolean existsByAfiliacionAndObraSocialNombre(@Param("nroAfiliado") String nroAfiliado, 
+                                                  @Param("nombreObra") String nombreObra, 
+                                                  @Param("excluirId") Integer excluirId);
+
     @Query(value = """
         SELECT
             p.id_paciente          AS idPaciente,

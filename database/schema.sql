@@ -82,7 +82,7 @@ CREATE TABLE afiliacion_obra_social (
   fecha_baja DATE,
   id_obra_social INT NOT NULL,
   CONSTRAINT fk_afiliacion_obra_social FOREIGN KEY (id_obra_social) REFERENCES obra_social(id_obra_social),
-  CONSTRAINT uq_numero_afiliado UNIQUE (numero_afiliado)
+  CONSTRAINT uq_numero_afiliado_obra_social UNIQUE (numero_afiliado, id_obra_social)
 );
 
 -- ============================================================

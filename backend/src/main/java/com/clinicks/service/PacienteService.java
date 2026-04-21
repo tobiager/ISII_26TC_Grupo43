@@ -20,4 +20,8 @@ public interface PacienteService {
     void deletePaciente(Integer id);
 
     void restaurarPaciente(Integer id);
+
+    boolean existeDni(Integer dni, Integer excluirId);
+
+    boolean existeAfiliado(String nroAfiliado, Integer idObraSocial, String nombreObraSocial, Integer excluirId);
 }

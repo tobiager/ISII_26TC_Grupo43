@@ -25,6 +25,11 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.CONFLICT, ex.getMessage());
     }
 
+    @ExceptionHandler(AfiliadoDuplicadoException.class)
+    public ResponseEntity<Map<String, Object>> handleAfiliadoDuplicado(AfiliadoDuplicadoException ex) {
+        return buildError(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, Object>> handleDataIntegrity(DataIntegrityViolationException ex) {
         String mensaje = resolverMensajeConstraint(ex);

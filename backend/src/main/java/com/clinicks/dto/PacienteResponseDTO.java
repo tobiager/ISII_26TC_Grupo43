@@ -22,24 +22,28 @@ public class PacienteResponseDTO {
     private List<String> alergias;
     private List<String> enfermedadesCronicas;
     private List<String> antecedentesFamiliares;
+    private String antecedentesText;
 
     private String obraSocial;
     private Integer idObraSocial;
     private String nroAfiliado;
+    private LocalDate fechaVencimientoAfiliacion;
 
     private String estado;
     private String numeroHabitacion;
     private LocalDate ultimaVisita;
 
     private String telefono;
+    private String tipoTelefono;
     private String direccion;
+    private Integer numeroDireccion;
+    private Integer piso;
+    private String tipoResidencia;
 
     private Integer idLocalidad;
     private String nombreLocalidad;
     private Integer idProvincia;
     private String nombreProvincia;
 
-    private String contactoEmergenciaNombre;
-    private String contactoEmergenciaTelefono;
-    private String contactoEmergenciaParentesco;
+    private List<ContactoEmergenciaDTO> contactosEmergencia;
 }
