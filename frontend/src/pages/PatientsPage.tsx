@@ -9,6 +9,7 @@ import PatientForm from '../components/PatientForm'
 import PatientTable from '../components/PatientTable'
 import PatientDetailModal from '../components/PatientDetailModal'
 import StatCard from '../components/StatCard'
+import FeatureInProgress from '../components/FeatureInProgress'
 import { patientService } from '../services/patientService'
 import { locationService, type AdminUser } from '../services/locationService'
 import type { Patient, PatientRequest } from '../types/patient'
@@ -177,10 +178,12 @@ export default function PatientsPage() {
               <Users size={15} />
               Pacientes
             </button>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors">
-              <BedDouble size={15} />
-              Habitaciones
-            </button>
+            <FeatureInProgress featureName="camas">
+              <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors">
+                <BedDouble size={15} />
+                Habitaciones
+              </button>
+            </FeatureInProgress>
           </nav>
         </div>
         <div className="flex items-center gap-3">
@@ -193,9 +196,11 @@ export default function PatientsPage() {
             </p>
             <p className="text-xs text-gray-500">{adminUser?.rol ?? ''}</p>
           </div>
-          <button className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors ml-1">
-            <LogOut size={16} />
-          </button>
+          <FeatureInProgress featureName="cerrar sesión">
+            <button className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors ml-1">
+              <LogOut size={16} />
+            </button>
+          </FeatureInProgress>
         </div>
       </header>
 
