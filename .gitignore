@@ -23,3 +23,6 @@ Thumbs.db
 
 #db diagram
 *.diagram
+
+.env
+backend/src/main/resources/application.yml
