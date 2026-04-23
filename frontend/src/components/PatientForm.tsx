@@ -8,8 +8,9 @@ import { BLOOD_TYPES } from '../types/patient'
 import { locationService, type Provincia, type Localidad, type ObraSocial } from '../services/locationService'
 import { patientService } from '../services/patientService'
 import {
-  patientSchema, TELEFONO_REGEX,
+  patientSchema, TELEFONO_REGEX, SOLO_LETRAS,
   CONTACT_NOMBRE_MAX, CONTACT_PARENTESCO_MAX, CONTACT_TELEFONO_MAX,
+  normalizarTelefono, esTelefonoArgentinoValido,
 } from '../validations/patientSchema'
 import type { PatientFormValues } from '../validations/patientSchema'
 
@@ -45,7 +46,7 @@ function blockInvalidPhone(e: React.KeyboardEvent<HTMLInputElement>) {
 
 function blockInvalidAfiliado(e: React.KeyboardEvent<HTMLInputElement>) {
   if (e.ctrlKey || e.metaKey) return
-  if (!ALLOWED_KEYS.includes(e.key) && !/^[a-zA-Z0-9\s\-/.]$/.test(e.key)) e.preventDefault()
+  if (!ALLOWED_KEYS.includes(e.key) && !/^[a-zA-Z0-9]$/.test(e.key)) e.preventDefault()
 }
 
 function blockNonLetters(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -102,21 +103,38 @@ function UniqueHint({ text }: { text: string }) {
 
 // ─── Validación de contactos de emergencia ────────────────────────────────────
 
-function validateContactos(list: EmergencyContact[]): Record<string, string> {
+function validateContactos(list: EmergencyContact[], patientPhone: string): Record<string, string> {
   const errs: Record<string, string> = {}
+  const patientNorm = normalizarTelefono(patientPhone)
+  const seenPhones = new Set<string>()
+
   list.forEach((c, i) => {
     if (!c.nombre.trim()) {
       errs[`${i}_nombre`] = 'El nombre es obligatorio'
+    } else if (!SOLO_LETRAS.test(c.nombre.trim())) {
+      errs[`${i}_nombre`] = 'Solo se permiten letras y espacios'
     } else if (c.nombre.trim().length > CONTACT_NOMBRE_MAX) {
       errs[`${i}_nombre`] = `Máximo ${CONTACT_NOMBRE_MAX} caracteres`
     }
+
     if (!c.telefono.trim()) {
       errs[`${i}_telefono`] = 'El teléfono es obligatorio'
     } else if (c.telefono.trim().length > CONTACT_TELEFONO_MAX) {
       errs[`${i}_telefono`] = `Máximo ${CONTACT_TELEFONO_MAX} caracteres`
     } else if (!TELEFONO_REGEX.test(c.telefono)) {
       errs[`${i}_telefono`] = 'Solo números, espacios, guiones o paréntesis'
+    } else if (!esTelefonoArgentinoValido(c.telefono)) {
+      errs[`${i}_telefono`] = 'Formato argentino inválido (ej: 1123456789 ó 5491123456789)'
+    } else {
+      const norm = normalizarTelefono(c.telefono)
+      if (patientNorm && norm === patientNorm) {
+        errs[`${i}_telefono`] = 'No puede ser igual al teléfono del paciente'
+      } else if (seenPhones.has(norm)) {
+        errs[`${i}_telefono`] = 'Este número ya figura en otro contacto de emergencia'
+      }
+      seenPhones.add(norm)
     }
+
     if (!c.parentesco.trim()) {
       errs[`${i}_parentesco`] = 'El parentesco es obligatorio'
     } else if (c.parentesco.trim().length > CONTACT_PARENTESCO_MAX) {
@@ -177,6 +195,7 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
   const nombreObraSocialWatch = watch('nombreObraSocial')
   const nroAfiliadoWatch = watch('nroAfiliado')
   const dniWatch = watch('dni')
+  const telefonoWatch = watch('telefono')
 
   // ── Carga inicial de provincias y obras sociales ─────────────────────────────
 
@@ -338,8 +357,18 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
     const key = `${idx}_${field}`
     setContactosErr(prev => {
       const next = { ...prev }
-      if (field === 'telefono' && value && !TELEFONO_REGEX.test(value)) {
-        next[key] = 'Solo números, espacios, guiones o paréntesis'
+      if (field === 'telefono') {
+        const norm = normalizarTelefono(value)
+        const patientNorm = normalizarTelefono(telefonoWatch ?? '')
+        if (value && !TELEFONO_REGEX.test(value)) {
+          next[key] = 'Solo números, espacios, guiones o paréntesis'
+        } else if (value && !esTelefonoArgentinoValido(value)) {
+          next[key] = 'Formato argentino inválido (ej: 1123456789)'
+        } else if (value && patientNorm && norm === patientNorm) {
+          next[key] = 'No puede ser igual al teléfono del paciente'
+        } else {
+          delete next[key]
+        }
       } else {
         delete next[key]
       }
@@ -369,7 +398,7 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
   }
 
   const handleFormSubmit = (data: PatientFormValues) => {
-    const contactErrors = validateContactos(contactos)
+    const contactErrors = validateContactos(contactos, data.telefono ?? '')
 
     if (Object.keys(contactErrors).length > 0) {
       setContactosErr(contactErrors)
@@ -830,7 +859,7 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
                   {...register('nroAfiliado')}
                   onBlur={handleAfiliadoBlur}
                   onKeyDown={blockInvalidAfiliado}
-                  maxLength={50}
+                  maxLength={20}
                   className={inputCls(!!(errors.nroAfiliado || afiliadoExists))}
                   placeholder="OSDE-001234"
                 />
