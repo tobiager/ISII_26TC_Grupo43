@@ -7,17 +7,17 @@ import java.util.List;
 
 public interface PacienteService {
 
-    List<PacienteResponseDTO> getAllPacientes();
+    List<PacienteResponseDTO> obtenerTodosLosPacientes();
 
-    List<PacienteResponseDTO> getDeletedPacientes();
+    List<PacienteResponseDTO> obtenerPacientesEliminados();
 
-    PacienteResponseDTO getPacienteById(Integer id);
+    PacienteResponseDTO obtenerPacientePorId(Integer id);
 
-    PacienteResponseDTO createPaciente(PacienteRequestDTO dto);
+    PacienteResponseDTO crearPaciente(PacienteRequestDTO dto);
 
-    PacienteResponseDTO updatePaciente(Integer id, PacienteRequestDTO dto);
+    PacienteResponseDTO actualizarPaciente(Integer id, PacienteRequestDTO dto);
 
-    void deletePaciente(Integer id);
+    void eliminarPaciente(Integer id);
 
     void restaurarPaciente(Integer id);
 

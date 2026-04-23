@@ -13,31 +13,31 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestControllerAdvice
-public class GlobalExceptionHandler {
+public class ManejadorGlobalDeExcepciones {
 
-    @ExceptionHandler(PacienteNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleNotFound(PacienteNotFoundException ex) {
-        return buildError(HttpStatus.NOT_FOUND, ex.getMessage());
+    @ExceptionHandler(PacienteNoEncontradoException.class)
+    public ResponseEntity<Map<String, Object>> manejarNoEncontrado(PacienteNoEncontradoException ex) {
+        return construirError(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
     @ExceptionHandler(DniDuplicadoException.class)
-    public ResponseEntity<Map<String, Object>> handleDniDuplicado(DniDuplicadoException ex) {
-        return buildError(HttpStatus.CONFLICT, ex.getMessage());
+    public ResponseEntity<Map<String, Object>> manejarDniDuplicado(DniDuplicadoException ex) {
+        return construirError(HttpStatus.CONFLICT, ex.getMessage());
     }
 
     @ExceptionHandler(AfiliadoDuplicadoException.class)
-    public ResponseEntity<Map<String, Object>> handleAfiliadoDuplicado(AfiliadoDuplicadoException ex) {
-        return buildError(HttpStatus.CONFLICT, ex.getMessage());
+    public ResponseEntity<Map<String, Object>> manejarAfiliadoDuplicado(AfiliadoDuplicadoException ex) {
+        return construirError(HttpStatus.CONFLICT, ex.getMessage());
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<Map<String, Object>> handleDataIntegrity(DataIntegrityViolationException ex) {
+    public ResponseEntity<Map<String, Object>> manejarIntegridadDeDatos(DataIntegrityViolationException ex) {
         String mensaje = resolverMensajeConstraint(ex);
-        return buildError(HttpStatus.CONFLICT, mensaje);
+        return construirError(HttpStatus.CONFLICT, mensaje);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
+    public ResponseEntity<Map<String, Object>> manejarValidacion(MethodArgumentNotValidException ex) {
         Map<String, String> errores = new HashMap<>();
         for (FieldError error : ex.getBindingResult().getFieldErrors()) {
             errores.put(error.getField(), error.getDefaultMessage());
@@ -51,8 +51,8 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
-        return buildError(HttpStatus.INTERNAL_SERVER_ERROR, "Ocurrió un error inesperado. Por favor intente nuevamente.");
+    public ResponseEntity<Map<String, Object>> manejarGenerico(Exception ex) {
+        return construirError(HttpStatus.INTERNAL_SERVER_ERROR, "Ocurrió un error inesperado. Por favor intente nuevamente.");
     }
 
     // ─── HELPERS ───────────────────────────────────────────────────────────────
@@ -76,7 +76,7 @@ public class GlobalExceptionHandler {
         return "Error de integridad en los datos ingresados. Verifique que no existan valores duplicados.";
     }
 
-    private ResponseEntity<Map<String, Object>> buildError(HttpStatus status, String message) {
+    private ResponseEntity<Map<String, Object>> construirError(HttpStatus status, String message) {
         Map<String, Object> body = new HashMap<>();
         body.put("timestamp", LocalDateTime.now().toString());
         body.put("status", status.value());

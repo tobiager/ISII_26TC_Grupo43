@@ -13,9 +13,10 @@ import java.util.List;
 @Repository
 public interface ContactoEmergenciaRepository extends JpaRepository<ContactoEmergencia, Integer> {
 
-    List<ContactoEmergencia> findByPaciente(Paciente paciente);
+    @org.springframework.data.jpa.repository.Query("SELECT c FROM ContactoEmergencia c WHERE c.paciente = :paciente")
+    List<ContactoEmergencia> encontrarPorPaciente(@org.springframework.data.repository.query.Param("paciente") Paciente paciente);
 
-    @Modifying
-    @Query("DELETE FROM ContactoEmergencia c WHERE c.paciente = :paciente")
-    void deleteAllByPaciente(@Param("paciente") Paciente paciente);
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("DELETE FROM ContactoEmergencia c WHERE c.paciente = :paciente")
+    void eliminarTodosPorPaciente(@Param("paciente") Paciente paciente);
 }

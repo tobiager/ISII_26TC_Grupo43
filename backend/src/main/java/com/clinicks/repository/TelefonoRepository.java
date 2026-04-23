@@ -14,11 +14,13 @@ import java.util.Optional;
 @Repository
 public interface TelefonoRepository extends JpaRepository<Telefono, Integer> {
 
-    List<Telefono> findByPaciente(Paciente paciente);
+    @org.springframework.data.jpa.repository.Query("SELECT t FROM Telefono t WHERE t.paciente = :paciente")
+    List<Telefono> encontrarPorPaciente(@org.springframework.data.repository.query.Param("paciente") Paciente paciente);
 
-    Optional<Telefono> findByPacienteAndTipoTelefono(Paciente paciente, String tipoTelefono);
+    @org.springframework.data.jpa.repository.Query("SELECT t FROM Telefono t WHERE t.paciente = :paciente AND t.tipoTelefono = :tipoTelefono")
+    Optional<Telefono> encontrarPorPacienteYTipo(@org.springframework.data.repository.query.Param("paciente") Paciente paciente, @org.springframework.data.repository.query.Param("tipoTelefono") String tipoTelefono);
 
-    @Modifying
-    @Query("DELETE FROM Telefono t WHERE t.paciente = :paciente")
-    void deleteAllByPaciente(@Param("paciente") Paciente paciente);
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("DELETE FROM Telefono t WHERE t.paciente = :paciente")
+    void eliminarTodosPorPaciente(@Param("paciente") Paciente paciente);
 }

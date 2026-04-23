@@ -9,5 +9,6 @@ import java.util.Optional;
 @Repository
 public interface AlergiaRepository extends JpaRepository<Alergia, Integer> {
 
-    Optional<Alergia> findByNombreAlergiaIgnoreCase(String nombreAlergia);
+    @org.springframework.data.jpa.repository.Query("SELECT a FROM Alergia a WHERE LOWER(a.nombreAlergia) = LOWER(:nombreAlergia)")
+    Optional<Alergia> encontrarPorNombreIgnorandoMayusculas(@org.springframework.data.repository.query.Param("nombreAlergia") String nombreAlergia);
 }

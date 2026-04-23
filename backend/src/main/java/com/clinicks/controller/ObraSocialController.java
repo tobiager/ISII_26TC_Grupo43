@@ -18,7 +18,7 @@ public class ObraSocialController {
 
     // GET /api/obras-sociales — Lista todas las obras sociales
     @GetMapping
-    public ResponseEntity<List<Map<String, Object>>> getAll() {
+    public ResponseEntity<List<Map<String, Object>>> obtenerTodas() {
         List<Map<String, Object>> result = obraSocialRepository.findAll()
                 .stream()
                 .sorted((a, b) -> a.getNombreObra().compareToIgnoreCase(b.getNombreObra()))

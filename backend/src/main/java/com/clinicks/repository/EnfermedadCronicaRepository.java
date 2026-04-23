@@ -9,5 +9,6 @@ import java.util.Optional;
 @Repository
 public interface EnfermedadCronicaRepository extends JpaRepository<EnfermedadCronica, Integer> {
 
-    Optional<EnfermedadCronica> findByNombreEnfermedadIgnoreCase(String nombre);
+    @org.springframework.data.jpa.repository.Query("SELECT e FROM EnfermedadCronica e WHERE LOWER(e.nombreEnfermedad) = LOWER(:nombre)")
+    Optional<EnfermedadCronica> encontrarPorNombreIgnorandoMayusculas(@org.springframework.data.repository.query.Param("nombre") String nombre);
 }
