@@ -1,27 +1,56 @@
 import { z } from 'zod'
 
-// ─── Helpers de validación exportados ────────────────────────────────────────
+// ─── Normalización de teléfonos ───────────────────────────────────────────────
 
-/** Solo letras (incluyendo tildes y ñ), espacios, guiones y apóstrofes */
+/** Elimina todo carácter no numérico para comparar o validar teléfonos */
+export function normalizarTelefono(tel: string): string {
+  return tel.replace(/[^\d]/g, '')
+}
+
+/**
+ * Valida formato argentino tras normalización:
+ * - 10 dígitos: área sin 0 + número sin 15 (ej: 1123456789)
+ * - 12 dígitos: 54 + área + número (líneas fijas con código de país)
+ * - 13 dígitos: 549 + área + número (móvil con código de país)
+ * Retorna true si el campo está vacío (la obligatoriedad se controla por separado).
+ */
+export function esTelefonoArgentinoValido(tel: string): boolean {
+  if (!tel || !tel.trim()) return true
+  const d = normalizarTelefono(tel)
+  return /^(549\d{10}|54\d{10}|\d{10})$/.test(d)
+}
+
+// ─── Regexes exportados ───────────────────────────────────────────────────────
+
+/** Solo letras (con tildes y ñ), espacios, guiones y apóstrofes */
 export const SOLO_LETRAS = /^[a-záéíóúüñA-ZÁÉÍÓÚÜÑ\s''`-]+$/
 
-/** Teléfono: dígitos, espacios, guiones, paréntesis, +, punto */
+/** Nombre de obra social: letras (con tildes y ñ), números y espacios */
+export const NOMBRE_OS_REGEX = /^[a-záéíóúüñA-ZÁÉÍÓÚÜÑ0-9\s]+$/
+
+/** Teléfono: dígitos, espacios, guiones, paréntesis, + y punto */
 export const TELEFONO_REGEX = /^[\d\s\-()+.]+$/
 
-/** Nro. Afiliado: letras, dígitos, guiones, barras, puntos y espacios */
-export const NRO_AFILIADO_REGEX = /^[a-zA-Z0-9\s\-/.]+$/
+/** Nro. de Afiliado: estrictamente alfanumérico (sin espacios ni símbolos) */
+export const NRO_AFILIADO_REGEX = /^[a-zA-Z0-9]+$/
+
+/** Calle: letras (con tildes), números, espacios y puntuación de dirección */
+export const CALLE_REGEX = /^[a-záéíóúüñA-ZÁÉÍÓÚÜÑ0-9\s.,\-#°]+$/
 
 /** Límites de longitud para campos de contactos de emergencia */
 export const CONTACT_NOMBRE_MAX = 200
 export const CONTACT_PARENTESCO_MAX = 100
 export const CONTACT_TELEFONO_MAX = 25
 
+// ─── Helper interno ───────────────────────────────────────────────────────────
+
+/** Retorna true si hay 5 o más caracteres consecutivos iguales */
+function tieneRepeticion(s: string): boolean {
+  return /(.)\1{4,}/.test(s)
+}
+
 // ─── Coerciones para campos numéricos opcionales ─────────────────────────────
 
-/**
- * Convierte '' / null / undefined → undefined antes de validar.
- * Úsalo en campos numéricos opcionales (piso, idProvincia).
- */
 const optionalInt = z.preprocess(
   (v) => (v === '' || v == null) ? undefined : Number(v),
   z.number().int().min(0).optional(),
@@ -63,6 +92,15 @@ export const patientSchema = z
       .refine(
         (d) => !!d && new Date(d) < new Date(),
         'La fecha no puede ser igual o posterior a hoy',
+      )
+      .refine(
+        (d) => {
+          if (!d) return true;
+          const limitDate = new Date();
+          limitDate.setFullYear(limitDate.getFullYear() - 150);
+          return new Date(d) >= limitDate;
+        },
+        'La edad debe ser realista (máximo 150 años)',
       ),
 
     tipoSangre: z.enum(
@@ -77,6 +115,10 @@ export const patientSchema = z
       .refine(
         (v) => v === '' || TELEFONO_REGEX.test(v),
         'Formato inválido — solo números, espacios, guiones o paréntesis',
+      )
+      .refine(
+        (v) => esTelefonoArgentinoValido(v),
+        'Ingresá un número argentino válido (ej: 1123456789 ó 5491123456789)',
       ),
 
     tipoTelefono: z.enum(
@@ -84,11 +126,12 @@ export const patientSchema = z
       { error: 'Seleccioná un tipo de teléfono válido' },
     ),
 
-    // ── Dirección (campos obligatorios) ───────────────────────────────────────
+    // ── Dirección ─────────────────────────────────────────────────────────────
     direccion: z
       .string()
       .min(1, 'La calle es obligatoria')
-      .max(200, 'Máximo 200 caracteres'),
+      .max(200, 'Máximo 200 caracteres')
+      .regex(CALLE_REGEX, 'La calle solo puede contener letras, números y caracteres de dirección comunes'),
 
     /**
      * '' → 0 → falla min(1) → "El número de domicilio es obligatorio"
@@ -131,10 +174,14 @@ export const patientSchema = z
 
     nroAfiliado: z
       .string()
-      .max(50, 'Máximo 50 caracteres')
+      .max(20, 'Máximo 20 caracteres')
       .refine(
         (v) => v === '' || NRO_AFILIADO_REGEX.test(v),
-        'Solo se permiten letras, números, guiones, barras y espacios',
+        'Solo letras y números — sin espacios ni símbolos',
+      )
+      .refine(
+        (v) => !tieneRepeticion(v),
+        'El Nro. de Afiliado no puede contener secuencias de caracteres repetidos',
       )
       .default(''),
 
@@ -150,25 +197,36 @@ export const patientSchema = z
     antecedentesText: z.string().max(2000, 'Máximo 2000 caracteres').default(''),
   })
 
-  // ── Validaciones cruzadas (obra social) ────────────────────────────────────
+  // ── Validaciones cruzadas ─────────────────────────────────────────────────
   .superRefine((data, ctx) => {
-    const tieneOSExistente =
-      data.idObraSocial !== '' && data.idObraSocial !== 'nueva'
+    const tieneOS = data.idObraSocial !== ''
+    const esNuevaOS = data.idObraSocial === 'nueva'
 
-    if (tieneOSExistente && !data.nroAfiliado.trim()) {
+    // 1. Si hay cualquier obra social (existente o nueva), el Nro. de Afiliado es obligatorio
+    if (tieneOS && !data.nroAfiliado.trim()) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'El número de afiliado es obligatorio al seleccionar una obra social',
+        code: 'custom',
+        message: 'El número de afiliado es obligatorio',
         path: ['nroAfiliado'],
       })
     }
 
-    if (data.idObraSocial === 'nueva' && !data.nombreObraSocial.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Ingresá el nombre de la obra social',
-        path: ['nombreObraSocial'],
-      })
+    // 2. Si la obra social es "nueva", validar nombre
+    if (esNuevaOS) {
+      const nombreLimpio = data.nombreObraSocial.trim()
+      if (!nombreLimpio) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Ingresá el nombre de la obra social',
+          path: ['nombreObraSocial'],
+        })
+      } else if (!NOMBRE_OS_REGEX.test(nombreLimpio)) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'El nombre solo puede contener letras, números y espacios — sin símbolos',
+          path: ['nombreObraSocial'],
+        })
+      }
     }
   })
 
