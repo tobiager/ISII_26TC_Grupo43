@@ -25,8 +25,8 @@ export function esTelefonoArgentinoValido(tel: string): boolean {
 /** Solo letras (con tildes y ñ), espacios, guiones y apóstrofes */
 export const SOLO_LETRAS = /^[a-záéíóúüñA-ZÁÉÍÓÚÜÑ\s''`-]+$/
 
-/** Nombre de obra social: letras (con tildes y ñ), números y espacios */
-export const NOMBRE_OS_REGEX = /^[a-záéíóúüñA-ZÁÉÍÓÚÜÑ0-9\s]+$/
+/** Nombre de obra social: solo letras (con tildes y ñ) y espacios — sin números ni símbolos */
+export const NOMBRE_OS_REGEX = /^[a-záéíóúüñA-ZÁÉÍÓÚÜÑ\s]+$/
 
 /** Teléfono: dígitos, espacios, guiones, paréntesis, + y punto */
 export const TELEFONO_REGEX = /^[\d\s\-()+.]+$/
@@ -51,9 +51,14 @@ function tieneRepeticion(s: string): boolean {
 
 // ─── Coerciones para campos numéricos opcionales ─────────────────────────────
 
-const optionalInt = z.preprocess(
+/**
+ * Piso: opcional, pero si se provee debe ser un entero positivo (>= 1).
+ * '' o null → undefined (ausente)
+ * 0, -1, etc. → falla min(1)
+ */
+const pisoOpcional = z.preprocess(
   (v) => (v === '' || v == null) ? undefined : Number(v),
-  z.number().int().min(0).optional(),
+  z.number().int().min(1, 'El piso debe ser un número positivo').optional(),
 )
 
 // ─── Esquema de validación del formulario de paciente ────────────────────────
@@ -90,7 +95,7 @@ export const patientSchema = z
       .string()
       .min(1, 'La fecha de nacimiento es obligatoria')
       .refine(
-        (d) => !!d && new Date(d) < new Date(),
+        (d) => !!d && new Date(d) < new Date(new Date().toISOString().split('T')[0]),
         'La fecha no puede ser igual o posterior a hoy',
       )
       .refine(
@@ -141,8 +146,8 @@ export const patientSchema = z
       .int('El número de domicilio debe ser un entero')
       .min(1, 'El número de domicilio es obligatorio'),
 
-    /** Piso opcional: '' → undefined */
-    piso: optionalInt,
+    /** Piso opcional: '' → undefined. Si se ingresa debe ser >= 1. */
+    piso: pisoOpcional,
 
     tipoResidencia: z.enum(
       ['permanente', 'transitorio'] as const,
@@ -185,11 +190,15 @@ export const patientSchema = z
       )
       .default(''),
 
+    /**
+     * La fecha de alta se registra hoy en el backend, por lo que la fecha de
+     * vencimiento debe ser estrictamente posterior (mañana como mínimo).
+     */
     fechaVencimientoAfiliacion: z
       .string()
       .refine(
-        (v) => !v || new Date(v) >= new Date(new Date().toISOString().split('T')[0]),
-        'La fecha de vencimiento no puede ser anterior a hoy',
+        (v) => !v || new Date(v) > new Date(new Date().toISOString().split('T')[0]),
+        'La fecha de vencimiento debe ser posterior a la fecha de hoy',
       )
       .default(''),
 
@@ -223,7 +232,7 @@ export const patientSchema = z
       } else if (!NOMBRE_OS_REGEX.test(nombreLimpio)) {
         ctx.addIssue({
           code: 'custom',
-          message: 'El nombre solo puede contener letras, números y espacios — sin símbolos',
+          message: 'El nombre de la obra social solo puede contener letras y espacios — sin números ni símbolos',
           path: ['nombreObraSocial'],
         })
       }

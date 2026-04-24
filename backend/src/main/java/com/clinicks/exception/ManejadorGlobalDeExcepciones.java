@@ -30,6 +30,11 @@ public class ManejadorGlobalDeExcepciones {
         return construirError(HttpStatus.CONFLICT, ex.getMessage());
     }
 
+    @ExceptionHandler(TelefonoDuplicadoException.class)
+    public ResponseEntity<Map<String, Object>> manejarTelefonoDuplicado(TelefonoDuplicadoException ex) {
+        return construirError(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, Object>> manejarIntegridadDeDatos(DataIntegrityViolationException ex) {
         String mensaje = resolverMensajeConstraint(ex);

@@ -23,4 +23,10 @@ public interface TelefonoRepository extends JpaRepository<Telefono, Integer> {
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.data.jpa.repository.Query("DELETE FROM Telefono t WHERE t.paciente = :paciente")
     void eliminarTodosPorPaciente(@Param("paciente") Paciente paciente);
+
+    @Query("SELECT CASE WHEN COUNT(t) > 0 THEN true ELSE false END FROM Telefono t WHERE t.numeroTelefono = :numero")
+    boolean existePorNumero(@Param("numero") String numero);
+
+    @Query("SELECT CASE WHEN COUNT(t) > 0 THEN true ELSE false END FROM Telefono t WHERE t.numeroTelefono = :numero AND t.paciente.idPaciente != :idPaciente")
+    boolean existePorNumeroEnOtroPaciente(@Param("numero") String numero, @Param("idPaciente") Integer idPaciente);
 }

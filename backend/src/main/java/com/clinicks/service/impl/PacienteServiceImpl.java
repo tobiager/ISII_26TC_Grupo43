@@ -3,8 +3,10 @@ package com.clinicks.service.impl;
 import com.clinicks.dto.ContactoEmergenciaDTO;
 import com.clinicks.dto.PacienteRequestDTO;
 import com.clinicks.dto.PacienteResponseDTO;
+import com.clinicks.exception.AfiliadoDuplicadoException;
 import com.clinicks.exception.DniDuplicadoException;
 import com.clinicks.exception.PacienteNoEncontradoException;
+import com.clinicks.exception.TelefonoDuplicadoException;
 import com.clinicks.model.*;
 import com.clinicks.repository.*;
 import com.clinicks.service.PacienteService;
@@ -19,7 +21,9 @@ import java.time.OffsetDateTime;
 import java.time.Period;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -77,7 +81,7 @@ public class PacienteServiceImpl implements PacienteService {
     @Transactional(readOnly = true)
     public boolean existeAfiliado(String nroAfiliado, Integer idObraSocial, String nombreObraSocial, Integer excluirId) {
         if (!StringUtils.hasText(nroAfiliado)) return false;
-        
+
         if (idObraSocial != null) {
             return pacienteRepository.existePorAfiliacionYObraSocialId(nroAfiliado, idObraSocial, excluirId);
         } else if (StringUtils.hasText(nombreObraSocial)) {
@@ -88,7 +92,7 @@ public class PacienteServiceImpl implements PacienteService {
 
     private void validarAfiliadoUnico(PacienteRequestDTO dto, Integer idExcluir) {
         if (existeAfiliado(dto.getNroAfiliado(), dto.getIdObraSocial(), dto.getNombreObraSocial(), idExcluir)) {
-            throw new com.clinicks.exception.AfiliadoDuplicadoException(dto.getNroAfiliado());
+            throw new AfiliadoDuplicadoException(dto.getNroAfiliado());
         }
     }
 
@@ -102,10 +106,11 @@ public class PacienteServiceImpl implements PacienteService {
         }
 
         validarAfiliadoUnico(dto, null);
+        validarTelefonosSolicitud(dto.getTelefono(), dto.getContactosEmergencia(), null);
 
         Persona persona = Persona.builder()
-                .nombrePersona(dto.getNombre().trim())
-                .apellidoPersona(dto.getApellido().trim())
+                .nombrePersona(capitalizarNombre(dto.getNombre()))
+                .apellidoPersona(capitalizarNombre(dto.getApellido()))
                 .fechaNacimiento(dto.getFechaNacimiento().atStartOfDay())
                 .build();
 
@@ -151,7 +156,6 @@ public class PacienteServiceImpl implements PacienteService {
         guardarTelefono(saved, dto.getTelefono(), dto.getTipoTelefono());
         guardarContactosEmergencia(saved, dto.getContactosEmergencia());
 
-        // Inicializar historial médico automáticamente al crear paciente
         if (!historialMedicoRepository.existePorPaciente(saved)) {
             historialMedicoRepository.save(HistorialMedico.builder()
                     .paciente(saved)
@@ -176,13 +180,14 @@ public class PacienteServiceImpl implements PacienteService {
         }
 
         validarAfiliadoUnico(dto, id);
+        validarTelefonosSolicitud(dto.getTelefono(), dto.getContactosEmergencia(), id);
 
         Persona persona = paciente.getPersona();
         if (StringUtils.hasText(dto.getNombre())) {
-            persona.setNombrePersona(dto.getNombre().trim());
+            persona.setNombrePersona(capitalizarNombre(dto.getNombre()));
         }
         if (StringUtils.hasText(dto.getApellido())) {
-            persona.setApellidoPersona(dto.getApellido().trim());
+            persona.setApellidoPersona(capitalizarNombre(dto.getApellido()));
         }
         if (dto.getFechaNacimiento() != null) {
             persona.setFechaNacimiento(dto.getFechaNacimiento().atStartOfDay());
@@ -257,6 +262,63 @@ public class PacienteServiceImpl implements PacienteService {
     private Paciente obtenerPacienteActivo(Integer id) {
         return pacienteRepository.encontrarPacienteActivoPorId(id)
                 .orElseThrow(() -> new PacienteNoEncontradoException(id));
+    }
+
+    /**
+     * Capitalizes the first letter of each word and lowercases the rest.
+     * e.g. "JUAN carlos" → "Juan Carlos"
+     */
+    private String capitalizarNombre(String s) {
+        if (!StringUtils.hasText(s)) return s;
+        return Arrays.stream(s.trim().split("\\s+"))
+                .filter(w -> !w.isEmpty())
+                .map(w -> Character.toUpperCase(w.charAt(0)) + w.substring(1).toLowerCase())
+                .collect(Collectors.joining(" "));
+    }
+
+    /**
+     * Validates that a single phone number does not exist in the Telefono or
+     * ContactoEmergencia tables for any patient other than {@code excluirPacienteId}.
+     */
+    private void validarTelefonoUnico(String numero, Integer excluirPacienteId) {
+        boolean enTelefono = excluirPacienteId != null
+                ? telefonoRepository.existePorNumeroEnOtroPaciente(numero, excluirPacienteId)
+                : telefonoRepository.existePorNumero(numero);
+
+        boolean enContacto = excluirPacienteId != null
+                ? contactoEmergenciaRepository.existePorTelefonoEnOtroPaciente(numero, excluirPacienteId)
+                : contactoEmergenciaRepository.existePorTelefono(numero);
+
+        if (enTelefono || enContacto) {
+            throw new TelefonoDuplicadoException(numero);
+        }
+    }
+
+    /**
+     * Validates uniqueness for all phones in a single request (personal phone
+     * + all emergency contact phones). Checks cross-table duplicates and
+     * duplicates within the same request.
+     */
+    private void validarTelefonosSolicitud(String telefono,
+                                           List<ContactoEmergenciaDTO> contactos,
+                                           Integer excluirPacienteId) {
+        Set<String> vistos = new HashSet<>();
+
+        if (StringUtils.hasText(telefono)) {
+            String t = telefono.trim();
+            vistos.add(t);
+            validarTelefonoUnico(t, excluirPacienteId);
+        }
+
+        if (contactos == null) return;
+        for (ContactoEmergenciaDTO c : contactos) {
+            if (!StringUtils.hasText(c.getTelefono())) continue;
+            String t = c.getTelefono().trim();
+            if (!vistos.add(t)) {
+                throw new TelefonoDuplicadoException(t);
+            }
+            validarTelefonoUnico(t, excluirPacienteId);
+        }
     }
 
     private void cargarAlergias(FichaMedica ficha, List<String> nombres) {

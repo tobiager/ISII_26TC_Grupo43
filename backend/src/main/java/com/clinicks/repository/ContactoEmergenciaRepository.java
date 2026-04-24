@@ -19,4 +19,10 @@ public interface ContactoEmergenciaRepository extends JpaRepository<ContactoEmer
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.data.jpa.repository.Query("DELETE FROM ContactoEmergencia c WHERE c.paciente = :paciente")
     void eliminarTodosPorPaciente(@Param("paciente") Paciente paciente);
+
+    @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END FROM ContactoEmergencia c WHERE c.telefonoCelular = :telefono")
+    boolean existePorTelefono(@Param("telefono") String telefono);
+
+    @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END FROM ContactoEmergencia c WHERE c.telefonoCelular = :telefono AND c.paciente.idPaciente != :idPaciente")
+    boolean existePorTelefonoEnOtroPaciente(@Param("telefono") String telefono, @Param("idPaciente") Integer idPaciente);
 }
