@@ -25,6 +25,9 @@ public class Usuario {
     @Column(name = "pass", nullable = false, length = 200)
     private String pass;
 
+    @Column(name = "autorizacion", length = 50)
+    private String autorizacion;
+
     @Column(name = "deleted_at", columnDefinition = "TIMESTAMP WITH TIME ZONE")
     private OffsetDateTime deletedAt;
 

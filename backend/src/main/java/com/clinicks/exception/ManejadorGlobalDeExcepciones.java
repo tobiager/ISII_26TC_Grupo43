@@ -3,6 +3,7 @@ package com.clinicks.exception;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -18,6 +19,36 @@ public class ManejadorGlobalDeExcepciones {
     @ExceptionHandler(PacienteNoEncontradoException.class)
     public ResponseEntity<Map<String, Object>> manejarNoEncontrado(PacienteNoEncontradoException ex) {
         return construirError(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    @ExceptionHandler(UsuarioNoEncontradoException.class)
+    public ResponseEntity<Map<String, Object>> manejarUsuarioNoEncontrado(UsuarioNoEncontradoException ex) {
+        return construirError(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    @ExceptionHandler(CredencialesInvalidasException.class)
+    public ResponseEntity<Map<String, Object>> manejarCredenciales(CredencialesInvalidasException ex) {
+        return construirError(HttpStatus.UNAUTHORIZED, ex.getMessage());
+    }
+
+    @ExceptionHandler(InvitacionInvalidaException.class)
+    public ResponseEntity<Map<String, Object>> manejarInvitacion(InvitacionInvalidaException ex) {
+        return construirError(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    @ExceptionHandler(UsuarioDuplicadoException.class)
+    public ResponseEntity<Map<String, Object>> manejarUsuarioDuplicado(UsuarioDuplicadoException ex) {
+        return construirError(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
+    @ExceptionHandler(RolNoEncontradoException.class)
+    public ResponseEntity<Map<String, Object>> manejarRolNoEncontrado(RolNoEncontradoException ex) {
+        return construirError(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> manejarAccesoNoAutorizado(AccessDeniedException ex) {
+        return construirError(HttpStatus.FORBIDDEN, "No tiene permisos para realizar esta acción.");
     }
 
     @ExceptionHandler(DniDuplicadoException.class)
@@ -74,6 +105,12 @@ public class ManejadorGlobalDeExcepciones {
         }
         if (msg.contains("uq_numero_afiliado") || msg.contains("numero_afiliado")) {
             return "El número de afiliado ya existe en el sistema.";
+        }
+        if (msg.contains("uq_usuario_email") || msg.contains("usuario_email")) {
+            return "El email ingresado ya está registrado en el sistema.";
+        }
+        if (msg.contains("uq_invitacion_token")) {
+            return "Ya existe una invitación con ese token. Intente nuevamente.";
         }
         if (msg.contains("not-null") || msg.contains("null value")) {
             return "Hay campos obligatorios sin completar.";
