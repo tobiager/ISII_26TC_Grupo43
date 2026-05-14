@@ -28,6 +28,10 @@ public class Usuario {
     @Column(name = "autorizacion", length = 50)
     private String autorizacion;
 
+    @Builder.Default
+    @Column(name = "must_change_password", nullable = false)
+    private boolean mustChangePassword = false;
+
     @Column(name = "deleted_at", columnDefinition = "TIMESTAMP WITH TIME ZONE")
     private OffsetDateTime deletedAt;
 

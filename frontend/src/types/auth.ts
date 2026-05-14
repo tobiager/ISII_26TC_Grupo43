@@ -9,6 +9,40 @@ export interface AuthUser {
   iniciales: string
   rol: Rol
   autorizacion: string | null
+  mustChangePassword?: boolean
+  esAdminProtegido?: boolean
+}
+
+export interface PerfilResponse {
+  idUsuario: number
+  email: string
+  nombre: string
+  apellido: string
+  rol: string
+  autorizacion: string | null
+  mustChangePassword: boolean
+  esAdminProtegido: boolean
+}
+
+export interface ResetPasswordResponse {
+  message: string
+  temporaryPassword: string
+}
+
+export interface CambiarPasswordRequest {
+  passwordActual: string
+  nuevaPassword: string
+}
+
+export interface CambiarEmailRequest {
+  nuevoEmail: string
+  passwordActual: string
+}
+
+export interface CambiarDatosBasicosRequest {
+  nombre: string
+  apellido: string
+  fechaNacimiento?: string
 }
 
 export interface LoginRequest {

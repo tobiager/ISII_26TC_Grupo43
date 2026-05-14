@@ -46,6 +46,11 @@ public class ManejadorGlobalDeExcepciones {
         return construirError(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
+    @ExceptionHandler(OperacionNoPermitidaException.class)
+    public ResponseEntity<Map<String, Object>> manejarOperacionNoPermitida(OperacionNoPermitidaException ex) {
+        return construirError(HttpStatus.FORBIDDEN, ex.getMessage());
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Map<String, Object>> manejarAccesoNoAutorizado(AccessDeniedException ex) {
         return construirError(HttpStatus.FORBIDDEN, "No tiene permisos para realizar esta acción.");

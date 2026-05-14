@@ -2,6 +2,7 @@ package com.clinicks.controller;
 
 import com.clinicks.dto.admin.AdminUsuarioDTO;
 import com.clinicks.dto.admin.CambiarRolRequestDTO;
+import com.clinicks.dto.admin.ResetPasswordResponseDTO;
 import com.clinicks.service.AdminService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -44,5 +45,11 @@ public class AdminController {
     @PatchMapping("/users/{id}/enable")
     public ResponseEntity<AdminUsuarioDTO> activarUsuario(@PathVariable Integer id) {
         return ResponseEntity.ok(adminService.activarUsuario(id));
+    }
+
+    // PATCH /api/admin/users/{id}/reset-password — resetea contraseña a temporal
+    @PatchMapping("/users/{id}/reset-password")
+    public ResponseEntity<ResetPasswordResponseDTO> resetearPassword(@PathVariable Integer id) {
+        return ResponseEntity.ok(adminService.resetearPassword(id));
     }
 }

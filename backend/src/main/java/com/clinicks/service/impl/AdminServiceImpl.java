@@ -1,7 +1,10 @@
 package com.clinicks.service.impl;
 
+import com.clinicks.config.AdminConstants;
 import com.clinicks.dto.admin.AdminUsuarioDTO;
 import com.clinicks.dto.admin.CambiarRolRequestDTO;
+import com.clinicks.dto.admin.ResetPasswordResponseDTO;
+import com.clinicks.exception.OperacionNoPermitidaException;
 import com.clinicks.exception.RolNoEncontradoException;
 import com.clinicks.exception.UsuarioNoEncontradoException;
 import com.clinicks.model.Rol;
@@ -10,6 +13,7 @@ import com.clinicks.repository.RolRepository;
 import com.clinicks.repository.UsuarioRepository;
 import com.clinicks.service.AdminService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +27,7 @@ public class AdminServiceImpl implements AdminService {
 
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public List<AdminUsuarioDTO> listarUsuarios() {
@@ -36,6 +41,13 @@ public class AdminServiceImpl implements AdminService {
     public AdminUsuarioDTO cambiarRol(Integer idUsuario, CambiarRolRequestDTO request) {
         Usuario usuario = usuarioRepository.findById(idUsuario)
                 .orElseThrow(() -> new UsuarioNoEncontradoException(idUsuario));
+
+        if (AdminConstants.EMAIL_ADMIN_PROTEGIDO.equals(usuario.getEmail())) {
+            throw new OperacionNoPermitidaException("No se puede modificar el rol del administrador principal.");
+        }
+        if (AdminConstants.ROL_ADMINISTRADOR.equals(request.getRol())) {
+            throw new OperacionNoPermitidaException("No se puede asignar el rol ADMINISTRADOR.");
+        }
 
         Rol nuevoRol = rolRepository.findByNombreRol(request.getRol())
                 .orElseThrow(() -> new RolNoEncontradoException(request.getRol()));
@@ -52,13 +64,8 @@ public class AdminServiceImpl implements AdminService {
         Usuario usuario = usuarioRepository.findById(idUsuario)
                 .orElseThrow(() -> new UsuarioNoEncontradoException(idUsuario));
 
-        // No permitir que el último administrador activo se desactive
-        if ("ADMINISTRADOR".equals(usuario.getRol().getNombreRol())) {
-            long totalAdmin = usuarioRepository.contarAdministradoresActivos();
-            if (totalAdmin <= 1) {
-                throw new RuntimeException(
-                        "No se puede desactivar al último administrador activo del sistema.");
-            }
+        if (AdminConstants.EMAIL_ADMIN_PROTEGIDO.equals(usuario.getEmail())) {
+            throw new OperacionNoPermitidaException("No se puede desactivar al administrador principal.");
         }
 
         usuario.setDeletedAt(OffsetDateTime.now());
@@ -77,6 +84,26 @@ public class AdminServiceImpl implements AdminService {
         usuarioRepository.save(usuario);
 
         return convertirAAdminUsuarioDTO(usuario);
+    }
+
+    @Override
+    @Transactional
+    public ResetPasswordResponseDTO resetearPassword(Integer idUsuario) {
+        Usuario usuario = usuarioRepository.findById(idUsuario)
+                .orElseThrow(() -> new UsuarioNoEncontradoException(idUsuario));
+
+        if (AdminConstants.EMAIL_ADMIN_PROTEGIDO.equals(usuario.getEmail())) {
+            throw new OperacionNoPermitidaException("No se puede resetear la contraseña del administrador principal.");
+        }
+
+        usuario.setPass(passwordEncoder.encode(AdminConstants.PASSWORD_TEMPORAL));
+        usuario.setMustChangePassword(true);
+        usuarioRepository.save(usuario);
+
+        return ResetPasswordResponseDTO.builder()
+                .message("Contraseña reseteada correctamente. El usuario debe cambiarla en su próximo inicio de sesión.")
+                .temporaryPassword(AdminConstants.PASSWORD_TEMPORAL)
+                .build();
     }
 
     // ─── HELPERS ────────────────────────────────────────────────────────────────

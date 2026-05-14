@@ -9,6 +9,7 @@ interface AuthContextType {
   login: (data: LoginRequest) => Promise<void>
   logout: () => void
   hasRole: (...roles: Rol[]) => boolean
+  updateUser: (user: AuthUser) => void
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -53,6 +54,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return roles.includes(user.rol)
   }
 
+  const updateUser = (updatedUser: AuthUser) => {
+    localStorage.setItem(USER_KEY, JSON.stringify(updatedUser))
+    setUser(updatedUser)
+  }
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -61,6 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       logout,
       hasRole,
+      updateUser,
     }}>
       {children}
     </AuthContext.Provider>

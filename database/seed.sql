@@ -95,10 +95,10 @@ INSERT INTO localidad (nombre_localidad, codigo_postal, id_provincia) VALUES
 
 -- ============================================================
 -- 3. ROLES Y OBRAS SOCIALES
--- Roles:        1=ADMIN, 2=MEDICO, 3=ENFERMERO
+-- Roles: 1=ADMINISTRADOR, 2=ADMINISTRATIVO, 3=MEDICO, 4=ENFERMERO
 -- Obras sociales: 1=OSDE, 2=Swiss Medical, 3=PAMI, 4=IOMA, 5=Galeno
 -- ============================================================
-INSERT INTO rol (nombre_rol) VALUES ('ADMIN'), ('MEDICO'), ('ENFERMERO');
+INSERT INTO rol (nombre_rol) VALUES ('ADMINISTRADOR'), ('ADMINISTRATIVO'), ('MEDICO'), ('ENFERMERO');
 INSERT INTO obra_social (nombre_obra) VALUES ('OSDE'), ('Swiss Medical'), ('PAMI'), ('IOMA'), ('Galeno');
 
 -- ============================================================
@@ -112,8 +112,8 @@ INSERT INTO enfermedad_cronica (nombre_enfermedad) VALUES ('Hipertensión arteri
 INSERT INTO antecedente_familiar (nombre_enfermedad) VALUES ('Diabetes tipo 2'), ('Hipertensión'), ('Cardiopatía'), ('Cáncer de colon'), ('Alzheimer');
 
 -- ============================================================
--- 5. PERSONAS (10 Pacientes + 2 Staff)
--- IDs resultantes: 1..12
+-- 5. PERSONAS (10 Pacientes + 3 Staff)
+-- IDs resultantes: 1..13
 --   1=Juan Pérez        (paciente)
 --   2=María García      (paciente)
 --   3=Ricardo Darín     (paciente)
@@ -124,8 +124,9 @@ INSERT INTO antecedente_familiar (nombre_enfermedad) VALUES ('Diabetes tipo 2'),
 --   8=Lali Espósito     (paciente)
 --   9=Duki Mauro        (paciente)
 --  10=Nicki Nicole      (paciente)
---  11=Claudia Medina    (staff/médico)
---  12=Roberto Admin     (staff/admin) ← usuario admin@hospital.com
+--  11=Claudia Medina    (staff/médico)    → claudia@hospital.com / MEDICO
+--  12=Roberto Admin     (staff/admin)     → admin@hospital.com   / ADMINISTRATIVO
+--  13=Admin Clinicks    (superadmin)      → admin@clinicks.com   / ADMINISTRADOR
 -- ============================================================
 INSERT INTO persona (nombre_persona, apellido_persona, fecha_nacimiento) VALUES
   ('Juan',     'Pérez',    '1980-01-01'),
@@ -139,7 +140,8 @@ INSERT INTO persona (nombre_persona, apellido_persona, fecha_nacimiento) VALUES
   ('Duki',     'Mauro',    '1996-06-24'),
   ('Nicki',    'Nicole',   '2000-08-25'),
   ('Claudia',  'Medina',   '1982-04-20'),
-  ('Roberto',  'Admin',    '1980-06-15');
+  ('Roberto',  'Admin',    '1980-06-15'),
+  ('Admin',    'Clinicks',  '1990-01-01');
 
 -- ============================================================
 -- 6. DOMICILIOS (10 para pacientes)
@@ -239,14 +241,18 @@ INSERT INTO ficha_antecedente_familiar (id_ficha_medica, id_antecedente_familiar
 
 -- ============================================================
 -- 12. USUARIOS
--- admin@hospital.com  → id_persona=12 (Roberto Admin),  rol=1 (ADMIN)
--- claudia@hospital.com → id_persona=11 (Claudia Medina), rol=2 (MEDICO)
--- NOTA: Sin Spring Security activo, 'pass' es texto plano comparado desde frontend.
---       Al implementar BCrypt, reemplazar estos valores por hashes correspondientes.
+-- admin@clinicks.com  → id_persona=13 (Admin Clinicks), rol=1 (ADMINISTRADOR) ← SUPERADMIN PROTEGIDO
+-- admin@hospital.com  → id_persona=12 (Roberto Admin),  rol=2 (ADMINISTRATIVO) ← dato de prueba
+-- claudia@hospital.com → id_persona=11 (Claudia Medina), rol=3 (MEDICO)       ← dato de prueba
+--
+-- Todos los usuarios de prueba usan la misma contraseña inicial: Admin123456
+-- Hash BCrypt (cost 10): $2a$10$GrSosoIMBYHEFVBQUQMEQ.tcaITI44c.eEUHY.Pvrps0WRHwW0T2K
+-- must_change_password=TRUE en los usuarios de prueba → deben cambiar al primer login.
 -- ============================================================
-INSERT INTO usuario (email, pass, id_rol, id_persona, autorizacion) VALUES
-  ('admin@hospital.com',   'hash_admin',  1, 12, 'FULL_ACCESS'),
-  ('claudia@hospital.com', 'hash_medico', 2, 11, 'READ_WRITE');
+INSERT INTO usuario (email, pass, autorizacion, id_rol, id_persona, must_change_password) VALUES
+  ('admin@clinicks.com',   '$2a$10$GrSosoIMBYHEFVBQUQMEQ.tcaITI44c.eEUHY.Pvrps0WRHwW0T2K', 'ACTIVO', 1, 13, FALSE),
+  ('admin@hospital.com',   '$2a$10$GrSosoIMBYHEFVBQUQMEQ.tcaITI44c.eEUHY.Pvrps0WRHwW0T2K', 'ACTIVO', 2, 12, TRUE),
+  ('claudia@hospital.com', '$2a$10$GrSosoIMBYHEFVBQUQMEQ.tcaITI44c.eEUHY.Pvrps0WRHwW0T2K', 'ACTIVO', 3, 11, TRUE);
 
 -- ============================================================
 -- 13. DATOS ADICIONALES DE SOPORTE
@@ -261,6 +267,11 @@ SET session_replication_role = DEFAULT;
 
 -- ============================================================
 -- VERIFICACIÓN RÁPIDA (descomentar para validar)
+-- Esperado: provincias=24, localidades=120, roles=4, obras=5,
+--           alergias=5, enf_cronicas=5, antecedentes=5,
+--           personas=13, domicilios=10, residencias=10,
+--           fichas=10, afiliaciones=10, pacientes=10,
+--           usuarios=3, habitaciones=3, tipo_proc=3
 -- ============================================================
 /*
 SELECT 'provincias'              AS tabla, COUNT(*) AS total FROM provincia

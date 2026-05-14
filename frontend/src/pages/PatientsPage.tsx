@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   Users, UserCheck, BedDouble, ClipboardList,
-  Search, ChevronDown, UserPlus, Stethoscope, LogOut, UserX, X, Eye, RotateCcw, Shield,
+  Search, ChevronDown, UserPlus, Stethoscope, UserX, X, Eye, RotateCcw, Shield,
 } from 'lucide-react'
 import Modal from '../components/Modal'
 import PatientForm from '../components/PatientForm'
@@ -11,6 +11,8 @@ import PatientTable from '../components/PatientTable'
 import PatientDetailModal from '../components/PatientDetailModal'
 import StatCard from '../components/StatCard'
 import FeatureInProgress from '../components/FeatureInProgress'
+import UserMenu from '../components/UserMenu'
+import CambiarPasswordModal from '../components/CambiarPasswordModal'
 import { patientService } from '../services/patientService'
 import { useAuth } from '../contexts/AuthContext'
 import type { Patient, PatientRequest } from '../types/patient'
@@ -20,7 +22,14 @@ const ESTADOS = ['Todos los estados', 'Ambulatorio', 'Internado', 'Egresado']
 
 export default function PatientsPage() {
   const navigate = useNavigate()
-  const { user, logout, hasRole } = useAuth()
+  const { hasRole, user } = useAuth()
+  const [forcePasswordModal, setForcePasswordModal] = useState(false)
+
+  useEffect(() => {
+    if (user?.mustChangePassword) {
+      setForcePasswordModal(true)
+    }
+  }, [user?.mustChangePassword])
 
   const [patients, setPatients] = useState<Patient[]>([])
   const [loading, setLoading] = useState(true)
@@ -155,11 +164,6 @@ export default function PatientsPage() {
     }
   }
 
-  const handleLogout = () => {
-    logout()
-    navigate('/login', { replace: true })
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
 
@@ -194,24 +198,7 @@ export default function PatientsPage() {
             )}
           </nav>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white text-xs font-bold">
-            {user?.iniciales ?? '…'}
-          </div>
-          <div className="text-right">
-            <p className="text-sm font-medium text-gray-900">
-              {user ? user.nombreCompleto : '…'}
-            </p>
-            <p className="text-xs text-gray-500">{user?.rol ?? ''}</p>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors ml-1"
-            title="Cerrar sesión"
-          >
-            <LogOut size={16} />
-          </button>
-        </div>
+        <UserMenu />
       </header>
 
       {/* ─── CONTENT ─────────────────────────────────────────────────────────── */}
@@ -468,6 +455,12 @@ export default function PatientsPage() {
       <PatientDetailModal
         patient={viewingPatient}
         onClose={() => setViewingPatient(null)}
+      />
+
+      {/* ─── CAMBIO DE CONTRASEÑA OBLIGATORIO ───────────────────────────────── */}
+      <CambiarPasswordModal
+        open={forcePasswordModal}
+        onClose={() => setForcePasswordModal(false)}
       />
     </div>
   )

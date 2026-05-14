@@ -21,5 +21,7 @@ public class LoginResponseDTO {
         private String iniciales;
         private String rol;
         private String autorizacion;
+        private boolean mustChangePassword;
+        private boolean esAdminProtegido;
     }
 }

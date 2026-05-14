@@ -9,7 +9,65 @@
 | MEDICO        | Módulos clínicos y acceso a historiales médicos.          |
 | ENFERMERO     | Módulos de enfermería.                                    |
 
-El rol **ADMINISTRADOR** fue agregado en esta feature. Los demás ya existían en la tabla `rol`.
+---
+
+## Inicialización de la base de datos
+
+La base de datos se inicializa con dos scripts en orden:
+
+```
+database/schema.sql      → crea todas las tablas, constraints, índices y triggers
+database/seed.sql        → carga datos iniciales (roles, usuarios, datos de prueba)
+```
+
+Para un reset completo desde cero (limpia todo y recarga):
+
+```
+database/reset_and_seed.sql   → TRUNCATE + seed completo en un solo script
+```
+
+> No existe ninguna migración suelta que deba ejecutarse por separado.
+> Los archivos `migration_auth.sql` y `migration_admin_rules.sql` fueron consolidados
+> en los scripts principales y eliminados del repositorio.
+
+### Pasos desde cero
+
+```bash
+# Opción A — psql CLI
+psql "postgresql://<user>:<pass>@<host>/<db>" -f database/schema.sql
+psql "postgresql://<user>:<pass>@<host>/<db>" -f database/seed.sql
+
+# Opción B — reset completo (equivale a schema + seed sobre base vacía)
+psql "postgresql://<user>:<pass>@<host>/<db>" -f database/reset_and_seed.sql
+
+# Opción C — Supabase SQL Editor
+# Pegar y ejecutar schema.sql, luego seed.sql (o directamente reset_and_seed.sql).
+```
+
+---
+
+## Administrador inicial
+
+| Campo              | Valor                                                               |
+|--------------------|---------------------------------------------------------------------|
+| Email              | `admin@clinicks.com`                                                |
+| Contraseña         | `Admin123456`                                                       |
+| Rol                | `ADMINISTRADOR`                                                     |
+| autorizacion       | `ACTIVO`                                                            |
+| must_change_password | `FALSE`                                                           |
+| Hash BCrypt (cost 10) | `$2a$10$GrSosoIMBYHEFVBQUQMEQ.tcaITI44c.eEUHY.Pvrps0WRHwW0T2K` |
+
+`admin@clinicks.com` es el **superadmin protegido** del sistema. Ver reglas más abajo.
+
+### Usuarios de prueba (seed)
+
+| Email                  | Contraseña inicial | Rol            | must_change_password |
+|------------------------|--------------------|----------------|----------------------|
+| `admin@clinicks.com`   | Admin123456        | ADMINISTRADOR  | FALSE                |
+| `admin@hospital.com`   | Admin123456        | ADMINISTRATIVO | TRUE                 |
+| `claudia@hospital.com` | Admin123456        | MEDICO         | TRUE                 |
+
+Los usuarios de prueba tienen `must_change_password=TRUE` y deben cambiar su contraseña en el primer login.
 
 ---
 
@@ -103,7 +161,7 @@ El backend:
 
 ---
 
-## Endpoints agregados
+## Endpoints
 
 ### Públicos
 
@@ -121,55 +179,66 @@ El backend:
 
 ### Solo ADMINISTRADOR
 
-| Método | Endpoint                          | Descripción                   |
-|--------|-----------------------------------|-------------------------------|
-| POST   | `/api/auth/invitations`           | Crear invitación              |
-| GET    | `/api/auth/invitations`           | Listar invitaciones           |
-| GET    | `/api/admin/users`                | Listar usuarios               |
-| PATCH  | `/api/admin/users/{id}/role`      | Cambiar rol de usuario        |
-| PATCH  | `/api/admin/users/{id}/disable`   | Desactivar usuario            |
-| PATCH  | `/api/admin/users/{id}/enable`    | Activar usuario               |
+| Método | Endpoint                                | Descripción                        |
+|--------|-----------------------------------------|------------------------------------|
+| POST   | `/api/auth/invitations`                 | Crear invitación (no ADMINISTRADOR)|
+| GET    | `/api/auth/invitations`                 | Listar invitaciones                |
+| GET    | `/api/admin/users`                      | Listar usuarios                    |
+| PATCH  | `/api/admin/users/{id}/role`            | Cambiar rol (no ADMINISTRADOR)     |
+| PATCH  | `/api/admin/users/{id}/disable`         | Desactivar usuario                 |
+| PATCH  | `/api/admin/users/{id}/enable`          | Activar usuario                    |
+| PATCH  | `/api/admin/users/{id}/reset-password`  | Resetear contraseña a temporal     |
+
+### Autenticados (cualquier rol) — Perfil
+
+| Método | Endpoint                  | Descripción                        |
+|--------|---------------------------|------------------------------------|
+| GET    | `/api/profile`            | Obtener datos del perfil propio    |
+| PATCH  | `/api/profile/password`   | Cambiar contraseña propia          |
+| PATCH  | `/api/profile/email`      | Cambiar email propio               |
+| PATCH  | `/api/profile/basic-data` | Cambiar nombre/apellido propios    |
 
 ---
 
-## Migración SQL
+## Reglas del administrador principal (`admin@clinicks.com`)
 
-Archivo: `database/migration_auth.sql`
+El usuario `admin@clinicks.com` es el **superadmin protegido**. Las siguientes operaciones están bloqueadas tanto en frontend como en backend:
 
-Contiene:
-1. `INSERT` idempotente del rol `ADMINISTRADOR` (y otros roles si no existen).
-2. `CREATE TABLE IF NOT EXISTS invitacion_registro` — tabla de invitaciones.
-3. Bloque `DO $$` que crea la persona y el usuario `admin@clinicks.com` si no existen.
+- No se puede cambiar su rol desde el panel de admin.
+- No se puede desactivarlo.
+- No se puede resetear su contraseña desde el panel de admin.
+- No puede cambiar su propio email ni contraseña desde el perfil.
+- No se puede invitar a nadie con rol `ADMINISTRADOR`.
+- No se puede asignar rol `ADMINISTRADOR` a ningún otro usuario.
 
-### Hash BCrypt del usuario admin
+Estas reglas están implementadas en `AdminServiceImpl` y `AdminController`, utilizando la constante `AdminConstants.EMAIL_ADMIN_PROTEGIDO = "admin@clinicks.com"`.
 
-```
-Password temporal: Admin123456
-Hash: $2a$10$GrSosoIMBYHEFVBQUQMEQ.tcaITI44c.eEUHY.Pvrps0WRHwW0T2K
-```
+### Columna `must_change_password`
+
+La tabla `usuario` incluye la columna `must_change_password BOOLEAN NOT NULL DEFAULT FALSE`.
+
+Cuando un ADMINISTRADOR resetea la contraseña de un usuario:
+- La contraseña se cambia a `Temporal123456`.
+- Se activa el flag `must_change_password = true` en la base de datos.
+- Al iniciar sesión, el frontend detecta este flag y muestra el modal de cambio de contraseña.
+- Al completar el cambio, `must_change_password` vuelve a `false`.
 
 ---
 
-## Cómo crear el admin inicial
+## Cómo probar el sistema desde cero
 
-Ejecutar la migración en la base de datos:
+### 1. Inicializar la base de datos
 
 ```bash
-psql -h HOST -U USERNAME -d DATABASE -f database/migration_auth.sql
+# Opción A: schema + seed por separado
+psql "postgresql://<user>:<pass>@<host>/<db>" -f database/schema.sql
+psql "postgresql://<user>:<pass>@<host>/<db>" -f database/seed.sql
+
+# Opción B: reset completo
+psql "postgresql://<user>:<pass>@<host>/<db>" -f database/reset_and_seed.sql
 ```
 
-O desde Supabase SQL Editor: copiar y ejecutar el contenido de `database/migration_auth.sql`.
-
----
-
-## Cómo probar paso a paso
-
-### 1. Ejecutar la migración
-
-```sql
--- En Supabase SQL Editor o psql
-\i database/migration_auth.sql
-```
+O desde el SQL Editor de Supabase: pegar y ejecutar `reset_and_seed.sql`.
 
 ### 2. Iniciar el backend
 

@@ -158,10 +158,27 @@ CREATE TABLE usuario (
   id_rol INT NOT NULL,
   id_persona INT NOT NULL,
   deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+  must_change_password BOOLEAN NOT NULL DEFAULT FALSE,
   CONSTRAINT fk_usuario_rol FOREIGN KEY (id_rol) REFERENCES rol(id_rol),
   CONSTRAINT fk_usuario_persona FOREIGN KEY (id_persona) REFERENCES persona(id_persona),
   CONSTRAINT uq_usuario_email UNIQUE (email),
   CONSTRAINT ck_usuario_email_formato CHECK (email ~* '^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$')
+);
+
+CREATE TABLE invitacion_registro (
+  id_invitacion INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  email VARCHAR(200) NOT NULL,
+  token VARCHAR(255) NOT NULL,
+  id_rol INT NOT NULL,
+  id_usuario_creador INT NOT NULL,
+  fecha_creacion TIMESTAMP NOT NULL DEFAULT NOW(),
+  fecha_expiracion TIMESTAMP NOT NULL,
+  fecha_uso TIMESTAMP,
+  deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+  CONSTRAINT fk_invitacion_rol FOREIGN KEY (id_rol) REFERENCES rol(id_rol),
+  CONSTRAINT fk_invitacion_creador FOREIGN KEY (id_usuario_creador) REFERENCES usuario(id_usuario),
+  CONSTRAINT uq_invitacion_token UNIQUE (token),
+  CONSTRAINT ck_invitacion_email_formato CHECK (email ~* '^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$')
 );
 
 -- ============================================================

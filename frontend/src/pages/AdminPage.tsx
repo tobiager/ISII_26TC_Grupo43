@@ -2,14 +2,15 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
-  Users, Shield, Stethoscope, LogOut, Copy, Check,
-  UserCheck, UserX, RefreshCw, Send, ChevronDown,
+  Users, Shield, Stethoscope, Copy, Check,
+  UserCheck, UserX, RefreshCw, Send, ChevronDown, KeyRound, Lock,
 } from 'lucide-react'
-import { useAuth } from '../contexts/AuthContext'
 import { authService } from '../services/authService'
+import UserMenu from '../components/UserMenu'
 import type { AdminUsuario, InvitacionResponse, Rol } from '../types/auth'
 
-const ROLES: Rol[] = ['ADMINISTRADOR', 'ADMINISTRATIVO', 'MEDICO', 'ENFERMERO']
+const ADMIN_EMAIL = 'admin@clinicks.com'
+const ROLES: Rol[] = ['ADMINISTRATIVO', 'MEDICO', 'ENFERMERO']
 const ROL_LABELS: Record<Rol, string> = {
   ADMINISTRADOR: 'Administrador',
   ADMINISTRATIVO: 'Administrativo',
@@ -21,12 +22,12 @@ type Tab = 'usuarios' | 'invitaciones'
 
 export default function AdminPage() {
   const navigate = useNavigate()
-  const { user, logout } = useAuth()
   const [tab, setTab] = useState<Tab>('usuarios')
 
   // ── Estado usuarios ──────────────────────────────────────────────────────
   const [usuarios, setUsuarios] = useState<AdminUsuario[]>([])
   const [loadingUsuarios, setLoadingUsuarios] = useState(true)
+  const [resetConfirmId, setResetConfirmId] = useState<number | null>(null)
 
   // ── Estado invitaciones ──────────────────────────────────────────────────
   const [invitaciones, setInvitaciones] = useState<InvitacionResponse[]>([])
@@ -74,6 +75,7 @@ export default function AdminPage() {
       fetchUsuarios()
     } catch (err: any) {
       toast.error(err?.response?.data?.error ?? 'Error al cambiar el rol')
+      fetchUsuarios()
     }
   }
 
@@ -89,6 +91,17 @@ export default function AdminPage() {
       fetchUsuarios()
     } catch (err: any) {
       toast.error(err?.response?.data?.error ?? 'Error al modificar el usuario')
+    }
+  }
+
+  const handleResetPassword = async (u: AdminUsuario) => {
+    try {
+      const res = await authService.resetearPassword(u.idUsuario)
+      toast.success(`Contraseña reseteada. Temporal: ${res.temporaryPassword}`, { duration: 8000 })
+      setResetConfirmId(null)
+      fetchUsuarios()
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? 'Error al resetear la contraseña')
     }
   }
 
@@ -122,11 +135,6 @@ export default function AdminPage() {
     })
   }
 
-  const handleLogout = () => {
-    logout()
-    navigate('/login', { replace: true })
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
 
@@ -153,22 +161,7 @@ export default function AdminPage() {
             </button>
           </nav>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-blue-700 flex items-center justify-center text-white text-xs font-bold">
-            {user?.iniciales ?? '…'}
-          </div>
-          <div className="text-right">
-            <p className="text-sm font-medium text-gray-900">{user?.nombreCompleto ?? '…'}</p>
-            <p className="text-xs text-gray-500">{user?.rol ?? ''}</p>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors ml-1"
-            title="Cerrar sesión"
-          >
-            <LogOut size={16} />
-          </button>
-        </div>
+        <UserMenu />
       </header>
 
       {/* ─── CONTENT ────────────────────────────────────────────────────────── */}
@@ -239,56 +232,105 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {usuarios.map(u => (
-                      <tr key={u.idUsuario} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2.5">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold
-                              ${u.activo ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-400'}`}>
-                              {u.iniciales}
+                    {usuarios.map(u => {
+                      const esAdminProtegido = u.email === ADMIN_EMAIL
+                      return (
+                        <tr key={u.idUsuario} className={`hover:bg-gray-50 transition-colors ${esAdminProtegido ? 'bg-amber-50/30' : ''}`}>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2.5">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold
+                                ${u.activo ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-400'}`}>
+                                {u.iniciales}
+                              </div>
+                              <div>
+                                <span className={`font-medium ${u.activo ? 'text-gray-900' : 'text-gray-400'}`}>
+                                  {u.nombreCompleto}
+                                </span>
+                                {esAdminProtegido && (
+                                  <span className="ml-2 inline-flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full">
+                                    <Lock size={9} />
+                                    Protegido
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            <span className={`font-medium ${u.activo ? 'text-gray-900' : 'text-gray-400'}`}>
-                              {u.nombreCompleto}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-gray-500">{u.email}</td>
-                        <td className="px-6 py-4">
-                          <div className="relative inline-block">
-                            <select
-                              value={u.rol}
-                              onChange={e => handleCambiarRol(u, e.target.value as Rol)}
-                              className="appearance-none text-xs font-medium px-3 py-1.5 pr-7 rounded-lg border border-gray-200 bg-white outline-none focus:border-blue-400 cursor-pointer"
-                            >
-                              {ROLES.map(r => (
-                                <option key={r} value={r}>{ROL_LABELS[r]}</option>
-                              ))}
-                            </select>
-                            <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full
-                            ${u.activo
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-gray-100 text-gray-500'}`}>
-                            {u.activo ? <UserCheck size={11} /> : <UserX size={11} />}
-                            {u.activo ? 'Activo' : 'Inactivo'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <button
-                            onClick={() => handleToggleActivo(u)}
-                            className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors
+                          </td>
+                          <td className="px-6 py-4 text-gray-500">{u.email}</td>
+                          <td className="px-6 py-4">
+                            {esAdminProtegido ? (
+                              <span className="text-xs font-medium px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg">
+                                {ROL_LABELS[u.rol] ?? u.rol}
+                              </span>
+                            ) : (
+                              <div className="relative inline-block">
+                                <select
+                                  value={u.rol}
+                                  onChange={e => handleCambiarRol(u, e.target.value as Rol)}
+                                  className="appearance-none text-xs font-medium px-3 py-1.5 pr-7 rounded-lg border border-gray-200 bg-white outline-none focus:border-blue-400 cursor-pointer"
+                                >
+                                  {ROLES.map(r => (
+                                    <option key={r} value={r}>{ROL_LABELS[r]}</option>
+                                  ))}
+                                </select>
+                                <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full
                               ${u.activo
-                                ? 'border-red-200 text-red-600 hover:bg-red-50'
-                                : 'border-green-200 text-green-600 hover:bg-green-50'}`}
-                          >
-                            {u.activo ? 'Desactivar' : 'Activar'}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-gray-100 text-gray-500'}`}>
+                              {u.activo ? <UserCheck size={11} /> : <UserX size={11} />}
+                              {u.activo ? 'Activo' : 'Inactivo'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              {!esAdminProtegido && (
+                                <>
+                                  <button
+                                    onClick={() => handleToggleActivo(u)}
+                                    className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors
+                                      ${u.activo
+                                        ? 'border-red-200 text-red-600 hover:bg-red-50'
+                                        : 'border-green-200 text-green-600 hover:bg-green-50'}`}
+                                  >
+                                    {u.activo ? 'Desactivar' : 'Activar'}
+                                  </button>
+
+                                  {resetConfirmId === u.idUsuario ? (
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        onClick={() => handleResetPassword(u)}
+                                        className="text-xs font-medium px-2 py-1.5 rounded-lg border border-orange-200 text-orange-600 hover:bg-orange-50 transition-colors"
+                                      >
+                                        Confirmar
+                                      </button>
+                                      <button
+                                        onClick={() => setResetConfirmId(null)}
+                                        className="text-xs font-medium px-2 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
+                                      >
+                                        Cancelar
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      onClick={() => setResetConfirmId(u.idUsuario)}
+                                      className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+                                      title="Resetear contraseña a temporal"
+                                    >
+                                      <KeyRound size={11} />
+                                      Reset pass
+                                    </button>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               )}
@@ -419,7 +461,7 @@ export default function AdminPage() {
                             <td className="px-6 py-3 text-gray-700">{inv.email}</td>
                             <td className="px-6 py-3">
                               <span className="text-xs font-medium px-2 py-1 bg-blue-50 text-blue-700 rounded-full">
-                                {ROL_LABELS[inv.rol]}
+                                {ROL_LABELS[inv.rol] ?? inv.rol}
                               </span>
                             </td>
                             <td className="px-6 py-3">

@@ -1,5 +1,6 @@
 package com.clinicks.service.impl;
 
+import com.clinicks.config.AdminConstants;
 import com.clinicks.dto.auth.*;
 import com.clinicks.exception.*;
 import com.clinicks.model.InvitacionRegistro;
@@ -118,6 +119,10 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public InvitacionResponseDTO crearInvitacion(InvitacionRequestDTO request, String emailCreador) {
+        if (AdminConstants.ROL_ADMINISTRADOR.equals(request.getRol())) {
+            throw new OperacionNoPermitidaException("No se puede invitar con el rol ADMINISTRADOR.");
+        }
+
         Rol rol = rolRepository.findByNombreRol(request.getRol())
                 .orElseThrow(() -> new RolNoEncontradoException(request.getRol()));
 
@@ -193,6 +198,8 @@ public class AuthServiceImpl implements AuthService {
                 .iniciales(iniciales)
                 .rol(u.getRol().getNombreRol())
                 .autorizacion(u.getAutorizacion())
+                .mustChangePassword(u.isMustChangePassword())
+                .esAdminProtegido("admin@clinicks.com".equals(u.getEmail()))
                 .build();
     }
 

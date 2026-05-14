@@ -2,11 +2,16 @@ import axios from 'axios'
 import type {
   AdminUsuario,
   AuthUser,
+  CambiarDatosBasicosRequest,
+  CambiarEmailRequest,
+  CambiarPasswordRequest,
   InvitacionRequest,
   InvitacionResponse,
   LoginRequest,
   LoginResponse,
+  PerfilResponse,
   RegisterRequest,
+  ResetPasswordResponse,
   ValidarTokenResponse,
 } from '../types/auth'
 import { apiClient } from './apiClient'
@@ -46,4 +51,19 @@ export const authService = {
 
   activarUsuario: (idUsuario: number): Promise<AdminUsuario> =>
     apiClient.patch<AdminUsuario>(`/admin/users/${idUsuario}/enable`).then(r => r.data),
+
+  resetearPassword: (idUsuario: number): Promise<ResetPasswordResponse> =>
+    apiClient.patch<ResetPasswordResponse>(`/admin/users/${idUsuario}/reset-password`).then(r => r.data),
+
+  obtenerPerfil: (): Promise<PerfilResponse> =>
+    apiClient.get<PerfilResponse>('/profile').then(r => r.data),
+
+  cambiarPassword: (data: CambiarPasswordRequest): Promise<PerfilResponse> =>
+    apiClient.patch<PerfilResponse>('/profile/password', data).then(r => r.data),
+
+  cambiarEmail: (data: CambiarEmailRequest): Promise<PerfilResponse> =>
+    apiClient.patch<PerfilResponse>('/profile/email', data).then(r => r.data),
+
+  cambiarDatosBasicos: (data: CambiarDatosBasicosRequest): Promise<PerfilResponse> =>
+    apiClient.patch<PerfilResponse>('/profile/basic-data', data).then(r => r.data),
 }
