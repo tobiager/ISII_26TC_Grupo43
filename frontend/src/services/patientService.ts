@@ -1,8 +1,5 @@
-import axios from 'axios'
 import type { Patient, PatientRequest } from '../types/patient'
-
-const BASE = import.meta.env.VITE_API_URL ?? '/api'
-const api = axios.create({ baseURL: BASE })
+import { apiClient } from './apiClient'
 
 function sanitize(data: PatientRequest): object {
   return {
@@ -20,38 +17,38 @@ function sanitize(data: PatientRequest): object {
 
 export const patientService = {
   getAll: (signal?: AbortSignal): Promise<Patient[]> =>
-    api.get<Patient[]>('/pacientes', { signal }).then(r => r.data),
+    apiClient.get<Patient[]>('/pacientes', { signal }).then(r => r.data),
 
   getDeleted: (signal?: AbortSignal): Promise<Patient[]> =>
-    api.get<Patient[]>('/pacientes/desactivados', { signal }).then(r => r.data),
+    apiClient.get<Patient[]>('/pacientes/desactivados', { signal }).then(r => r.data),
 
   getById: (id: number, signal?: AbortSignal): Promise<Patient> =>
-    api.get<Patient>(`/pacientes/${id}`, { signal }).then(r => r.data),
+    apiClient.get<Patient>(`/pacientes/${id}`, { signal }).then(r => r.data),
 
   create: (data: PatientRequest): Promise<Patient> =>
-    api.post<Patient>('/pacientes', sanitize(data)).then(r => r.data),
+    apiClient.post<Patient>('/pacientes', sanitize(data)).then(r => r.data),
 
   update: (id: number, data: PatientRequest): Promise<Patient> =>
-    api.put<Patient>(`/pacientes/${id}`, sanitize(data)).then(r => r.data),
+    apiClient.put<Patient>(`/pacientes/${id}`, sanitize(data)).then(r => r.data),
 
   delete: (id: number): Promise<void> =>
-    api.delete(`/pacientes/${id}`).then(() => undefined),
+    apiClient.delete(`/pacientes/${id}`).then(() => undefined),
 
   restaurar: (id: number): Promise<void> =>
-    api.patch(`/pacientes/${id}/restaurar`).then(() => undefined),
+    apiClient.patch(`/pacientes/${id}/restaurar`).then(() => undefined),
 
   checkDni: (dni: number, excluirId?: number): Promise<boolean> =>
-    api.get<{ existe: boolean }>('/pacientes/existe-dni', {
+    apiClient.get<{ existe: boolean }>('/pacientes/existe-dni', {
       params: { dni, ...(excluirId ? { excluirId } : {}) },
     }).then(r => r.data.existe),
 
   checkAfiliado: (nroAfiliado: string, idObraSocial?: number, nombreObraSocial?: string, excluirId?: number): Promise<boolean> =>
-    api.get<{ existe: boolean }>('/pacientes/existe-afiliado', {
-      params: { 
-        nroAfiliado, 
-        ...(idObraSocial ? { idObraSocial } : {}), 
-        ...(nombreObraSocial ? { nombreObraSocial } : {}), 
-        ...(excluirId ? { excluirId } : {}) 
+    apiClient.get<{ existe: boolean }>('/pacientes/existe-afiliado', {
+      params: {
+        nroAfiliado,
+        ...(idObraSocial ? { idObraSocial } : {}),
+        ...(nombreObraSocial ? { nombreObraSocial } : {}),
+        ...(excluirId ? { excluirId } : {})
       },
     }).then(r => r.data.existe),
 }

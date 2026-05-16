@@ -18,8 +18,8 @@ public class ProvinciaController {
 
     // GET /api/provincias — Lista todas las provincias ordenadas alfabéticamente
     @GetMapping
-    public ResponseEntity<List<Map<String, Object>>> getAll() {
-        List<Map<String, Object>> result = provinciaRepository.findAllByOrderByNombreProvinciaAsc()
+    public ResponseEntity<List<Map<String, Object>>> obtenerTodas() {
+        List<Map<String, Object>> result = provinciaRepository.encontrarTodasOrdenadasPorNombre()
                 .stream()
                 .map(p -> Map.<String, Object>of(
                         "id", p.getIdProvincia(),

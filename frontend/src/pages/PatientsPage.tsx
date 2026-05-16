@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   Users, UserCheck, BedDouble, ClipboardList,
-  Search, ChevronDown, UserPlus, Stethoscope, LogOut, UserX, X, Eye, RotateCcw,
+  Search, ChevronDown, UserPlus, Stethoscope, UserX, X, Eye, RotateCcw, Shield,
 } from 'lucide-react'
 import Modal from '../components/Modal'
 import PatientForm from '../components/PatientForm'
@@ -10,18 +11,29 @@ import PatientTable from '../components/PatientTable'
 import PatientDetailModal from '../components/PatientDetailModal'
 import StatCard from '../components/StatCard'
 import FeatureInProgress from '../components/FeatureInProgress'
+import UserMenu from '../components/UserMenu'
+import CambiarPasswordModal from '../components/CambiarPasswordModal'
 import { patientService } from '../services/patientService'
-import { locationService, type AdminUser } from '../services/locationService'
+import { useAuth } from '../contexts/AuthContext'
 import type { Patient, PatientRequest } from '../types/patient'
 
 const OBRAS_SOCIALES = ['Todas las Obras Sociales', 'OSDE', 'Swiss Medical', 'PAMI', 'Galeno', 'Medicus']
 const ESTADOS = ['Todos los estados', 'Ambulatorio', 'Internado', 'Egresado']
 
 export default function PatientsPage() {
+  const navigate = useNavigate()
+  const { hasRole, user } = useAuth()
+  const [forcePasswordModal, setForcePasswordModal] = useState(false)
+
+  useEffect(() => {
+    if (user?.mustChangePassword) {
+      setForcePasswordModal(true)
+    }
+  }, [user?.mustChangePassword])
+
   const [patients, setPatients] = useState<Patient[]>([])
   const [loading, setLoading] = useState(true)
   const [formLoading, setFormLoading] = useState(false)
-  const [adminUser, setAdminUser] = useState<AdminUser | null>(null)
 
   const [search, setSearch] = useState('')
   const [filterOS, setFilterOS] = useState('Todas las Obras Sociales')
@@ -35,14 +47,6 @@ export default function PatientsPage() {
   const [deletedPatients, setDeletedPatients] = useState<Patient[]>([])
   const [loadingDeleted, setLoadingDeleted] = useState(false)
   const [fetchError, setFetchError] = useState(false)
-
-  useEffect(() => {
-    const ctrl = new AbortController()
-    locationService.getPerfil(ctrl.signal)
-      .then(setAdminUser)
-      .catch(() => {})
-    return () => ctrl.abort()
-  }, [])
 
   const fetchPatients = useCallback(async () => {
     try {
@@ -121,7 +125,6 @@ export default function PatientsPage() {
     try {
       await patientService.restaurar(p.id)
       toast.success(`${p.nombreCompleto} fue restaurado correctamente`)
-      // Actualizar lista de eliminados
       setDeletedPatients(prev => prev.filter(x => x.id !== p.id))
       fetchPatients()
     } catch {
@@ -184,24 +187,18 @@ export default function PatientsPage() {
                 Habitaciones
               </button>
             </FeatureInProgress>
+            {hasRole('ADMINISTRADOR') && (
+              <button
+                onClick={() => navigate('/admin')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors"
+              >
+                <Shield size={15} />
+                Admin
+              </button>
+            )}
           </nav>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white text-xs font-bold">
-            {adminUser?.iniciales ?? '…'}
-          </div>
-          <div className="text-right">
-            <p className="text-sm font-medium text-gray-900">
-              {adminUser ? `Adm. ${adminUser.nombreCompleto}` : '…'}
-            </p>
-            <p className="text-xs text-gray-500">{adminUser?.rol ?? ''}</p>
-          </div>
-          <FeatureInProgress featureName="cerrar sesión">
-            <button className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors ml-1">
-              <LogOut size={16} />
-            </button>
-          </FeatureInProgress>
-        </div>
+        <UserMenu />
       </header>
 
       {/* ─── CONTENT ─────────────────────────────────────────────────────────── */}
@@ -365,7 +362,6 @@ export default function PatientsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowDeleted(false)} />
           <div className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[80vh] flex flex-col">
-            {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-gray-100 rounded-xl">
@@ -384,7 +380,6 @@ export default function PatientsPage() {
               </button>
             </div>
 
-            {/* Contenido */}
             <div className="overflow-y-auto flex-1 px-6 py-4">
               {loadingDeleted ? (
                 <div className="text-center py-12">
@@ -415,9 +410,7 @@ export default function PatientsPage() {
                             <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500 flex-shrink-0">
                               {p.nombre?.[0]}{p.apellido?.[0]}
                             </div>
-                            <span className="font-medium text-gray-900">
-                              {p.nombreCompleto}
-                            </span>
+                            <span className="font-medium text-gray-900">{p.nombreCompleto}</span>
                           </div>
                         </td>
                         <td className="py-3 pr-4 text-gray-900 font-mono">{p.dni}</td>
@@ -449,7 +442,6 @@ export default function PatientsPage() {
               )}
             </div>
 
-            {/* Footer */}
             <div className="px-6 py-3 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
               <p className="text-xs text-gray-400 text-center">
                 {deletedPatients.length} paciente{deletedPatients.length !== 1 ? 's' : ''} desactivado{deletedPatients.length !== 1 ? 's' : ''}
@@ -464,8 +456,12 @@ export default function PatientsPage() {
         patient={viewingPatient}
         onClose={() => setViewingPatient(null)}
       />
+
+      {/* ─── CAMBIO DE CONTRASEÑA OBLIGATORIO ───────────────────────────────── */}
+      <CambiarPasswordModal
+        open={forcePasswordModal}
+        onClose={() => setForcePasswordModal(false)}
+      />
     </div>
   )
 }
-
-

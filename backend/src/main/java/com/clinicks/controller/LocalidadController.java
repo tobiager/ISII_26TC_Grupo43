@@ -19,12 +19,12 @@ public class LocalidadController {
     // GET /api/localidades?provinciaId={id} — Localidades filtradas por provincia
     // GET /api/localidades — Todas las localidades (sin filtro)
     @GetMapping
-    public ResponseEntity<List<Map<String, Object>>> getByProvincia(
+    public ResponseEntity<List<Map<String, Object>>> obtenerPorProvincia(
             @RequestParam(required = false) Integer provinciaId) {
 
         var localidades = provinciaId != null
-                ? localidadRepository.findByProvinciaIdProvinciaOrderByNombreLocalidadAsc(provinciaId)
-                : localidadRepository.findAllByOrderByNombreLocalidadAsc();
+                ? localidadRepository.encontrarPorProvinciaOrdenadasPorNombre(provinciaId)
+                : localidadRepository.encontrarTodasOrdenadasPorNombre();
 
         List<Map<String, Object>> result = localidades.stream()
                 .map(l -> Map.<String, Object>of(

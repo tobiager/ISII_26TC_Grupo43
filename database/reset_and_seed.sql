@@ -27,6 +27,7 @@ TRUNCATE TABLE
   tipo_procedimiento,
   telefono,
   contacto_emergencia,
+  invitacion_registro,
   usuario,
   paciente,
   ficha_antecedente_familiar,
@@ -90,8 +91,8 @@ INSERT INTO localidad (nombre_localidad, codigo_postal, id_provincia) VALUES
   ('San Miguel de Tucumán', 4000, 24), ('Yerba Buena', 4107, 24), ('Tafí del Valle', 4137, 24), ('Concepción', 4146, 24), ('Lules', 4128, 24);
 
 -- ── 3. ROLES Y OBRAS SOCIALES ─────────────────────────────────
--- Roles: 1=ADMIN, 2=MEDICO, 3=ENFERMERO
-INSERT INTO rol (nombre_rol) VALUES ('ADMIN'), ('MEDICO'), ('ENFERMERO');
+-- Roles: 1=ADMINISTRADOR, 2=ADMINISTRATIVO, 3=MEDICO, 4=ENFERMERO
+INSERT INTO rol (nombre_rol) VALUES ('ADMINISTRADOR'), ('ADMINISTRATIVO'), ('MEDICO'), ('ENFERMERO');
 -- Obras: 1=OSDE, 2=Swiss Medical, 3=PAMI, 4=IOMA, 5=Galeno
 INSERT INTO obra_social (nombre_obra) VALUES ('OSDE'), ('Swiss Medical'), ('PAMI'), ('IOMA'), ('Galeno');
 
@@ -104,7 +105,7 @@ INSERT INTO enfermedad_cronica (nombre_enfermedad) VALUES ('Hipertensión arteri
 INSERT INTO antecedente_familiar (nombre_enfermedad) VALUES ('Diabetes tipo 2'), ('Hipertensión'), ('Cardiopatía'), ('Cáncer de colon'), ('Alzheimer');
 
 -- ── 5. PERSONAS ───────────────────────────────────────────────
--- IDs: 1..10 = pacientes | 11 = médico (Claudia) | 12 = admin (Roberto)
+-- IDs: 1..10 = pacientes | 11 = médico (Claudia) | 12 = admin de prueba (Roberto) | 13 = superadmin (Admin Clinicks)
 INSERT INTO persona (nombre_persona, apellido_persona, fecha_nacimiento) VALUES
   ('Juan',     'Pérez',    '1980-01-01'),
   ('María',    'García',   '1992-05-15'),
@@ -117,7 +118,8 @@ INSERT INTO persona (nombre_persona, apellido_persona, fecha_nacimiento) VALUES
   ('Duki',     'Mauro',    '1996-06-24'),
   ('Nicki',    'Nicole',   '2000-08-25'),
   ('Claudia',  'Medina',   '1982-04-20'),
-  ('Roberto',  'Admin',    '1980-06-15');
+  ('Roberto',  'Admin',    '1980-06-15'),
+  ('Admin',    'Clinicks',  '1990-01-01');
 
 -- ── 6. DOMICILIOS ─────────────────────────────────────────────
 -- Localidades elegidas: 1 (La Plata), 6 (Palermo), 76 (Viedma),
@@ -196,14 +198,17 @@ INSERT INTO ficha_antecedente_familiar (id_ficha_medica, id_antecedente_familiar
   (9, 3); -- Duki → Cardiopatía familiar
 
 -- ── 12. USUARIOS ──────────────────────────────────────────────
--- admin@hospital.com  → id_persona=12 (Roberto Admin),  rol=1 (ADMIN)
--- claudia@hospital.com → id_persona=11 (Claudia Medina), rol=2 (MEDICO)
--- Hash BCrypt de "admin123" generado con cost=10
--- NOTA: Sin Spring Security activo, 'pass' es texto plano comparado desde el frontend.
--- Reemplazar por hashes BCrypt al implementar Spring Security.
-INSERT INTO usuario (email, pass, id_rol, id_persona, autorizacion) VALUES
-  ('admin@hospital.com',   'hash_admin',  1, 12, 'FULL_ACCESS'),
-  ('claudia@hospital.com', 'hash_medico', 2, 11, 'READ_WRITE');
+-- admin@clinicks.com  → id_persona=13 (Admin Clinicks), rol=1 (ADMINISTRADOR) ← SUPERADMIN PROTEGIDO
+-- admin@hospital.com  → id_persona=12 (Roberto Admin),  rol=2 (ADMINISTRATIVO) ← dato de prueba
+-- claudia@hospital.com → id_persona=11 (Claudia Medina), rol=3 (MEDICO)       ← dato de prueba
+--
+-- Contraseña inicial de todos: Admin123456
+-- Hash BCrypt (cost 10): $2a$10$GrSosoIMBYHEFVBQUQMEQ.tcaITI44c.eEUHY.Pvrps0WRHwW0T2K
+-- must_change_password=TRUE en usuarios de prueba → deben cambiar al primer login.
+INSERT INTO usuario (email, pass, autorizacion, id_rol, id_persona, must_change_password) VALUES
+  ('admin@clinicks.com',   '$2a$10$GrSosoIMBYHEFVBQUQMEQ.tcaITI44c.eEUHY.Pvrps0WRHwW0T2K', 'ACTIVO', 1, 13, FALSE),
+  ('admin@hospital.com',   '$2a$10$GrSosoIMBYHEFVBQUQMEQ.tcaITI44c.eEUHY.Pvrps0WRHwW0T2K', 'ACTIVO', 2, 12, TRUE),
+  ('claudia@hospital.com', '$2a$10$GrSosoIMBYHEFVBQUQMEQ.tcaITI44c.eEUHY.Pvrps0WRHwW0T2K', 'ACTIVO', 3, 11, TRUE);
 
 -- ── 13. OTROS DATOS ───────────────────────────────────────────
 INSERT INTO habitacion_internacion (numero_habitacion, piso_habitacion, estado_habitacion) VALUES
@@ -215,6 +220,11 @@ INSERT INTO tipo_procedimiento (nombre_tipo_procedimiento) VALUES
 SET session_replication_role = DEFAULT;
 
 -- ── VERIFICACIÓN ──────────────────────────────────────────────
+-- Esperado: provincias=24, localidades=120, roles=4, obras=5,
+--           alergias=5, enf_cronicas=5, antecedentes=5,
+--           personas=13, domicilios=10, residencias=10,
+--           fichas=10, afiliaciones=10, pacientes=10,
+--           usuarios=3, habitaciones=3, tipo_proc=3
 SELECT 'provincias'              AS tabla, COUNT(*) AS total FROM provincia            UNION ALL
 SELECT 'localidades',                      COUNT(*) FROM localidad                    UNION ALL
 SELECT 'roles',                            COUNT(*) FROM rol                          UNION ALL
@@ -234,3 +244,9 @@ SELECT 'ficha_antec_fam (N:M)',            COUNT(*) FROM ficha_antecedente_famil
 SELECT 'usuarios',                         COUNT(*) FROM usuario                      UNION ALL
 SELECT 'habitaciones',                     COUNT(*) FROM habitacion_internacion        UNION ALL
 SELECT 'tipo_procedimientos',              COUNT(*) FROM tipo_procedimiento;
+
+-- Verificar que admin@clinicks.com es el único ADMINISTRADOR
+SELECT u.email, r.nombre_rol, u.autorizacion, u.must_change_password
+FROM usuario u
+JOIN rol r ON r.id_rol = u.id_rol
+ORDER BY u.id_usuario;

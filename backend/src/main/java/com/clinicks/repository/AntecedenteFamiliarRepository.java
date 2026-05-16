@@ -9,5 +9,6 @@ import java.util.Optional;
 @Repository
 public interface AntecedenteFamiliarRepository extends JpaRepository<AntecedenteFamiliar, Integer> {
 
-    Optional<AntecedenteFamiliar> findByNombreEnfermedadIgnoreCase(String nombre);
+    @org.springframework.data.jpa.repository.Query("SELECT a FROM AntecedenteFamiliar a WHERE LOWER(a.nombreEnfermedad) = LOWER(:nombre)")
+    Optional<AntecedenteFamiliar> encontrarPorNombreIgnorandoMayusculas(@org.springframework.data.repository.query.Param("nombre") String nombre);
 }

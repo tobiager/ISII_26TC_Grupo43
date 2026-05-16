@@ -9,5 +9,6 @@ import java.util.List;
 @Repository
 public interface ProvinciaRepository extends JpaRepository<Provincia, Integer> {
 
-    List<Provincia> findAllByOrderByNombreProvinciaAsc();
+    @org.springframework.data.jpa.repository.Query("SELECT p FROM Provincia p ORDER BY p.nombreProvincia ASC")
+    List<Provincia> encontrarTodasOrdenadasPorNombre();
 }

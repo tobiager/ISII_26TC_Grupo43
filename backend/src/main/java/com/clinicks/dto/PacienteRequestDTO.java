@@ -42,8 +42,13 @@ public class PacienteRequestDTO {
     private String tipoTelefono;
 
     private String direccion;
+
+    @Positive(message = "El número de domicilio debe ser positivo")
     private Integer numeroDireccion;
+
+    @Min(value = 1, message = "El piso debe ser un número positivo")
     private Integer piso;
+
     private Integer idLocalidad;
 
     @Pattern(regexp = "^(permanente|transitorio)$", message = "El tipo de residencia debe ser 'permanente' o 'transitorio'")
@@ -55,5 +60,7 @@ public class PacienteRequestDTO {
     private Integer idObraSocial;
     private String nombreObraSocial;
     private String nroAfiliado;
+
+    @Future(message = "La fecha de vencimiento de la afiliación debe ser posterior a la fecha de hoy")
     private LocalDate fechaVencimientoAfiliacion;
 }

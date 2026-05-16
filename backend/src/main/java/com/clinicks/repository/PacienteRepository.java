@@ -12,11 +12,14 @@ import java.util.Optional;
 @Repository
 public interface PacienteRepository extends JpaRepository<Paciente, Integer> {
 
-    Optional<Paciente> findByIdPacienteAndDeletedAtIsNull(Integer id);
+    @org.springframework.data.jpa.repository.Query("SELECT p FROM Paciente p WHERE p.idPaciente = :id AND p.deletedAt IS NULL")
+    Optional<Paciente> encontrarPacienteActivoPorId(@org.springframework.data.repository.query.Param("id") Integer id);
 
-    boolean existsByDni(Integer dni);
+    @org.springframework.data.jpa.repository.Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END FROM Paciente p WHERE p.dni = :dni")
+    boolean existePorDni(@org.springframework.data.repository.query.Param("dni") Integer dni);
 
-    boolean existsByDniAndIdPacienteNot(Integer dni, Integer idPaciente);
+    @org.springframework.data.jpa.repository.Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END FROM Paciente p WHERE p.dni = :dni AND p.idPaciente != :idPaciente")
+    boolean existePorDniYNoIdPaciente(@org.springframework.data.repository.query.Param("dni") Integer dni, @org.springframework.data.repository.query.Param("idPaciente") Integer idPaciente);
 
     @Query("""
         SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END 
@@ -27,7 +30,7 @@ public interface PacienteRepository extends JpaRepository<Paciente, Integer> {
         AND p.deletedAt IS NULL
         AND (:excluirId IS NULL OR p.idPaciente != :excluirId)
     """)
-    boolean existsByAfiliacionAndObraSocialId(@Param("nroAfiliado") String nroAfiliado, 
+    boolean existePorAfiliacionYObraSocialId(@Param("nroAfiliado") String nroAfiliado, 
                                               @Param("idObraSocial") Integer idObraSocial, 
                                               @Param("excluirId") Integer excluirId);
 
@@ -40,7 +43,7 @@ public interface PacienteRepository extends JpaRepository<Paciente, Integer> {
         AND p.deletedAt IS NULL
         AND (:excluirId IS NULL OR p.idPaciente != :excluirId)
     """)
-    boolean existsByAfiliacionAndObraSocialNombre(@Param("nroAfiliado") String nroAfiliado, 
+    boolean existePorAfiliacionYObraSocialNombre(@Param("nroAfiliado") String nroAfiliado, 
                                                   @Param("nombreObra") String nombreObra, 
                                                   @Param("excluirId") Integer excluirId);
 
@@ -86,7 +89,7 @@ public interface PacienteRepository extends JpaRepository<Paciente, Integer> {
                  estado, hi.numero_habitacion, hm.fecha_actualizacion
         ORDER BY per.apellido_persona, per.nombre_persona
         """, nativeQuery = true)
-    List<PacienteResumenProjection> findAllActivePatientsWithDetails();
+    List<PacienteResumenProjection> encontrarTodosLosPacientesActivosConDetalles();
 
     @Query(value = """
         SELECT
@@ -115,7 +118,7 @@ public interface PacienteRepository extends JpaRepository<Paciente, Integer> {
                  p.dni, afl.numero_afiliado, fm.tipo_sangre, os.nombre_obra, os.id_obra_social
         ORDER BY per.apellido_persona, per.nombre_persona
         """, nativeQuery = true)
-    List<PacienteResumenProjection> findAllDeletedPatientsWithDetails();
+    List<PacienteResumenProjection> encontrarTodosLosPacientesEliminadosConDetalles();
 
     @Query("""
         SELECT p FROM Paciente p
@@ -127,7 +130,7 @@ public interface PacienteRepository extends JpaRepository<Paciente, Integer> {
         )
         ORDER BY p.persona.apellidoPersona, p.persona.nombrePersona
         """)
-    List<Paciente> searchByDniOrName(@Param("query") String query);
+    List<Paciente> buscarPorDniONombre(@Param("query") String query);
 
     interface PacienteResumenProjection {
         Integer getIdPaciente();
