@@ -114,7 +114,8 @@ public class HabitacionServiceImpl implements HabitacionService {
             throw new OperacionNoPermitidaException("La internación ya fue cerrada.");
         }
 
-        internacion.setFechaFin(LocalDateTime.now());
+        LocalDateTime ahora = LocalDateTime.now();
+        internacion.setFechaFin(ahora);
         internacionRepository.save(internacion);
 
         HabitacionInternacion habitacion = internacion.getHabitacion();
@@ -122,23 +123,42 @@ public class HabitacionServiceImpl implements HabitacionService {
         habitacionRepository.save(habitacion);
 
         HistorialMedico historial = internacion.getHistorial();
-        historial.setFechaActualizacion(LocalDateTime.now());
+        historial.setFechaActualizacion(ahora);
         historialRepository.save(historial);
 
-        registrarEventoAuto("Alta médica", buildDescEgresar(dto), historial, idUsuario);
+        registrarEventoAuto("Alta médica", buildDescEgresar(dto), historial, idUsuario, ahora);
+    }
+
+    @Override
+    @Transactional
+    public void cambiarEstadoHabitacion(Integer idHabitacion, String nuevoEstado) {
+        if (!"disponible".equals(nuevoEstado) && !"mantenimiento".equals(nuevoEstado)) {
+            throw new OperacionNoPermitidaException("Estado no permitido: " + nuevoEstado + ". Solo se acepta 'disponible' o 'mantenimiento'.");
+        }
+        HabitacionInternacion habitacion = habitacionRepository.findById(idHabitacion)
+                .orElseThrow(() -> new RuntimeException("Habitación no encontrada"));
+        if ("ocupada".equals(habitacion.getEstadoHabitacion())) {
+            throw new OperacionNoPermitidaException("No se puede modificar el estado de una habitación ocupada.");
+        }
+        habitacion.setEstadoHabitacion(nuevoEstado);
+        habitacionRepository.save(habitacion);
     }
 
     private void registrarEventoAuto(String nombreTipo, String descripcion, HistorialMedico historial, Integer idUsuario) {
+        registrarEventoAuto(nombreTipo, descripcion, historial, idUsuario, LocalDateTime.now());
+    }
+
+    private void registrarEventoAuto(String nombreTipo, String descripcion, HistorialMedico historial, Integer idUsuario, LocalDateTime fechaRegistro) {
         tipoRepository.findByNombreTipoProcedimiento(nombreTipo).ifPresent(tipo -> {
             usuarioRepository.findById(idUsuario).ifPresent(usuario -> {
                 registroRepository.save(RegistroClinico.builder()
                         .descripcion(descripcion)
-                        .fechaRegistro(LocalDateTime.now())
+                        .fechaRegistro(fechaRegistro)
                         .historial(historial)
                         .tipoProcedimiento(tipo)
                         .usuario(usuario)
                         .build());
-                historial.setFechaActualizacion(LocalDateTime.now());
+                historial.setFechaActualizacion(fechaRegistro);
                 historialRepository.save(historial);
             });
         });

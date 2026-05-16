@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import UserMenu from '../components/UserMenu'
 import ReadOnlyBadge from '../components/ReadOnlyBadge'
+import PatientDetailModal from '../components/PatientDetailModal'
 import { roomService } from '../services/roomService'
 import { patientService } from '../services/patientService'
 import { useAuth } from '../contexts/AuthContext'
@@ -14,6 +15,7 @@ import {
   canAdmitPatient,
   canTransferPatient,
   canDischargePatient,
+  canManageRooms,
   canAccessAdmin,
 } from '../utils/permissions'
 import type { Habitacion } from '../types/room'
@@ -52,6 +54,13 @@ export default function HabitacionesPage() {
   const [egresoObs, setEgresoObs]           = useState('')
   const [egresoLoading, setEgresoLoading]   = useState(false)
 
+  // ── cambio de estado de habitación ───────────────────────────────
+  const [estadoLoading, setEstadoLoading]   = useState<number | null>(null)
+
+  // ── modal ver paciente ────────────────────────────────────────
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
+  const [selectedRoom, setSelectedRoom]       = useState<Habitacion | null>(null)
+
   const fetch = useCallback(async () => {
     setLoading(true)
     try {
@@ -67,10 +76,8 @@ export default function HabitacionesPage() {
   useEffect(() => { fetch() }, [fetch])
 
   useEffect(() => {
-    if (canAdmitPatient(role)) {
-      patientService.getAll().then(setPatients).catch(() => {})
-    }
-  }, [role])
+    patientService.getAll().then(setPatients).catch(() => {})
+  }, [])
 
   const pisos = useMemo(() => {
     const map = new Map<number, Habitacion[]>()
@@ -165,7 +172,27 @@ export default function HabitacionesPage() {
     }
   }
 
-  const isReadOnly = !canAdmitPatient(role) && !canTransferPatient(role) && !canDischargePatient(role)
+  const handleVerPaciente = (id: number) => {
+    const patient = patients.find(p => p.id === id) ?? null
+    const room    = habitaciones.find(h => h.pacienteActual?.id === id) ?? null
+    setSelectedPatient(patient)
+    setSelectedRoom(room)
+  }
+
+  const handleCambiarEstado = async (hab: Habitacion, nuevoEstado: 'disponible' | 'mantenimiento') => {
+    setEstadoLoading(hab.id)
+    try {
+      await roomService.cambiarEstado(hab.id, nuevoEstado)
+      toast.success(nuevoEstado === 'mantenimiento' ? 'Habitación marcada en mantenimiento' : 'Habitación marcada como disponible')
+      fetch()
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? 'Error al cambiar estado de la habitación')
+    } finally {
+      setEstadoLoading(null)
+    }
+  }
+
+  const isReadOnly = !canAdmitPatient(role) && !canTransferPatient(role) && !canDischargePatient(role) && !canManageRooms(role)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -263,10 +290,13 @@ export default function HabitacionesPage() {
                     canAdmit={canAdmitPatient(role)}
                     canTransfer={canTransferPatient(role)}
                     canDischarge={canDischargePatient(role)}
+                    canManage={canManageRooms(role)}
+                    estadoLoading={estadoLoading === h.id}
                     onInternar={() => openInternar(h)}
                     onTrasladar={() => openTrasladar(h)}
                     onEgresar={() => openEgresar(h)}
-                    onVerPaciente={id => navigate(`/paciente/${id}`)}
+                    onVerPaciente={id => handleVerPaciente(id)}
+                    onCambiarEstado={estado => handleCambiarEstado(h, estado)}
                   />
                 ))}
               </div>
@@ -397,6 +427,25 @@ export default function HabitacionesPage() {
         </Modal>
       )}
 
+      {/* MODAL VER PACIENTE */}
+      <PatientDetailModal
+        patient={selectedPatient}
+        onClose={() => { setSelectedPatient(null); setSelectedRoom(null) }}
+        defaultTab="info"
+        roomActions={
+          selectedRoom
+            ? {
+                onTrasladar: canTransferPatient(role)
+                  ? () => { setSelectedPatient(null); setSelectedRoom(null); openTrasladar(selectedRoom) }
+                  : undefined,
+                onEgresar: canDischargePatient(role)
+                  ? () => { setSelectedPatient(null); setSelectedRoom(null); openEgresar(selectedRoom) }
+                  : undefined,
+              }
+            : undefined
+        }
+      />
+
       {/* MODAL EGRESAR */}
       {egresoModal && (
         <Modal
@@ -450,13 +499,16 @@ interface RoomCardProps {
   canAdmit: boolean
   canTransfer: boolean
   canDischarge: boolean
+  canManage: boolean
+  estadoLoading: boolean
   onInternar: () => void
   onTrasladar: () => void
   onEgresar: () => void
   onVerPaciente: (id: number) => void
+  onCambiarEstado: (estado: 'disponible' | 'mantenimiento') => void
 }
 
-function RoomCard({ habitacion: h, canAdmit, canTransfer, canDischarge, onInternar, onTrasladar, onEgresar, onVerPaciente }: RoomCardProps) {
+function RoomCard({ habitacion: h, canAdmit, canTransfer, canDischarge, canManage, estadoLoading, onInternar, onTrasladar, onEgresar, onVerPaciente, onCambiarEstado }: RoomCardProps) {
   const cfg = ESTADO_CONFIG[h.estadoHabitacion] ?? ESTADO_CONFIG.disponible
 
   return (
@@ -534,24 +586,70 @@ function RoomCard({ habitacion: h, canAdmit, canTransfer, canDischarge, onIntern
         <div className="mb-3 text-xs text-amber-600 font-medium">En mantenimiento</div>
       )}
 
-      {h.estadoHabitacion === 'disponible' && (
-        canAdmit ? (
-          <button
-            onClick={onInternar}
-            className="w-full py-2 text-xs font-medium rounded-xl border border-blue-200 text-blue-700 hover:bg-blue-50 transition-colors"
-          >
-            Internar Paciente
-          </button>
-        ) : (
-          <button
-            disabled
-            title="Tu rol no permite internar pacientes."
-            className="w-full py-2 text-xs font-medium rounded-xl border border-gray-200 text-gray-400 cursor-not-allowed"
-          >
-            Internar Paciente
-          </button>
-        )
-      )}
+      <div className="space-y-1.5">
+        {h.estadoHabitacion === 'disponible' && (
+          canAdmit ? (
+            <button
+              onClick={onInternar}
+              className="w-full py-2 text-xs font-medium rounded-xl border border-blue-200 text-blue-700 hover:bg-blue-50 transition-colors"
+            >
+              Internar Paciente
+            </button>
+          ) : (
+            <button
+              disabled
+              title="Tu rol no permite internar pacientes."
+              className="w-full py-2 text-xs font-medium rounded-xl border border-gray-200 text-gray-400 cursor-not-allowed"
+            >
+              Internar Paciente
+            </button>
+          )
+        )}
+
+        {h.estadoHabitacion === 'disponible' && (
+          canManage ? (
+            <button
+              onClick={() => onCambiarEstado('mantenimiento')}
+              disabled={estadoLoading}
+              className="w-full py-2 text-xs font-medium rounded-xl border border-amber-200 text-amber-700 hover:bg-amber-50 transition-colors disabled:opacity-50"
+            >
+              <Wrench size={11} className="inline mr-1" />
+              {estadoLoading ? 'Actualizando...' : 'Marcar mantenimiento'}
+            </button>
+          ) : (
+            <button
+              disabled
+              title="Tu rol no permite modificar habitaciones."
+              className="w-full py-2 text-xs font-medium rounded-xl border border-gray-200 text-gray-400 cursor-not-allowed"
+            >
+              <Wrench size={11} className="inline mr-1" />
+              Marcar mantenimiento
+            </button>
+          )
+        )}
+
+        {h.estadoHabitacion === 'mantenimiento' && (
+          canManage ? (
+            <button
+              onClick={() => onCambiarEstado('disponible')}
+              disabled={estadoLoading}
+              className="w-full py-2 text-xs font-medium rounded-xl border border-green-200 text-green-700 hover:bg-green-50 transition-colors disabled:opacity-50"
+            >
+              <CheckCircle size={11} className="inline mr-1" />
+              {estadoLoading ? 'Actualizando...' : 'Marcar disponible'}
+            </button>
+          ) : (
+            <button
+              disabled
+              title="Tu rol no permite modificar habitaciones."
+              className="w-full py-2 text-xs font-medium rounded-xl border border-gray-200 text-gray-400 cursor-not-allowed"
+            >
+              <CheckCircle size={11} className="inline mr-1" />
+              Marcar disponible
+            </button>
+          )
+        )}
+      </div>
     </div>
   )
 }

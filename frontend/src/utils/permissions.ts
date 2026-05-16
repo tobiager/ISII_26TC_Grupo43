@@ -5,11 +5,11 @@ export const canEditPatients      = (role: Rol) => role === 'ADMINISTRADOR' || r
 export const canDeletePatients    = (role: Rol) => role === 'ADMINISTRADOR' || role === 'ADMINISTRATIVO'
 
 export const canViewRooms         = (_role: Rol) => true
-export const canAdmitPatient      = (role: Rol) => role === 'ADMINISTRADOR' || role === 'ADMINISTRATIVO'
+export const canAdmitPatient      = (role: Rol) => role === 'ADMINISTRADOR' || role === 'ENFERMERO'
 export const canTransferPatient   = (role: Rol) => role === 'ADMINISTRADOR' || role === 'ENFERMERO'
-export const canDischargePatient  = (role: Rol) => role === 'ADMINISTRADOR' || role === 'ADMINISTRATIVO'
-export const canManageRooms       = (role: Rol) => role === 'ADMINISTRADOR' || role === 'ADMINISTRATIVO' || role === 'ENFERMERO'
-export const canChangeRoomStatus  = (role: Rol) => role === 'ADMINISTRADOR' || role === 'ADMINISTRATIVO' || role === 'ENFERMERO'
+export const canDischargePatient  = (role: Rol) => role === 'ADMINISTRADOR' || role === 'ENFERMERO'
+export const canManageRooms       = (role: Rol) => role === 'ADMINISTRADOR' || role === 'ENFERMERO'
+export const canChangeRoomStatus  = (role: Rol) => role === 'ADMINISTRADOR' || role === 'ENFERMERO'
 
 export const canViewMedicalHistory  = (_role: Rol) => true
 export const canEditMedicalHistory  = (role: Rol) => role === 'ADMINISTRADOR' || role === 'MEDICO' || role === 'ENFERMERO'

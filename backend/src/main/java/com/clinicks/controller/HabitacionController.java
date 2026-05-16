@@ -30,7 +30,7 @@ public class HabitacionController {
     }
 
     @PostMapping("/habitaciones/{id}/internar")
-    @PreAuthorize("hasAnyAuthority('ADMINISTRADOR','ADMINISTRATIVO')")
+    @PreAuthorize("hasAnyAuthority('ADMINISTRADOR','ENFERMERO')")
     public ResponseEntity<Map<String, String>> internar(
             @PathVariable Integer id,
             @RequestBody InternacionRequestDTO dto,
@@ -54,7 +54,7 @@ public class HabitacionController {
     }
 
     @PostMapping("/internaciones/{id}/egresar")
-    @PreAuthorize("hasAnyAuthority('ADMINISTRADOR','ADMINISTRATIVO')")
+    @PreAuthorize("hasAnyAuthority('ADMINISTRADOR','ENFERMERO')")
     public ResponseEntity<Map<String, String>> egresar(
             @PathVariable Integer id,
             @RequestBody EgresoRequestDTO dto,
@@ -63,5 +63,15 @@ public class HabitacionController {
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
         habitacionService.egresarPaciente(id, dto, usuario.getIdUsuario());
         return ResponseEntity.ok(Map.of("mensaje", "Paciente egresado correctamente"));
+    }
+
+    @PatchMapping("/habitaciones/{id}/estado")
+    @PreAuthorize("hasAnyAuthority('ADMINISTRADOR','ENFERMERO')")
+    public ResponseEntity<Map<String, String>> cambiarEstado(
+            @PathVariable Integer id,
+            @RequestBody Map<String, String> body) {
+        String estado = body.get("estado");
+        habitacionService.cambiarEstadoHabitacion(id, estado);
+        return ResponseEntity.ok(Map.of("mensaje", "Estado de habitación actualizado correctamente"));
     }
 }

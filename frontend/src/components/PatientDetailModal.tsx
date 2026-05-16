@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react'
 import {
   X, Phone, MapPin, AlertTriangle, Heart, Users, CreditCard,
   Calendar, Droplets, Home, ClipboardList, Plus, ChevronDown,
+  ArrowRightLeft, LogOut, BedDouble, Activity,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Patient } from '../types/patient'
-import type { HistorialMedicoDetalle, TipoProcedimiento } from '../types/history'
+import type { HistorialMedicoDetalle, TipoProcedimiento, InternacionHistorial, RegistroClinico } from '../types/history'
 import { historialService } from '../services/historialService'
 import { useAuth } from '../contexts/AuthContext'
 import { canEditMedicalHistory } from '../utils/permissions'
@@ -13,9 +14,16 @@ import ReadOnlyBadge from './ReadOnlyBadge'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
+interface RoomActions {
+  onTrasladar?: () => void
+  onEgresar?: () => void
+}
+
 interface PatientDetailModalProps {
   patient: Patient | null
   onClose: () => void
+  defaultTab?: Tab
+  roomActions?: RoomActions
 }
 
 type Tab = 'info' | 'historial'
@@ -40,25 +48,31 @@ const tipoSangreColors: Record<string, string> = {
 }
 
 const TIPO_COLORS: Record<string, string> = {
-  'Consulta clínica':                    'bg-blue-50 border-l-4 border-blue-400',
-  'Diagnóstico':                         'bg-green-50 border-l-4 border-green-400',
-  'Internación':                         'bg-indigo-50 border-l-4 border-indigo-400',
-  'Medicación':                          'bg-violet-50 border-l-4 border-violet-400',
-  'Extracción de sangre':                'bg-amber-50 border-l-4 border-amber-400',
-  'Radiografía':                         'bg-orange-50 border-l-4 border-orange-400',
-  'Alta':                                'bg-emerald-50 border-l-4 border-emerald-400',
-  'Alta médica':                         'bg-emerald-50 border-l-4 border-emerald-400',
-  'Traslado de habitación':              'bg-teal-50 border-l-4 border-teal-400',
-  'Control de signos vitales':           'bg-sky-50 border-l-4 border-sky-400',
-  'Curación de herida':                  'bg-rose-50 border-l-4 border-rose-400',
-  'Cirugía':                             'bg-red-50 border-l-4 border-red-400',
-  'Transfusión de sangre':               'bg-red-50 border-l-4 border-red-300',
-  'Electrocardiograma':                  'bg-purple-50 border-l-4 border-purple-400',
-  'Fisioterapia':                        'bg-lime-50 border-l-4 border-lime-400',
-  'Nota de evolución':                   'bg-gray-50 border-l-4 border-gray-400',
+  'Consulta clínica':           'bg-blue-50 border-l-4 border-blue-400',
+  'Evolución médica':           'bg-sky-50 border-l-4 border-sky-400',
+  'Evolución de enfermería':    'bg-cyan-50 border-l-4 border-cyan-400',
+  'Diagnóstico':                'bg-green-50 border-l-4 border-green-400',
+  'Administración de medicación': 'bg-violet-50 border-l-4 border-violet-400',
+  'Extracción de sangre':       'bg-amber-50 border-l-4 border-amber-400',
+  'Laboratorio':                'bg-yellow-50 border-l-4 border-yellow-400',
+  'Radiografía':                'bg-orange-50 border-l-4 border-orange-400',
+  'Ecografía':                  'bg-orange-50 border-l-4 border-orange-300',
+  'Tomografía':                 'bg-red-50 border-l-4 border-red-300',
+  'Resonancia magnética':       'bg-red-50 border-l-4 border-red-400',
+  'Electrocardiograma':         'bg-purple-50 border-l-4 border-purple-400',
+  'Indicación médica':          'bg-indigo-50 border-l-4 border-indigo-300',
+  'Procedimiento':              'bg-slate-50 border-l-4 border-slate-400',
+  'Curación':                   'bg-rose-50 border-l-4 border-rose-400',
+  'Control de signos vitales':  'bg-teal-50 border-l-4 border-teal-300',
+  'Observación general':        'bg-gray-50 border-l-4 border-gray-400',
+  'Internación':                'bg-indigo-50 border-l-4 border-indigo-500',
+  'Alta médica':                'bg-emerald-50 border-l-4 border-emerald-400',
+  'Traslado de habitación':     'bg-teal-50 border-l-4 border-teal-400',
 }
 
-export default function PatientDetailModal({ patient, onClose }: PatientDetailModalProps) {
+const TIPOS_AUTOMATICOS = new Set(['Internación', 'Traslado de habitación', 'Alta médica', 'Egreso hospitalario'])
+
+export default function PatientDetailModal({ patient, onClose, defaultTab, roomActions }: PatientDetailModalProps) {
   const { user } = useAuth()
   const [tab, setTab] = useState<Tab>('info')
 
@@ -76,13 +90,13 @@ export default function PatientDetailModal({ patient, onClose }: PatientDetailMo
 
   useEffect(() => {
     if (!patient) return
-    setTab('info')
+    setTab(defaultTab ?? 'info')
     setHistorial(null)
     setShowAddForm(false)
     setNewTipo('')
     setNewCustomType('')
     setNewDesc('')
-  }, [patient])
+  }, [patient, defaultTab])
 
   useEffect(() => {
     if (!patient || tab !== 'historial') return
@@ -409,7 +423,7 @@ export default function PatientDetailModal({ patient, onClose }: PatientDetailMo
                         className="w-full appearance-none pl-3 pr-8 py-2 text-sm border border-gray-200 rounded-xl outline-none focus:border-blue-400 bg-white"
                       >
                         <option value="">Seleccionar tipo...</option>
-                        {tipos.filter(t => t.nombre !== 'Otro').map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+                        {tipos.filter(t => !TIPOS_AUTOMATICOS.has(t.nombre) && t.nombre !== 'Otro').map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
                         <option value="otro">Otro / Personalizado</option>
                       </select>
                       <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -452,46 +466,57 @@ export default function PatientDetailModal({ patient, onClose }: PatientDetailMo
                 </div>
               )}
 
-              {/* Timeline */}
+              {/* Historial agrupado */}
               {historialLoading ? (
                 <div className="text-center py-12">
                   <div className="inline-block w-7 h-7 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
                   <p className="text-sm text-gray-400 mt-3">Cargando historial...</p>
                 </div>
-              ) : !historial || historial.registros.length === 0 ? (
+              ) : !historial || (historial.registros.length === 0 && !(historial.internaciones?.length)) ? (
                 <div className="text-center py-12 text-gray-400">
                   <ClipboardList size={36} className="mx-auto mb-3 opacity-40" />
                   <p className="text-sm">Sin registros clínicos</p>
                   {canEdit && <p className="text-xs mt-1">Usá el botón "Registrar Evento" para agregar el primer registro.</p>}
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {historial.registros.map(r => {
-                    const cardClass = TIPO_COLORS[r.tipoProcedimiento] ?? 'bg-gray-50 border-l-4 border-gray-300'
-                    return (
-                      <div key={r.id} className={`rounded-xl p-4 ${cardClass}`}>
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                                {r.tipoProcedimiento}
-                              </span>
-                            </div>
-                            <p className="text-sm text-gray-800 whitespace-pre-wrap">{r.descripcion}</p>
-                            <div className="flex items-center gap-3 mt-2 text-xs text-gray-400 flex-wrap">
-                              <span className="flex items-center gap-1">
-                                <Calendar size={11} />
-                                {formatDateTime(r.fechaRegistro)}
-                              </span>
-                              <span>•</span>
-                              <span>{r.usuarioNombre}</span>
-                              <span className="bg-white/60 px-1.5 py-0.5 rounded text-gray-500">{r.usuarioRol}</span>
-                            </div>
-                          </div>
-                        </div>
+                <div className="space-y-6">
+                  {/* Atenciones ambulatorias */}
+                  {(historial.eventosAmbulatorios ?? []).length > 0 && (
+                    <section>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Activity size={13} className="text-green-600" />
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          Atenciones ambulatorias
+                        </span>
+                        <span className="text-xs text-gray-400">({historial.eventosAmbulatorios.length})</span>
                       </div>
+                      <div className="space-y-3">
+                        {historial.eventosAmbulatorios.map(r => (
+                          <RegistroCard key={r.id} registro={r} />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Internaciones (más reciente primero) */}
+                  {(historial.internaciones ?? []).map((internacion, idx) => {
+                    const total = historial.internaciones.length
+                    const label = internacion.estado === 'ACTIVA'
+                      ? 'Internación actual'
+                      : `Internación #${total - idx}`
+                    return (
+                      <InternacionBlock key={internacion.idInternacion} internacion={internacion} label={label} />
                     )
                   })}
+
+                  {/* Fallback: sin datos de agrupación → lista plana */}
+                  {!(historial.internaciones?.length) && !(historial.eventosAmbulatorios?.length) && (
+                    <div className="space-y-3">
+                      {historial.registros.map(r => (
+                        <RegistroCard key={r.id} registro={r} />
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -500,6 +525,28 @@ export default function PatientDetailModal({ patient, onClose }: PatientDetailMo
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0">
+          {roomActions && (roomActions.onTrasladar || roomActions.onEgresar) && (
+            <div className="flex gap-2 mb-3">
+              {roomActions.onTrasladar && (
+                <button
+                  onClick={roomActions.onTrasladar}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium text-blue-700 border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors"
+                >
+                  <ArrowRightLeft size={14} />
+                  Trasladar
+                </button>
+              )}
+              {roomActions.onEgresar && (
+                <button
+                  onClick={roomActions.onEgresar}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium text-amber-700 border border-amber-200 bg-amber-50 hover:bg-amber-100 transition-colors"
+                >
+                  <LogOut size={14} />
+                  Egresar
+                </button>
+              )}
+            </div>
+          )}
           <button
             onClick={onClose}
             className="w-full py-2.5 rounded-xl text-sm font-medium text-gray-700 border border-gray-200 hover:bg-gray-100 transition-colors"
@@ -518,5 +565,109 @@ function InfoRow({ label, value, icon }: { label: string; value?: string | null;
       <p className="text-xs text-gray-400 mb-1 flex items-center gap-1">{icon}{label}</p>
       <p className="text-sm font-medium text-gray-800">{value ?? '—'}</p>
     </div>
+  )
+}
+
+function RegistroCard({ registro: r }: { registro: RegistroClinico }) {
+  const cardClass = TIPO_COLORS[r.tipoProcedimiento] ?? 'bg-gray-50 border-l-4 border-gray-300'
+  return (
+    <div className={`rounded-xl p-4 ${cardClass}`}>
+      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+        {r.tipoProcedimiento}
+      </span>
+      <p className="text-sm text-gray-800 whitespace-pre-wrap mt-1">{r.descripcion}</p>
+      <div className="flex items-center gap-3 mt-2 text-xs text-gray-400 flex-wrap">
+        <span className="flex items-center gap-1">
+          <Calendar size={11} />
+          {formatDateTime(r.fechaRegistro)}
+        </span>
+        <span>•</span>
+        <span>{r.usuarioNombre}</span>
+        <span className="bg-white/60 px-1.5 py-0.5 rounded text-gray-500">{r.usuarioRol}</span>
+      </div>
+    </div>
+  )
+}
+
+function InternacionBlock({ internacion, label }: { internacion: InternacionHistorial; label: string }) {
+  const isActiva = internacion.estado === 'ACTIVA'
+  const [open, setOpen] = useState(isActiva)
+
+  return (
+    <section className={`rounded-xl border overflow-hidden ${isActiva ? 'border-blue-100' : 'border-gray-100'}`}>
+
+      {/* Header clickable (accordion trigger) */}
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className={`w-full text-left px-4 py-3 flex items-start justify-between gap-3 transition-colors ${
+          isActiva ? 'bg-blue-50 hover:bg-blue-100/70' : 'bg-gray-50 hover:bg-gray-100/70'
+        }`}
+      >
+        <div className="flex-1 min-w-0">
+          {/* Primera fila: label + estado */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <BedDouble size={13} className={isActiva ? 'text-blue-600' : 'text-gray-500'} />
+            <span className={`text-xs font-semibold uppercase tracking-wider ${isActiva ? 'text-blue-700' : 'text-gray-600'}`}>
+              {label}
+            </span>
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${isActiva ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-600'}`}>
+              {isActiva ? 'Internado' : 'Egresado'}
+            </span>
+          </div>
+
+          {/* Segunda fila: hab, fechas, traslados y — si colapsado — cantidad de eventos */}
+          <div className="flex items-center gap-1.5 mt-1.5 text-xs text-gray-500 flex-wrap">
+            <BedDouble size={10} className="flex-shrink-0" />
+            <span>Hab. {internacion.numeroHabitacion} — Piso {internacion.pisoHabitacion}</span>
+            <span className="text-gray-300">·</span>
+            <span>{formatDateTime(internacion.fechaInicio)}</span>
+            <span className="text-gray-300">→</span>
+            <span className={isActiva ? 'font-medium text-blue-600' : ''}>
+              {internacion.fechaFin ? formatDateTime(internacion.fechaFin) : 'Actual'}
+            </span>
+            {internacion.cantidadTraslados > 0 && (
+              <>
+                <span className="text-gray-300">·</span>
+                <span className="flex items-center gap-1">
+                  <ArrowRightLeft size={10} />
+                  {internacion.cantidadTraslados} traslado{internacion.cantidadTraslados !== 1 ? 's' : ''}
+                </span>
+              </>
+            )}
+            {!open && (
+              <>
+                <span className="text-gray-300">·</span>
+                <span className="flex items-center gap-1">
+                  <ClipboardList size={10} />
+                  {internacion.eventos.length} evento{internacion.eventos.length !== 1 ? 's' : ''}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Chevron: apunta abajo = abierto, derecha = cerrado */}
+        <ChevronDown
+          size={15}
+          className={`flex-shrink-0 mt-1 transition-transform duration-200 ${open ? 'rotate-0' : '-rotate-90'} ${isActiva ? 'text-blue-400' : 'text-gray-400'}`}
+        />
+      </button>
+
+      {/* Body (colapsable) */}
+      {open && (
+        <div className="px-4 py-4 bg-white space-y-3">
+          {internacion.eventos.length === 0 ? (
+            <p className="text-sm text-gray-400 italic text-center py-3">
+              Sin eventos registrados durante esta internación.
+            </p>
+          ) : (
+            internacion.eventos.map(r => (
+              <RegistroCard key={r.id} registro={r} />
+            ))
+          )}
+        </div>
+      )}
+    </section>
   )
 }

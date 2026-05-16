@@ -14,4 +14,6 @@ public class HistorialDetalleResponseDTO {
     private String observaciones;
     private String estadoHistorial;
     private List<RegistroClinicoResponseDTO> registros;
+    private List<RegistroClinicoResponseDTO> eventosAmbulatorios;
+    private List<InternacionHistorialDTO>    internaciones;
 }

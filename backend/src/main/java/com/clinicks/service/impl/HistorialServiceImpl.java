@@ -11,8 +11,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,6 +27,7 @@ public class HistorialServiceImpl implements HistorialService {
     private final PacienteRepository          pacienteRepository;
     private final HistorialMedicoRepository   historialRepository;
     private final RegistroClinicoRepository   registroRepository;
+    private final InternacionRepository       internacionRepository;
     private final TipoProcedimientoRepository tipoRepository;
     private final UsuarioRepository           usuarioRepository;
 
@@ -38,15 +42,65 @@ public class HistorialServiceImpl implements HistorialService {
         if (historial == null) {
             return HistorialDetalleResponseDTO.builder()
                     .registros(Collections.emptyList())
+                    .eventosAmbulatorios(Collections.emptyList())
+                    .internaciones(Collections.emptyList())
                     .estadoHistorial("activo")
                     .build();
         }
 
-        List<RegistroClinicoResponseDTO> registros =
-                registroRepository.findAllByHistorialOrderByFechaRegistroDesc(historial)
-                        .stream()
-                        .map(this::mapearRegistro)
-                        .collect(Collectors.toList());
+        // Cargar todos los registros y las internaciones
+        List<RegistroClinico> todosRegistros =
+                registroRepository.findAllByHistorialOrderByFechaRegistroDesc(historial);
+
+        List<Internacion> internaciones =
+                internacionRepository.findAllByHistorialOrderByFechaInicioDesc(historial);
+
+        // Mapear registros a DTOs (una sola vez)
+        List<RegistroClinicoResponseDTO> todosRegistrosDTOs = todosRegistros.stream()
+                .map(this::mapearRegistro)
+                .collect(Collectors.toList());
+
+        // Preparar mapa de eventos por internación
+        Map<Integer, List<RegistroClinicoResponseDTO>> eventosPorInternacion = new HashMap<>();
+        for (Internacion i : internaciones) {
+            eventosPorInternacion.put(i.getId(), new ArrayList<>());
+        }
+        List<RegistroClinicoResponseDTO> eventosAmbulatorios = new ArrayList<>();
+
+        // Agrupar cada registro en su internación o en ambulatorios
+        for (int idx = 0; idx < todosRegistros.size(); idx++) {
+            LocalDateTime fechaReg = todosRegistros.get(idx).getFechaRegistro();
+            RegistroClinicoResponseDTO dto = todosRegistrosDTOs.get(idx);
+            boolean asignado = false;
+
+            for (Internacion i : internaciones) {
+                boolean despuesDeInicio = !fechaReg.isBefore(i.getFechaInicio());
+                boolean antesDeFinOActiva = i.getFechaFin() == null || !fechaReg.isAfter(i.getFechaFin());
+                if (despuesDeInicio && antesDeFinOActiva) {
+                    eventosPorInternacion.get(i.getId()).add(dto);
+                    asignado = true;
+                    break;
+                }
+            }
+
+            if (!asignado) {
+                eventosAmbulatorios.add(dto);
+            }
+        }
+
+        // Construir DTOs de internación
+        List<InternacionHistorialDTO> internacionDTOs = internaciones.stream()
+                .map(i -> InternacionHistorialDTO.builder()
+                        .idInternacion(i.getId())
+                        .fechaInicio(i.getFechaInicio().format(FMT))
+                        .fechaFin(i.getFechaFin() != null ? i.getFechaFin().format(FMT) : null)
+                        .estado(i.getFechaFin() == null ? "ACTIVA" : "EGRESADA")
+                        .numeroHabitacion(i.getHabitacion().getNumeroHabitacion())
+                        .pisoHabitacion(i.getHabitacion().getPisoHabitacion())
+                        .cantidadTraslados(i.getCantidadTraslados())
+                        .eventos(eventosPorInternacion.getOrDefault(i.getId(), Collections.emptyList()))
+                        .build())
+                .collect(Collectors.toList());
 
         return HistorialDetalleResponseDTO.builder()
                 .id(historial.getIdHistorial())
@@ -54,7 +108,9 @@ public class HistorialServiceImpl implements HistorialService {
                 .fechaActualizacion(historial.getFechaActualizacion() != null ? historial.getFechaActualizacion().format(FMT) : null)
                 .observaciones(historial.getObservaciones())
                 .estadoHistorial(historial.getEstadoHistorial())
-                .registros(registros)
+                .registros(todosRegistrosDTOs)
+                .eventosAmbulatorios(eventosAmbulatorios)
+                .internaciones(internacionDTOs)
                 .build();
     }
 

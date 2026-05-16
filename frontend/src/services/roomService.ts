@@ -17,4 +17,7 @@ export const roomService = {
 
   egresar: (idInternacion: number, data: EgresoRequest): Promise<void> =>
     apiClient.post(`/internaciones/${idInternacion}/egresar`, data).then(() => undefined),
+
+  cambiarEstado: (idHabitacion: number, estado: 'disponible' | 'mantenimiento'): Promise<void> =>
+    apiClient.patch(`/habitaciones/${idHabitacion}/estado`, { estado }).then(() => undefined),
 }

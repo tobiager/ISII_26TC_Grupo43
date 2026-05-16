@@ -14,6 +14,17 @@ export interface RegistroClinico {
   usuarioRol: string
 }
 
+export interface InternacionHistorial {
+  idInternacion: number
+  fechaInicio: string
+  fechaFin: string | null
+  estado: 'ACTIVA' | 'EGRESADA'
+  numeroHabitacion: string
+  pisoHabitacion: number
+  cantidadTraslados: number
+  eventos: RegistroClinico[]
+}
+
 export interface HistorialMedicoDetalle {
   id: number
   fechaCreacion: string
@@ -21,6 +32,8 @@ export interface HistorialMedicoDetalle {
   observaciones: string | null
   estadoHistorial: string
   registros: RegistroClinico[]
+  eventosAmbulatorios: RegistroClinico[]
+  internaciones: InternacionHistorial[]
 }
 
 export interface RegistroClinicoRequest {

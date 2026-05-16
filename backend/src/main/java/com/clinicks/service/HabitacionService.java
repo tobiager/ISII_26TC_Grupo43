@@ -12,4 +12,5 @@ public interface HabitacionService {
     void internarPaciente(Integer idHabitacion, InternacionRequestDTO dto, Integer idUsuario);
     void trasladarPaciente(Integer idInternacion, TrasladoRequestDTO dto, Integer idUsuario);
     void egresarPaciente(Integer idInternacion, EgresoRequestDTO dto, Integer idUsuario);
+    void cambiarEstadoHabitacion(Integer idHabitacion, String nuevoEstado);
 }
