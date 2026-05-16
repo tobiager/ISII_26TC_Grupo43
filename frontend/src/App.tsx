@@ -4,6 +4,8 @@ import ProtectedRoute from './components/ProtectedRoute'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import PatientsPage from './pages/PatientsPage'
+import HabitacionesPage from './pages/HabitacionesPage'
+import HistorialPage from './pages/HistorialPage'
 import AdminPage from './pages/AdminPage'
 
 export default function App() {
@@ -29,6 +31,22 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <PatientsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/habitaciones"
+            element={
+              <ProtectedRoute>
+                <HabitacionesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/historial"
+            element={
+              <ProtectedRoute>
+                <HistorialPage />
               </ProtectedRoute>
             }
           />

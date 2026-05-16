@@ -71,6 +71,16 @@ public class ManejadorGlobalDeExcepciones {
         return construirError(HttpStatus.CONFLICT, ex.getMessage());
     }
 
+    @ExceptionHandler(HabitacionNoDisponibleException.class)
+    public ResponseEntity<Map<String, Object>> manejarHabitacionNoDisponible(HabitacionNoDisponibleException ex) {
+        return construirError(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
+    @ExceptionHandler(InternacionNoEncontradaException.class)
+    public ResponseEntity<Map<String, Object>> manejarInternacionNoEncontrada(InternacionNoEncontradaException ex) {
+        return construirError(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, Object>> manejarIntegridadDeDatos(DataIntegrityViolationException ex) {
         String mensaje = resolverMensajeConstraint(ex);

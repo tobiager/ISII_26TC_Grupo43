@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   Users, Shield, Stethoscope, Copy, Check,
-  UserCheck, UserX, RefreshCw, Send, ChevronDown, KeyRound, Lock,
+  UserCheck, UserX, RefreshCw, Send, ChevronDown, KeyRound, Lock, BedDouble, ClipboardList,
 } from 'lucide-react'
 import { authService } from '../services/authService'
 import UserMenu from '../components/UserMenu'
@@ -149,11 +149,25 @@ export default function AdminPage() {
           </div>
           <nav className="flex items-center gap-1">
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/pacientes')}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors"
             >
               <Users size={15} />
               Pacientes
+            </button>
+            <button
+              onClick={() => navigate('/habitaciones')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors"
+            >
+              <BedDouble size={15} />
+              Habitaciones
+            </button>
+            <button
+              onClick={() => navigate('/historial')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors"
+            >
+              <ClipboardList size={15} />
+              Historial
             </button>
             <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-blue-600 bg-blue-50">
               <Shield size={15} />

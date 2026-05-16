@@ -260,8 +260,35 @@ INSERT INTO usuario (email, pass, autorizacion, id_rol, id_persona, must_change_
 INSERT INTO habitacion_internacion (numero_habitacion, piso_habitacion, estado_habitacion) VALUES
   ('101', 1, 'disponible'), ('102', 1, 'disponible'), ('201', 2, 'disponible');
 
-INSERT INTO tipo_procedimiento (nombre_tipo_procedimiento) VALUES
-  ('Consulta clínica'), ('Extracción de sangre'), ('Radiografía');
+INSERT INTO tipo_procedimiento (nombre_tipo_procedimiento)
+SELECT v.nombre FROM (VALUES
+  ('Consulta clínica'),
+  ('Extracción de sangre'),
+  ('Radiografía'),
+  ('Internación'),
+  ('Traslado de habitación'),
+  ('Alta médica'),
+  ('Diagnóstico'),
+  ('Medicación'),
+  ('Inyección / Aplicación de medicamento'),
+  ('Control de signos vitales'),
+  ('Curación de herida'),
+  ('Colocación de suero'),
+  ('Ecografía'),
+  ('Electrocardiograma'),
+  ('Tomografía computada'),
+  ('Resonancia magnética'),
+  ('Endoscopía'),
+  ('Cirugía'),
+  ('Transfusión de sangre'),
+  ('Fisioterapia'),
+  ('Interconsulta médica'),
+  ('Nota de evolución'),
+  ('Otro')
+) AS v(nombre)
+WHERE NOT EXISTS (
+  SELECT 1 FROM tipo_procedimiento WHERE nombre_tipo_procedimiento = v.nombre
+);
 
 SET session_replication_role = DEFAULT;
 
@@ -271,7 +298,7 @@ SET session_replication_role = DEFAULT;
 --           alergias=5, enf_cronicas=5, antecedentes=5,
 --           personas=13, domicilios=10, residencias=10,
 --           fichas=10, afiliaciones=10, pacientes=10,
---           usuarios=3, habitaciones=3, tipo_proc=3
+--           usuarios=3, habitaciones=3, tipo_proc=23
 -- ============================================================
 /*
 SELECT 'provincias'              AS tabla, COUNT(*) AS total FROM provincia

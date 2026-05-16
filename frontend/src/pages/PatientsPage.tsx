@@ -10,11 +10,11 @@ import PatientForm from '../components/PatientForm'
 import PatientTable from '../components/PatientTable'
 import PatientDetailModal from '../components/PatientDetailModal'
 import StatCard from '../components/StatCard'
-import FeatureInProgress from '../components/FeatureInProgress'
 import UserMenu from '../components/UserMenu'
 import CambiarPasswordModal from '../components/CambiarPasswordModal'
 import { patientService } from '../services/patientService'
 import { useAuth } from '../contexts/AuthContext'
+import { canEditPatients, canDeletePatients, canAccessAdmin } from '../utils/permissions'
 import type { Patient, PatientRequest } from '../types/patient'
 
 const OBRAS_SOCIALES = ['Todas las Obras Sociales', 'OSDE', 'Swiss Medical', 'PAMI', 'Galeno', 'Medicus']
@@ -22,7 +22,8 @@ const ESTADOS = ['Todos los estados', 'Ambulatorio', 'Internado', 'Egresado']
 
 export default function PatientsPage() {
   const navigate = useNavigate()
-  const { hasRole, user } = useAuth()
+  const { user } = useAuth()
+  const role = user!.rol
   const [forcePasswordModal, setForcePasswordModal] = useState(false)
 
   useEffect(() => {
@@ -181,13 +182,21 @@ export default function PatientsPage() {
               <Users size={15} />
               Pacientes
             </button>
-            <FeatureInProgress featureName="camas">
-              <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors">
-                <BedDouble size={15} />
-                Habitaciones
-              </button>
-            </FeatureInProgress>
-            {hasRole('ADMINISTRADOR') && (
+            <button
+              onClick={() => navigate('/habitaciones')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors"
+            >
+              <BedDouble size={15} />
+              Habitaciones
+            </button>
+            <button
+              onClick={() => navigate('/historial')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors"
+            >
+              <ClipboardList size={15} />
+              Historial
+            </button>
+            {canAccessAdmin(role) && (
               <button
                 onClick={() => navigate('/admin')}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors"
@@ -210,7 +219,7 @@ export default function PatientsPage() {
             <Stethoscope size={22} className="text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Panel Administrativo</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Panel Médico</h1>
             <p className="text-sm text-gray-500">Sistema de Gestión Hospitalaria</p>
           </div>
         </div>
@@ -243,20 +252,24 @@ export default function PatientsPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={openDeleted}
-                className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-600 text-sm font-medium rounded-xl hover:bg-gray-50 transition-colors"
-              >
-                <UserX size={16} />
-                Ver Desactivados
-              </button>
-              <button
-                onClick={openCreate}
-                className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors"
-              >
-                <UserPlus size={16} />
-                Registrar Paciente
-              </button>
+              {canDeletePatients(role) && (
+                <button
+                  onClick={openDeleted}
+                  className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-600 text-sm font-medium rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  <UserX size={16} />
+                  Ver Desactivados
+                </button>
+              )}
+              {canEditPatients(role) && (
+                <button
+                  onClick={openCreate}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors"
+                >
+                  <UserPlus size={16} />
+                  Registrar Paciente
+                </button>
+              )}
             </div>
           </div>
 

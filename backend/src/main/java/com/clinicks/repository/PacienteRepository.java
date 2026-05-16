@@ -65,7 +65,7 @@ public interface PacienteRepository extends JpaRepository<Paciente, Integer> {
                 ELSE 'Ambulatorio'
             END                    AS estado,
             hi.numero_habitacion   AS numeroHabitacion,
-            hm.fecha_actualizacion AS ultimaVisita
+            (SELECT MAX(rc.fecha_registro) FROM registro_clinico rc WHERE rc.id_historial = hm.id_historial) AS ultimaVisita
         FROM paciente p
         JOIN persona per       ON p.id_persona      = per.id_persona
         JOIN ficha_medica fm   ON p.id_ficha_medica = fm.id_ficha_medica
@@ -86,7 +86,7 @@ public interface PacienteRepository extends JpaRepository<Paciente, Integer> {
         GROUP BY p.id_paciente, per.nombre_persona, per.apellido_persona, per.fecha_nacimiento,
                  p.dni, afl.numero_afiliado, fm.tipo_sangre,
                  os.nombre_obra, os.id_obra_social,
-                 estado, hi.numero_habitacion, hm.fecha_actualizacion
+                 estado, hi.numero_habitacion, hm.id_historial
         ORDER BY per.apellido_persona, per.nombre_persona
         """, nativeQuery = true)
     List<PacienteResumenProjection> encontrarTodosLosPacientesActivosConDetalles();

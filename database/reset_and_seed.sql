@@ -215,7 +215,29 @@ INSERT INTO habitacion_internacion (numero_habitacion, piso_habitacion, estado_h
   ('101', 1, 'disponible'), ('102', 1, 'disponible'), ('201', 2, 'disponible');
 
 INSERT INTO tipo_procedimiento (nombre_tipo_procedimiento) VALUES
-  ('Consulta clínica'), ('Extracción de sangre'), ('Radiografía');
+  ('Consulta clínica'),
+  ('Extracción de sangre'),
+  ('Radiografía'),
+  ('Internación'),
+  ('Traslado de habitación'),
+  ('Alta médica'),
+  ('Diagnóstico'),
+  ('Medicación'),
+  ('Inyección / Aplicación de medicamento'),
+  ('Control de signos vitales'),
+  ('Curación de herida'),
+  ('Colocación de suero'),
+  ('Ecografía'),
+  ('Electrocardiograma'),
+  ('Tomografía computada'),
+  ('Resonancia magnética'),
+  ('Endoscopía'),
+  ('Cirugía'),
+  ('Transfusión de sangre'),
+  ('Fisioterapia'),
+  ('Interconsulta médica'),
+  ('Nota de evolución'),
+  ('Otro');
 
 SET session_replication_role = DEFAULT;
 
