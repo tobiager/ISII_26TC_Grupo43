@@ -1,0 +1,190 @@
+classDiagram
+direction TB
+
+class Persona {
+  -Integer idPersona
+  -String nombrePersona
+  -String apellidoPersona
+  -LocalDateTime fechaNacimiento
+  -LocalDateTime fechaFallecimiento
+}
+
+class Usuario {
+  -Integer idUsuario
+  -String email
+  -String pass
+  -String autorizacion
+  -boolean mustChangePassword
+  -OffsetDateTime deletedAt
+  -Rol rol
+  -Persona persona
+}
+
+class Rol {
+  -Integer idRol
+  -String nombreRol
+}
+
+class Paciente {
+  -Integer idPaciente
+  -Integer dni
+  -OffsetDateTime deletedAt
+  -Persona persona
+  -Residencia residencia
+  -FichaMedica fichaMedica
+  -AfiliacionObraSocial afiliacion
+}
+
+class Residencia {
+  -Integer idResidencia
+  -String tipoResidencia
+  -Domicilio domicilio
+}
+
+class Domicilio {
+  -Integer idDireccion
+  -String calle
+  -Integer numero
+  -Integer piso
+  -Localidad localidad
+}
+
+class Localidad {
+  -Integer idLocalidad
+  -String nombreLocalidad
+  -Integer codigoPostal
+  -Provincia provincia
+}
+
+class Provincia {
+  -Integer idProvincia
+  -String nombreProvincia
+}
+
+class AfiliacionObraSocial {
+  -Integer idAfiliacion
+  -String numeroAfiliado
+  -LocalDate fechaAlta
+  -LocalDate fechaVencimiento
+  -LocalDate fechaBaja
+  -ObraSocial obraSocial
+}
+
+class ObraSocial {
+  -Integer idObraSocial
+  -String nombreObra
+}
+
+class FichaMedica {
+  -Integer idFichaMedica
+  -String tipoSangre
+  -String antecedentesText
+  -Set alergias
+  -Set enfermedadesCronicas
+  -Set antecedentesFamiliares
+}
+
+class Alergia {
+  -Integer idAlergia
+  -String nombreAlergia
+}
+
+class EnfermedadCronica {
+  -Integer idEnfermedadCronica
+  -String nombreEnfermedad
+}
+
+class AntecedenteFamiliar {
+  -Integer idAntecedenteFamiliar
+  -String nombreEnfermedad
+}
+
+class Telefono {
+  -Integer idTelefono
+  -String numeroTelefono
+  -String tipoTelefono
+  -Paciente paciente
+}
+
+class ContactoEmergencia {
+  -Integer idContactoEmergencia
+  -String nombreCompleto
+  -String parentesco
+  -String telefonoCelular
+  -Paciente paciente
+}
+
+class HistorialMedico {
+  -Integer idHistorial
+  -LocalDateTime fechaCreacion
+  -LocalDateTime fechaActualizacion
+  -String observaciones
+  -String estadoHistorial
+  -Paciente paciente
+}
+
+class RegistroClinico {
+  -Integer id
+  -String descripcion
+  -LocalDateTime fechaRegistro
+  -HistorialMedico historial
+  -TipoProcedimiento tipoProcedimiento
+  -Usuario usuario
+}
+
+class TipoProcedimiento {
+  -Integer id
+  -String nombreTipoProcedimiento
+}
+
+class Internacion {
+  -Integer id
+  -LocalDateTime fechaInicio
+  -LocalDateTime fechaFin
+  -Integer cantidadTraslados
+  -HistorialMedico historial
+  -HabitacionInternacion habitacion
+}
+
+class HabitacionInternacion {
+  -Integer id
+  -String numeroHabitacion
+  -Integer pisoHabitacion
+  -String estadoHabitacion
+}
+
+class InvitacionRegistro {
+  -Integer idInvitacion
+  -String email
+  -String token
+  -Rol rol
+  -Usuario usuarioCreador
+  -LocalDateTime fechaCreacion
+  -LocalDateTime fechaExpiracion
+  -LocalDateTime fechaUso
+  -OffsetDateTime deletedAt
+}
+
+Usuario "many" --> "1" Rol
+Usuario "many" --> "1" Persona
+Paciente "many" --> "1" Persona
+Paciente "1" *-- "1" Residencia
+Paciente "1" *-- "1" FichaMedica
+Paciente "many" --> "0..1" AfiliacionObraSocial
+Paciente "1" --> "many" Telefono
+Paciente "1" --> "many" ContactoEmergencia
+Paciente "1" --> "many" HistorialMedico
+Residencia "1" *-- "1" Domicilio
+Domicilio "many" --> "1" Localidad
+Localidad "many" --> "1" Provincia
+AfiliacionObraSocial "many" --> "1" ObraSocial
+FichaMedica "many" --> "many" Alergia
+FichaMedica "many" --> "many" EnfermedadCronica
+FichaMedica "many" --> "many" AntecedenteFamiliar
+HistorialMedico "1" --> "many" RegistroClinico
+HistorialMedico "1" --> "many" Internacion
+RegistroClinico "many" --> "1" TipoProcedimiento
+RegistroClinico "many" --> "1" Usuario
+Internacion "many" --> "1" HabitacionInternacion
+InvitacionRegistro "many" --> "1" Rol
+InvitacionRegistro "many" --> "1" Usuario
