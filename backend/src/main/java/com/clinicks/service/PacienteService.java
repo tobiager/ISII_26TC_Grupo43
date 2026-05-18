@@ -13,7 +13,7 @@ public interface PacienteService {
 
     PacienteResponseDTO obtenerPacientePorId(Integer id);
 
-    PacienteResponseDTO crearPaciente(PacienteRequestDTO dto);
+    PacienteResponseDTO crearPaciente(PacienteRequestDTO dto, Integer idUsuario);
 
     PacienteResponseDTO actualizarPaciente(Integer id, PacienteRequestDTO dto);
 

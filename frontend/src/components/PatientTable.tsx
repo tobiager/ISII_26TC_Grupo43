@@ -15,7 +15,6 @@ interface PatientTableProps {
 const estadoBadge: Record<string, string> = {
   Ambulatorio: 'bg-green-100 text-green-700',
   Internado:   'bg-blue-100 text-blue-700',
-  Egresado:    'bg-gray-100 text-gray-600',
 }
 
 function formatDate(dateStr: string | null | undefined) {
@@ -132,8 +131,8 @@ export default function PatientTable({ patients, onView, onEdit, onDelete }: Pat
                       </button>
                     )}
 
-                    {/* Botón Baja — según permiso */}
-                    {canDelete ? (
+                    {/* Botón Baja — según permiso e internación */}
+                    {canDelete && p.estado !== 'Internado' ? (
                       <button
                         onClick={() => onDelete(p)}
                         className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
@@ -144,7 +143,7 @@ export default function PatientTable({ patients, onView, onEdit, onDelete }: Pat
                     ) : (
                       <button
                         disabled
-                        title="No tenés permisos para dar de baja pacientes."
+                        title={p.estado === 'Internado' ? 'No se puede dar de baja a un paciente internado.' : 'No tenés permisos para dar de baja pacientes.'}
                         className="p-1.5 rounded-lg text-gray-300 cursor-not-allowed"
                       >
                         <Trash2 size={15} />

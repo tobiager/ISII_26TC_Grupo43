@@ -21,7 +21,7 @@ export interface Patient {
   idObraSocial: number | null
   nroAfiliado: string | null
   fechaVencimientoAfiliacion: string | null
-  estado: 'Ambulatorio' | 'Internado' | 'Egresado'
+  estado: 'Ambulatorio' | 'Internado'
   numeroHabitacion: string | null
   ultimaVisita: string | null
   telefono: string | null

@@ -5,6 +5,7 @@ import com.clinicks.dto.PacienteRequestDTO;
 import com.clinicks.dto.PacienteResponseDTO;
 import com.clinicks.exception.AfiliadoDuplicadoException;
 import com.clinicks.exception.DniDuplicadoException;
+import com.clinicks.exception.OperacionNoPermitidaException;
 import com.clinicks.exception.PacienteNoEncontradoException;
 import com.clinicks.exception.TelefonoDuplicadoException;
 import com.clinicks.model.*;
@@ -40,6 +41,10 @@ public class PacienteServiceImpl implements PacienteService {
     private final ContactoEmergenciaRepository   contactoEmergenciaRepository;
     private final LocalidadRepository            localidadRepository;
     private final HistorialMedicoRepository      historialMedicoRepository;
+    private final RegistroClinicoRepository      registroClinicoRepository;
+    private final TipoProcedimientoRepository    tipoProcedimientoRepository;
+    private final UsuarioRepository              usuarioRepository;
+    private final InternacionRepository          internacionRepository;
 
     // ─── LISTAR ────────────────────────────────────────────────────────────────
 
@@ -100,7 +105,7 @@ public class PacienteServiceImpl implements PacienteService {
 
     @Override
     @Transactional
-    public PacienteResponseDTO crearPaciente(PacienteRequestDTO dto) {
+    public PacienteResponseDTO crearPaciente(PacienteRequestDTO dto, Integer idUsuario) {
         if (pacienteRepository.existePorDni(dto.getDni())) {
             throw new DniDuplicadoException(dto.getDni());
         }
@@ -156,13 +161,21 @@ public class PacienteServiceImpl implements PacienteService {
         guardarTelefono(saved, dto.getTelefono(), dto.getTipoTelefono());
         guardarContactosEmergencia(saved, dto.getContactosEmergencia());
 
-        if (!historialMedicoRepository.existePorPaciente(saved)) {
-            historialMedicoRepository.save(HistorialMedico.builder()
-                    .paciente(saved)
-                    .estadoHistorial("activo")
-                    .fechaCreacion(LocalDateTime.now())
-                    .fechaActualizacion(LocalDateTime.now())
-                    .build());
+        HistorialMedico historial = historialMedicoRepository.encontrarPorIdPaciente(saved.getIdPaciente())
+                .orElseGet(() -> historialMedicoRepository.save(HistorialMedico.builder()
+                        .paciente(saved)
+                        .estadoHistorial("activo")
+                        .fechaCreacion(LocalDateTime.now())
+                        .fechaActualizacion(LocalDateTime.now())
+                        .build()));
+
+        // Auto-crear eventos iniciales del historial
+        registrarEventoInicial("Apertura de historial", buildDescApertura(saved), historial, idUsuario);
+        if (ficha != null && !ficha.getAlergias().isEmpty()) {
+            registrarEventoInicial("Registro administrativo", buildDescAlergias(ficha), historial, idUsuario);
+        }
+        if (tieneAntecedentes(ficha)) {
+            registrarEventoInicial("Registro administrativo", buildDescAntecedentes(ficha), historial, idUsuario);
         }
 
         return mapearPacienteADTO(saved);
@@ -242,6 +255,10 @@ public class PacienteServiceImpl implements PacienteService {
     @Transactional
     public void eliminarPaciente(Integer id) {
         Paciente paciente = obtenerPacienteActivo(id);
+        if (internacionRepository.encontrarActivaPorPaciente(id).isPresent()) {
+            throw new OperacionNoPermitidaException(
+                "No se puede dar de baja al paciente porque está internado/a actualmente.");
+        }
         paciente.setDeletedAt(OffsetDateTime.now());
         pacienteRepository.save(paciente);
     }
@@ -423,6 +440,72 @@ public class PacienteServiceImpl implements PacienteService {
                     .telefonoCelular(StringUtils.hasText(c.getTelefono()) ? c.getTelefono().trim() : "Sin teléfono")
                     .build());
         }
+    }
+
+    // ─── AUTO-EVENTOS DE APERTURA ──────────────────────────────────────────────
+
+    private void registrarEventoInicial(String nombreTipo, String descripcion,
+                                        HistorialMedico historial, Integer idUsuario) {
+        tipoProcedimientoRepository.findByNombreTipoProcedimiento(nombreTipo).ifPresent(tipo ->
+            usuarioRepository.findById(idUsuario).ifPresent(usuario -> {
+                registroClinicoRepository.save(RegistroClinico.builder()
+                        .descripcion(descripcion)
+                        .fechaRegistro(LocalDateTime.now())
+                        .historial(historial)
+                        .tipoProcedimiento(tipo)
+                        .usuario(usuario)
+                        .build());
+                historial.setFechaActualizacion(LocalDateTime.now());
+                historialMedicoRepository.save(historial);
+            })
+        );
+    }
+
+    private String buildDescApertura(Paciente paciente) {
+        StringBuilder sb = new StringBuilder("Apertura de historial clínico. Se registran datos personales");
+        if (paciente.getResidencia() != null) sb.append(", domicilio");
+        if (paciente.getAfiliacion() != null && paciente.getAfiliacion().getObraSocial() != null) {
+            sb.append(", obra social (")
+              .append(paciente.getAfiliacion().getObraSocial().getNombreObra())
+              .append(")");
+        }
+        sb.append(" y ficha médica inicial.");
+        return sb.toString();
+    }
+
+    private String buildDescAlergias(FichaMedica ficha) {
+        String lista = ficha.getAlergias().stream()
+                .map(Alergia::getNombreAlergia)
+                .collect(Collectors.joining(", "));
+        return "Actualización de ficha médica: se registra alergia a " + lista + ".";
+    }
+
+    private String buildDescAntecedentes(FichaMedica ficha) {
+        StringBuilder sb = new StringBuilder("Actualización de ficha médica:");
+        if (!ficha.getEnfermedadesCronicas().isEmpty()) {
+            String ecs = ficha.getEnfermedadesCronicas().stream()
+                    .map(EnfermedadCronica::getNombreEnfermedad)
+                    .collect(Collectors.joining(", "));
+            sb.append(" enfermedades crónicas: ").append(ecs).append(";");
+        }
+        if (!ficha.getAntecedentesFamiliares().isEmpty()) {
+            String afs = ficha.getAntecedentesFamiliares().stream()
+                    .map(AntecedenteFamiliar::getNombreEnfermedad)
+                    .collect(Collectors.joining(", "));
+            sb.append(" antecedentes familiares: ").append(afs).append(";");
+        }
+        if (StringUtils.hasText(ficha.getAntecedentesText())) {
+            sb.append(" observaciones: ").append(ficha.getAntecedentesText().trim()).append(";");
+        }
+        return sb.toString().trim().replaceAll(";$", ".").replace(";", ",");
+    }
+
+    private boolean tieneAntecedentes(FichaMedica ficha) {
+        return ficha != null && (
+                !ficha.getEnfermedadesCronicas().isEmpty() ||
+                !ficha.getAntecedentesFamiliares().isEmpty() ||
+                StringUtils.hasText(ficha.getAntecedentesText())
+        );
     }
 
     // ─── MAPPERS ───────────────────────────────────────────────────────────────

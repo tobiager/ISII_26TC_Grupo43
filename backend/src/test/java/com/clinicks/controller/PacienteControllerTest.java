@@ -2,6 +2,8 @@ package com.clinicks.controller;
 
 import com.clinicks.dto.PacienteResponseDTO;
 import com.clinicks.exception.ManejadorGlobalDeExcepciones;
+import com.clinicks.model.Usuario;
+import com.clinicks.repository.UsuarioRepository;
 import com.clinicks.service.PacienteService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,9 +17,13 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 import java.util.Objects;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -28,6 +34,9 @@ class PacienteControllerTest {
     @Mock
     private PacienteService pacienteService;
 
+    @Mock
+    private UsuarioRepository usuarioRepository;
+
     private MockMvc mockMvc;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -36,7 +45,7 @@ class PacienteControllerTest {
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
-        mockMvc = MockMvcBuilders.standaloneSetup(new PacienteController(pacienteService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new PacienteController(pacienteService, usuarioRepository))
                 .setControllerAdvice(new ManejadorGlobalDeExcepciones())
                 .setValidator(validator)
                 .build();
@@ -53,9 +62,13 @@ class PacienteControllerTest {
                 .estado("Ambulatorio")
                 .build();
 
-        when(pacienteService.crearPaciente(any())).thenReturn(response);
+        Usuario mockUsuario = mock(Usuario.class);
+        when(mockUsuario.getIdUsuario()).thenReturn(1);
+        when(usuarioRepository.findByEmailActivo(anyString())).thenReturn(Optional.of(mockUsuario));
+        when(pacienteService.crearPaciente(any(), any())).thenReturn(response);
 
         mockMvc.perform(post("/api/pacientes")
+                        .with(user("admin@clinicks.com"))
                         .contentType(Objects.requireNonNull(MediaType.APPLICATION_JSON))
                         .content(Objects.requireNonNull(objectMapper.writeValueAsString(new PacienteJson(
                                 "Juan",

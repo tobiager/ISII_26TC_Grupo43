@@ -15,6 +15,7 @@ import { patientService } from '../services/patientService'
 import { historialService } from '../services/historialService'
 import { useAuth } from '../contexts/AuthContext'
 import { canAccessAdmin, canEditMedicalHistory } from '../utils/permissions'
+import { getTipoColor, TIPOS_AUTOMATICOS } from '../utils/clinickEventColors'
 import type { Patient } from '../types/patient'
 import type {
   HistorialMedicoDetalle,
@@ -39,37 +40,9 @@ function formatDateTime(dateStr: string | null | undefined) {
   catch { return '—' }
 }
 
-const TIPO_COLORS: Record<string, string> = {
-  'Consulta clínica':             'bg-blue-50 border-l-4 border-blue-400',
-  'Evolución médica':             'bg-sky-50 border-l-4 border-sky-400',
-  'Evolución de enfermería':      'bg-cyan-50 border-l-4 border-cyan-400',
-  'Diagnóstico':                  'bg-green-50 border-l-4 border-green-400',
-  'Administración de medicación': 'bg-violet-50 border-l-4 border-violet-400',
-  'Extracción de sangre':         'bg-amber-50 border-l-4 border-amber-400',
-  'Laboratorio':                  'bg-yellow-50 border-l-4 border-yellow-400',
-  'Radiografía':                  'bg-orange-50 border-l-4 border-orange-400',
-  'Ecografía':                    'bg-orange-50 border-l-4 border-orange-300',
-  'Tomografía':                   'bg-red-50 border-l-4 border-red-300',
-  'Resonancia magnética':         'bg-red-50 border-l-4 border-red-400',
-  'Electrocardiograma':           'bg-purple-50 border-l-4 border-purple-400',
-  'Indicación médica':            'bg-indigo-50 border-l-4 border-indigo-300',
-  'Procedimiento':                'bg-slate-50 border-l-4 border-slate-400',
-  'Curación':                     'bg-rose-50 border-l-4 border-rose-400',
-  'Control de signos vitales':    'bg-teal-50 border-l-4 border-teal-300',
-  'Observación general':          'bg-gray-50 border-l-4 border-gray-400',
-  'Internación':                  'bg-indigo-50 border-l-4 border-indigo-500',
-  'Alta médica':                  'bg-emerald-50 border-l-4 border-emerald-400',
-  'Traslado de habitación':       'bg-teal-50 border-l-4 border-teal-400',
-}
-
-const TIPOS_AUTOMATICOS = new Set([
-  'Internación', 'Traslado de habitación', 'Alta médica', 'Egreso hospitalario',
-])
-
 const ESTADO_BADGE: Record<string, string> = {
   Ambulatorio: 'bg-green-100 text-green-700',
   Internado:   'bg-blue-100 text-blue-700',
-  Egresado:    'bg-gray-100 text-gray-600',
 }
 
 const TIPO_SANGRE_COLORS: Record<string, string> = {
@@ -1069,7 +1042,7 @@ function DateRangePicker({
 // ── RegistroCard ───────────────────────────────────────────────────────────
 
 function RegistroCard({ registro: r }: { registro: RegistroClinico }) {
-  const cardClass = TIPO_COLORS[r.tipoProcedimiento] ?? 'bg-gray-50 border-l-4 border-gray-300'
+  const cardClass = getTipoColor(r.tipoProcedimiento)
   return (
     <div className={`rounded-xl p-4 ${cardClass}`}>
       <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{r.tipoProcedimiento}</span>
@@ -1104,7 +1077,7 @@ function InternacionBlock({ internacion, label }: { internacion: InternacionHist
             <BedDouble size={14} className={isActiva ? 'text-blue-600' : 'text-gray-500'} />
             <span className={`text-sm font-semibold ${isActiva ? 'text-blue-700' : 'text-gray-700'}`}>{label}</span>
             <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${isActiva ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-600'}`}>
-              {isActiva ? 'Internado' : 'Egresado'}
+              {isActiva ? 'Internado' : 'Con alta'}
             </span>
           </div>
           <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-500 flex-wrap">

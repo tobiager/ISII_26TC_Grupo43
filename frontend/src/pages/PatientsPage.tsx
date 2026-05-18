@@ -19,7 +19,7 @@ import { canEditPatients, canDeletePatients, canAccessAdmin } from '../utils/per
 import type { Patient, PatientRequest } from '../types/patient'
 
 const OBRAS_SOCIALES = ['Todas las Obras Sociales', 'OSDE', 'Swiss Medical', 'PAMI', 'Galeno', 'Medicus']
-const ESTADOS = ['Todos los estados', 'Ambulatorio', 'Internado', 'Egresado']
+const ESTADOS = ['Todos los estados', 'Ambulatorio', 'Internado']
 
 export default function PatientsPage() {
   const navigate = useNavigate()
@@ -161,8 +161,9 @@ export default function PatientsPage() {
       toast.success(`${deleteConfirm.nombreCompleto} fue dado de baja`)
       setDeleteConfirm(null)
       fetchPatients()
-    } catch {
-      toast.error('No se pudo dar de baja al paciente')
+    } catch (err: any) {
+      const msg = err?.response?.data?.error ?? 'No se pudo dar de baja al paciente'
+      toast.error(msg)
     }
   }
 
@@ -246,8 +247,8 @@ export default function PatientsPage() {
                 <p className="text-xs text-gray-500 mt-0.5">
                   {filtered.length} de {patients.length} pacientes
                   {stats.internados > 0 && ` (${stats.internados} internados`}
-                  {stats.total - stats.internados - patients.filter(p => p.estado === 'Egresado').length > 0
-                    && `, ${stats.total - stats.internados - patients.filter(p => p.estado === 'Egresado').length} ambulatorios`}
+                  {stats.total - stats.internados > 0
+                    && `, ${stats.total - stats.internados} ambulatorios`}
                   {stats.internados > 0 && ')'}
                 </p>
               </div>

@@ -61,7 +61,6 @@ public interface PacienteRepository extends JpaRepository<Paciente, Integer> {
             os.id_obra_social      AS idObraSocial,
             CASE
                 WHEN i.id_internacion IS NOT NULL THEN 'Internado'
-                WHEN hm.estado_historial = 'cerrado' THEN 'Egresado'
                 ELSE 'Ambulatorio'
             END                    AS estado,
             hi.numero_habitacion   AS numeroHabitacion,
