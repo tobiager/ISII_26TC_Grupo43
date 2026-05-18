@@ -1,16 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   X, Phone, MapPin, AlertTriangle, Heart, Users, CreditCard,
-  Calendar, Droplets, Home, ClipboardList, Plus, ChevronDown,
+  Calendar, Droplets, Home, ClipboardList, ChevronDown,
   ArrowRightLeft, LogOut, BedDouble, Activity,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Patient } from '../types/patient'
-import type { HistorialMedicoDetalle, TipoProcedimiento, InternacionHistorial, RegistroClinico } from '../types/history'
+import type { HistorialMedicoDetalle, InternacionHistorial, RegistroClinico } from '../types/history'
 import { historialService } from '../services/historialService'
-import { useAuth } from '../contexts/AuthContext'
-import { canEditMedicalHistory } from '../utils/permissions'
-import ReadOnlyBadge from './ReadOnlyBadge'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
@@ -70,32 +68,50 @@ const TIPO_COLORS: Record<string, string> = {
   'Traslado de habitación':     'bg-teal-50 border-l-4 border-teal-400',
 }
 
-const TIPOS_AUTOMATICOS = new Set(['Internación', 'Traslado de habitación', 'Alta médica', 'Egreso hospitalario'])
+function groupClinicalEventsByContext(historial: HistorialMedicoDetalle): {
+  ambulatorios: RegistroClinico[]
+  internaciones: InternacionHistorial[]
+} {
+  const ALTA_TIPOS = new Set(['Alta médica', 'Egreso hospitalario'])
+  const intByFechaFin = new Map<string, number>()
+  historial.internaciones.forEach((int, idx) => {
+    if (int.estado === 'EGRESADA' && int.fechaFin) {
+      intByFechaFin.set(int.fechaFin.substring(0, 16), idx)
+    }
+  })
+  const ambulatorios: RegistroClinico[] = []
+  const altasPorInternacion = new Map<number, RegistroClinico[]>()
+  historial.eventosAmbulatorios.forEach(event => {
+    if (ALTA_TIPOS.has(event.tipoProcedimiento)) {
+      const eventMin = event.fechaRegistro.substring(0, 16)
+      const intIdx = intByFechaFin.get(eventMin)
+      if (intIdx !== undefined) {
+        if (!altasPorInternacion.has(intIdx)) altasPorInternacion.set(intIdx, [])
+        altasPorInternacion.get(intIdx)!.push(event)
+        return
+      }
+    }
+    ambulatorios.push(event)
+  })
+  const internaciones = historial.internaciones.map((int, idx) => {
+    const extras = altasPorInternacion.get(idx) ?? []
+    if (extras.length === 0) return int
+    return { ...int, eventos: [...int.eventos, ...extras] }
+  })
+  return { ambulatorios, internaciones }
+}
 
 export default function PatientDetailModal({ patient, onClose, defaultTab, roomActions }: PatientDetailModalProps) {
-  const { user } = useAuth()
+  const navigate = useNavigate()
   const [tab, setTab] = useState<Tab>('info')
 
-  const [historial, setHistorial]           = useState<HistorialMedicoDetalle | null>(null)
+  const [historial, setHistorial]               = useState<HistorialMedicoDetalle | null>(null)
   const [historialLoading, setHistorialLoading] = useState(false)
-  const [tipos, setTipos]                   = useState<TipoProcedimiento[]>([])
-
-  const [showAddForm, setShowAddForm]       = useState(false)
-  const [newTipo, setNewTipo]               = useState<number | '' | 'otro'>('')
-  const [newCustomType, setNewCustomType]   = useState('')
-  const [newDesc, setNewDesc]               = useState('')
-  const [addLoading, setAddLoading]         = useState(false)
-
-  const canEdit = user ? canEditMedicalHistory(user.rol) : false
 
   useEffect(() => {
     if (!patient) return
     setTab(defaultTab ?? 'info')
     setHistorial(null)
-    setShowAddForm(false)
-    setNewTipo('')
-    setNewCustomType('')
-    setNewDesc('')
   }, [patient, defaultTab])
 
   useEffect(() => {
@@ -109,42 +125,10 @@ export default function PatientDetailModal({ patient, onClose, defaultTab, roomA
     return () => ctrl.abort()
   }, [patient, tab])
 
-  useEffect(() => {
-    if (!canEdit || tipos.length > 0) return
-    historialService.getTiposProcedimiento()
-      .then(setTipos)
-      .catch(() => {})
-  }, [canEdit, tipos.length])
-
-  const handleAddRegistro = async () => {
-    if (!patient || !newTipo || !newDesc.trim()) return
-    if (newTipo === 'otro' && !newCustomType.trim()) return
-    setAddLoading(true)
-    try {
-      let idTipo: number
-      let descripcion = newDesc.trim()
-      if (newTipo === 'otro') {
-        const otroTipo = tipos.find(t => t.nombre === 'Otro')
-        if (!otroTipo) { toast.error('Tipo "Otro" no disponible'); return }
-        idTipo = otroTipo.id
-        descripcion = `[Tipo personalizado: ${newCustomType.trim()}] ${descripcion}`
-      } else {
-        idTipo = Number(newTipo)
-      }
-      await historialService.registrarEvento({ idPaciente: patient.id, idTipoProcedimiento: idTipo, descripcion })
-      toast.success('Evento registrado correctamente')
-      setNewTipo('')
-      setNewCustomType('')
-      setNewDesc('')
-      setShowAddForm(false)
-      const updated = await historialService.getByPaciente(patient.id)
-      setHistorial(updated)
-    } catch {
-      toast.error('No se pudo registrar el evento')
-    } finally {
-      setAddLoading(false)
-    }
-  }
+  const grouped = useMemo(() => {
+    if (!historial) return { ambulatorios: [] as RegistroClinico[], internaciones: [] as InternacionHistorial[] }
+    return groupClinicalEventsByContext(historial)
+  }, [historial])
 
   if (!patient) return null
 
@@ -385,86 +369,14 @@ export default function PatientDetailModal({ patient, onClose, defaultTab, roomA
                     </p>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
-                  {!canEdit && <ReadOnlyBadge />}
-                  {canEdit && (
-                    <button
-                      onClick={() => setShowAddForm(v => !v)}
-                      className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white text-xs font-medium rounded-xl hover:bg-blue-700 transition-colors"
-                    >
-                      <Plus size={13} />
-                      Registrar Evento
-                    </button>
-                  )}
-                </div>
+                <button
+                  onClick={() => { navigate(`/historial/${patient.id}`); onClose() }}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white text-xs font-medium rounded-xl hover:bg-blue-700 transition-colors"
+                >
+                  <ClipboardList size={13} />
+                  Ver historial completo
+                </button>
               </div>
-
-              {/* Texto solo lectura para roles no-editores */}
-              {!canEdit && (
-                <p className="text-xs text-gray-400 italic mb-4">
-                  Podés consultar el historial, pero tu rol no permite registrar ni modificar eventos.
-                </p>
-              )}
-
-              {/* Formulario agregar */}
-              {showAddForm && canEdit && (
-                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-5 space-y-3">
-                  <p className="text-sm font-medium text-blue-900">Nuevo evento clínico</p>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Tipo de procedimiento</label>
-                    <div className="relative">
-                      <select
-                        value={newTipo}
-                        onChange={e => {
-                          const v = e.target.value
-                          setNewTipo(v === '' ? '' : v === 'otro' ? 'otro' : Number(v))
-                          if (v !== 'otro') setNewCustomType('')
-                        }}
-                        className="w-full appearance-none pl-3 pr-8 py-2 text-sm border border-gray-200 rounded-xl outline-none focus:border-blue-400 bg-white"
-                      >
-                        <option value="">Seleccionar tipo...</option>
-                        {tipos.filter(t => !TIPOS_AUTOMATICOS.has(t.nombre) && t.nombre !== 'Otro').map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
-                        <option value="otro">Otro / Personalizado</option>
-                      </select>
-                      <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                    </div>
-                    {newTipo === 'otro' && (
-                      <input
-                        type="text"
-                        value={newCustomType}
-                        onChange={e => setNewCustomType(e.target.value)}
-                        placeholder="Nombre del tipo personalizado..."
-                        className="w-full mt-2 px-3 py-2 text-sm border border-gray-200 rounded-xl outline-none focus:border-blue-400"
-                      />
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Descripción</label>
-                    <textarea
-                      value={newDesc}
-                      onChange={e => setNewDesc(e.target.value)}
-                      rows={3}
-                      placeholder="Descripción del evento clínico..."
-                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl outline-none focus:border-blue-400 resize-none"
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => { setShowAddForm(false); setNewTipo(''); setNewCustomType(''); setNewDesc('') }}
-                      className="flex-1 py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      onClick={handleAddRegistro}
-                      disabled={!newTipo || !newDesc.trim() || (newTipo === 'otro' && !newCustomType.trim()) || addLoading}
-                      className="flex-1 py-2 text-sm font-medium text-white bg-blue-600 rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {addLoading ? 'Guardando...' : 'Guardar'}
-                    </button>
-                  </div>
-                </div>
-              )}
 
               {/* Historial agrupado */}
               {historialLoading ? (
@@ -476,31 +388,30 @@ export default function PatientDetailModal({ patient, onClose, defaultTab, roomA
                 <div className="text-center py-12 text-gray-400">
                   <ClipboardList size={36} className="mx-auto mb-3 opacity-40" />
                   <p className="text-sm">Sin registros clínicos</p>
-                  {canEdit && <p className="text-xs mt-1">Usá el botón "Registrar Evento" para agregar el primer registro.</p>}
                 </div>
               ) : (
                 <div className="space-y-6">
                   {/* Atenciones ambulatorias */}
-                  {(historial.eventosAmbulatorios ?? []).length > 0 && (
+                  {grouped.ambulatorios.length > 0 && (
                     <section>
                       <div className="flex items-center gap-2 mb-3">
                         <Activity size={13} className="text-green-600" />
                         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                           Atenciones ambulatorias
                         </span>
-                        <span className="text-xs text-gray-400">({historial.eventosAmbulatorios.length})</span>
+                        <span className="text-xs text-gray-400">({grouped.ambulatorios.length})</span>
                       </div>
                       <div className="space-y-3">
-                        {historial.eventosAmbulatorios.map(r => (
+                        {grouped.ambulatorios.map(r => (
                           <RegistroCard key={r.id} registro={r} />
                         ))}
                       </div>
                     </section>
                   )}
 
-                  {/* Internaciones (más reciente primero) */}
-                  {(historial.internaciones ?? []).map((internacion, idx) => {
-                    const total = historial.internaciones.length
+                  {/* Internaciones */}
+                  {grouped.internaciones.map((internacion, idx) => {
+                    const total = grouped.internaciones.length
                     const label = internacion.estado === 'ACTIVA'
                       ? 'Internación actual'
                       : `Internación #${total - idx}`
@@ -510,7 +421,7 @@ export default function PatientDetailModal({ patient, onClose, defaultTab, roomA
                   })}
 
                   {/* Fallback: sin datos de agrupación → lista plana */}
-                  {!(historial.internaciones?.length) && !(historial.eventosAmbulatorios?.length) && (
+                  {!grouped.internaciones.length && !grouped.ambulatorios.length && (
                     <div className="space-y-3">
                       {historial.registros.map(r => (
                         <RegistroCard key={r.id} registro={r} />
@@ -596,7 +507,6 @@ function InternacionBlock({ internacion, label }: { internacion: InternacionHist
   return (
     <section className={`rounded-xl border overflow-hidden ${isActiva ? 'border-blue-100' : 'border-gray-100'}`}>
 
-      {/* Header clickable (accordion trigger) */}
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
@@ -605,7 +515,6 @@ function InternacionBlock({ internacion, label }: { internacion: InternacionHist
         }`}
       >
         <div className="flex-1 min-w-0">
-          {/* Primera fila: label + estado */}
           <div className="flex items-center gap-2 flex-wrap">
             <BedDouble size={13} className={isActiva ? 'text-blue-600' : 'text-gray-500'} />
             <span className={`text-xs font-semibold uppercase tracking-wider ${isActiva ? 'text-blue-700' : 'text-gray-600'}`}>
@@ -615,8 +524,6 @@ function InternacionBlock({ internacion, label }: { internacion: InternacionHist
               {isActiva ? 'Internado' : 'Egresado'}
             </span>
           </div>
-
-          {/* Segunda fila: hab, fechas, traslados y — si colapsado — cantidad de eventos */}
           <div className="flex items-center gap-1.5 mt-1.5 text-xs text-gray-500 flex-wrap">
             <BedDouble size={10} className="flex-shrink-0" />
             <span>Hab. {internacion.numeroHabitacion} — Piso {internacion.pisoHabitacion}</span>
@@ -646,15 +553,12 @@ function InternacionBlock({ internacion, label }: { internacion: InternacionHist
             )}
           </div>
         </div>
-
-        {/* Chevron: apunta abajo = abierto, derecha = cerrado */}
         <ChevronDown
           size={15}
           className={`flex-shrink-0 mt-1 transition-transform duration-200 ${open ? 'rotate-0' : '-rotate-90'} ${isActiva ? 'text-blue-400' : 'text-gray-400'}`}
         />
       </button>
 
-      {/* Body (colapsable) */}
       {open && (
         <div className="px-4 py-4 bg-white space-y-3">
           {internacion.eventos.length === 0 ? (

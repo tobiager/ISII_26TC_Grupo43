@@ -5,6 +5,7 @@ import {
   Users, UserCheck, BedDouble, ClipboardList,
   Search, ChevronDown, UserPlus, Stethoscope, UserX, X, Eye, RotateCcw, Shield,
 } from 'lucide-react'
+import CustomSelect from '../components/CustomSelect'
 import Modal from '../components/Modal'
 import PatientForm from '../components/PatientForm'
 import PatientTable from '../components/PatientTable'
@@ -284,26 +285,18 @@ export default function PatientsPage() {
                 className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
               />
             </div>
-            <div className="relative">
-              <select
-                value={filterOS}
-                onChange={e => setFilterOS(e.target.value)}
-                className="appearance-none pr-8 pl-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-blue-400 bg-white"
-              >
-                {OBRAS_SOCIALES.map(os => <option key={os}>{os}</option>)}
-              </select>
-              <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            </div>
-            <div className="relative">
-              <select
-                value={filterEstado}
-                onChange={e => setFilterEstado(e.target.value)}
-                className="appearance-none pr-8 pl-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-blue-400 bg-white"
-              >
-                {ESTADOS.map(e => <option key={e}>{e}</option>)}
-              </select>
-              <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            </div>
+            <CustomSelect
+              value={filterOS}
+              onChange={setFilterOS}
+              options={OBRAS_SOCIALES.map(os => ({ value: os, label: os }))}
+              className="pl-3 pr-2 py-2 text-sm border border-gray-200 rounded-lg bg-white cursor-pointer"
+            />
+            <CustomSelect
+              value={filterEstado}
+              onChange={setFilterEstado}
+              options={ESTADOS.map(e => ({ value: e, label: e }))}
+              className="pl-3 pr-2 py-2 text-sm border border-gray-200 rounded-lg bg-white cursor-pointer"
+            />
           </div>
 
           {/* Contenido tabla */}

@@ -6,6 +6,7 @@ import RegisterPage from './pages/RegisterPage'
 import PatientsPage from './pages/PatientsPage'
 import HabitacionesPage from './pages/HabitacionesPage'
 import HistorialPage from './pages/HistorialPage'
+import PatientHistorialPage from './pages/PatientHistorialPage'
 import AdminPage from './pages/AdminPage'
 
 export default function App() {
@@ -47,6 +48,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <HistorialPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/historial/:id"
+            element={
+              <ProtectedRoute>
+                <PatientHistorialPage />
               </ProtectedRoute>
             }
           />

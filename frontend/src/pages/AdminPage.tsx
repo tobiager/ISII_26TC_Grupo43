@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { authService } from '../services/authService'
 import UserMenu from '../components/UserMenu'
+import CustomSelect from '../components/CustomSelect'
 import type { AdminUsuario, InvitacionResponse, Rol } from '../types/auth'
 
 const ADMIN_EMAIL = 'admin@clinicks.com'
@@ -276,18 +277,12 @@ export default function AdminPage() {
                                 {ROL_LABELS[u.rol] ?? u.rol}
                               </span>
                             ) : (
-                              <div className="relative inline-block">
-                                <select
-                                  value={u.rol}
-                                  onChange={e => handleCambiarRol(u, e.target.value as Rol)}
-                                  className="appearance-none text-xs font-medium px-3 py-1.5 pr-7 rounded-lg border border-gray-200 bg-white outline-none focus:border-blue-400 cursor-pointer"
-                                >
-                                  {ROLES.map(r => (
-                                    <option key={r} value={r}>{ROL_LABELS[r]}</option>
-                                  ))}
-                                </select>
-                                <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                              </div>
+                              <CustomSelect
+                                value={u.rol}
+                                onChange={val => handleCambiarRol(u, val as Rol)}
+                                options={ROLES.map(r => ({ value: r, label: ROL_LABELS[r] }))}
+                                className="text-xs font-medium px-3 py-1.5 rounded-lg border border-gray-200 bg-white cursor-pointer"
+                              />
                             )}
                           </td>
                           <td className="px-6 py-4">
@@ -380,18 +375,12 @@ export default function AdminPage() {
 
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Rol</label>
-                    <div className="relative">
-                      <select
-                        value={invRol}
-                        onChange={e => setInvRol(e.target.value as Rol)}
-                        className="w-full appearance-none px-3 py-2 pr-8 text-sm border border-gray-200 rounded-lg outline-none focus:border-blue-400 bg-white"
-                      >
-                        {ROLES.map(r => (
-                          <option key={r} value={r}>{ROL_LABELS[r]}</option>
-                        ))}
-                      </select>
-                      <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                    </div>
+                    <CustomSelect
+                      value={invRol}
+                      onChange={val => setInvRol(val as Rol)}
+                      options={ROLES.map(r => ({ value: r, label: ROL_LABELS[r] }))}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white cursor-pointer"
+                    />
                   </div>
 
                   <div>
