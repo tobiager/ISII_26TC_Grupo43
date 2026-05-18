@@ -165,26 +165,26 @@ class InvitacionRegistro {
   -OffsetDateTime deletedAt
 }
 
-Usuario "many" --> "1" Rol
-Usuario "many" --> "1" Persona
-Paciente "many" --> "1" Persona
+Usuario "*" --> "1" Rol
+Usuario "*" --> "1" Persona
+Paciente "*" --> "1" Persona
 Paciente "1" *-- "1" Residencia
 Paciente "1" *-- "1" FichaMedica
-Paciente "many" --> "0..1" AfiliacionObraSocial
-Paciente "1" --> "many" Telefono
-Paciente "1" --> "many" ContactoEmergencia
-Paciente "1" --> "many" HistorialMedico
+Paciente "*" --> "0..1" AfiliacionObraSocial
+Paciente "1" --> "*" Telefono
+Paciente "1" --> "*" ContactoEmergencia
+Paciente "1" --> "*" HistorialMedico
 Residencia "1" *-- "1" Domicilio
-Domicilio "many" --> "1" Localidad
-Localidad "many" --> "1" Provincia
-AfiliacionObraSocial "many" --> "1" ObraSocial
-FichaMedica "many" --> "many" Alergia
-FichaMedica "many" --> "many" EnfermedadCronica
-FichaMedica "many" --> "many" AntecedenteFamiliar
-HistorialMedico "1" --> "many" RegistroClinico
-HistorialMedico "1" --> "many" Internacion
-RegistroClinico "many" --> "1" TipoProcedimiento
-RegistroClinico "many" --> "1" Usuario
-Internacion "many" --> "1" HabitacionInternacion
-InvitacionRegistro "many" --> "1" Rol
-InvitacionRegistro "many" --> "1" Usuario
+Domicilio "*" --> "1" Localidad
+Localidad "*" --> "1" Provincia
+AfiliacionObraSocial "*" --> "1" ObraSocial
+FichaMedica "*" --> "*" Alergia
+FichaMedica "*" --> "*" EnfermedadCronica
+FichaMedica "*" --> "*" AntecedenteFamiliar
+HistorialMedico "1" --> "*" RegistroClinico
+HistorialMedico "1" --> "*" Internacion
+RegistroClinico "*" --> "1" TipoProcedimiento
+RegistroClinico "*" --> "1" Usuario
+Internacion "*" --> "1" HabitacionInternacion
+InvitacionRegistro "*" --> "1" Rol
+InvitacionRegistro "*" --> "1" Usuario

@@ -397,16 +397,3 @@ Orden recomendado para levantar el proyecto:
 3. Frontend.
 
 ---
-
-## 13. Ruta sugerida para estudiar el proyecto
-
-1. `frontend/src/pages/PatientsPage.tsx`
-2. `frontend/src/services/patientService.ts`
-3. `backend/src/main/java/com/clinicks/controller/PacienteController.java`
-4. `backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java`
-5. `frontend/src/pages/HabitacionesPage.tsx`
-6. `backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java`
-7. `frontend/src/pages/HistorialPage.tsx`
-8. `backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java`
-9. `frontend/src/pages/AdminPage.tsx`
-10. `database/schema.sql`

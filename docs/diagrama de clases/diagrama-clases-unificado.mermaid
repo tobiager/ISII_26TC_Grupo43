@@ -174,30 +174,30 @@ class InvitacionRegistro {
 }
 
 %% Relaciones de dominio
-Usuario "many" --> "1" Rol : rol
-Usuario "many" --> "1" Persona : persona
-Paciente "many" --> "1" Persona : persona
+Usuario "*" --> "1" Rol : rol
+Usuario "*" --> "1" Persona : persona
+Paciente "*" --> "1" Persona : persona
 Paciente "1" *-- "1" Residencia : residencia
 Paciente "1" *-- "1" FichaMedica : fichaMedica
-Paciente "many" --> "0..1" AfiliacionObraSocial : afiliacion
-Paciente "1" --> "many" Telefono : telefonos
-Paciente "1" --> "many" ContactoEmergencia : contactos
-Paciente "1" --> "many" HistorialMedico : historiales
+Paciente "*" --> "0..1" AfiliacionObraSocial : afiliacion
+Paciente "1" --> "*" Telefono : telefonos
+Paciente "1" --> "*" ContactoEmergencia : contactos
+Paciente "1" --> "*" HistorialMedico : historiales
 Residencia "1" *-- "1" Domicilio : domicilio
-Domicilio "many" --> "1" Localidad : localidad
-Localidad "many" --> "1" Provincia : provincia
-AfiliacionObraSocial "many" --> "1" ObraSocial : obraSocial
-FichaMedica "many" --> "many" Alergia : alergias
-FichaMedica "many" --> "many" EnfermedadCronica : enfermedadesCronicas
-FichaMedica "many" --> "many" AntecedenteFamiliar : antecedentesFamiliares
-HistorialMedico "many" --> "1" Paciente : paciente
-RegistroClinico "many" --> "1" HistorialMedico : historial
-RegistroClinico "many" --> "1" TipoProcedimiento : tipoProcedimiento
-RegistroClinico "many" --> "1" Usuario : usuario
-Internacion "many" --> "1" HistorialMedico : historial
-Internacion "many" --> "1" HabitacionInternacion : habitacion
-InvitacionRegistro "many" --> "1" Rol : rol
-InvitacionRegistro "many" --> "1" Usuario : usuarioCreador
+Domicilio "*" --> "1" Localidad : localidad
+Localidad "*" --> "1" Provincia : provincia
+AfiliacionObraSocial "*" --> "1" ObraSocial : obraSocial
+FichaMedica "*" --> "*" Alergia : alergias
+FichaMedica "*" --> "*" EnfermedadCronica : enfermedadesCronicas
+FichaMedica "*" --> "*" AntecedenteFamiliar : antecedentesFamiliares
+HistorialMedico "*" --> "1" Paciente : paciente
+RegistroClinico "*" --> "1" HistorialMedico : historial
+RegistroClinico "*" --> "1" TipoProcedimiento : tipoProcedimiento
+RegistroClinico "*" --> "1" Usuario : usuario
+Internacion "*" --> "1" HistorialMedico : historial
+Internacion "*" --> "1" HabitacionInternacion : habitacion
+InvitacionRegistro "*" --> "1" Rol : rol
+InvitacionRegistro "*" --> "1" Usuario : usuarioCreador
 
 %% ═══════════════════════════════════════════════════════════════════
 %% CAPA DE APLICACION

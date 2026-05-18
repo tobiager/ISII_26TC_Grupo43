@@ -79,6 +79,7 @@ Los usuarios de prueba tienen `must_change_password=TRUE` y deben cambiar su con
    - Que el usuario exista y tenga `deleted_at IS NULL`.
    - Que la contraseña coincida con el hash BCrypt almacenado en `usuario.pass`.
 4. Si es válido, genera un JWT firmado con HS256 (24h de expiración) y devuelve:
+
    ```json
    {
      "token": "eyJ...",
@@ -94,6 +95,7 @@ Los usuarios de prueba tienen `must_change_password=TRUE` y deben cambiar su con
      }
    }
    ```
+
 5. El frontend guarda el token en `localStorage` (`clinicks_token`) y redirige según el rol:
    - `ADMINISTRADOR` → `/admin`
    - Resto → `/` (pacientes)
@@ -118,6 +120,7 @@ Authorization: Bearer <token>
 ```
 
 Respuesta:
+
 ```json
 {
   "email": "medico@clinicks.com",
@@ -153,6 +156,7 @@ POST /api/auth/register
 ```
 
 El backend:
+
 - Valida que el token exista, no esté vencido, no esté usado y no esté cancelado.
 - Valida que no exista ya un usuario con ese email.
 - Crea una `persona` con los datos personales.
@@ -218,6 +222,7 @@ Estas reglas están implementadas en `AdminServiceImpl` y `AdminController`, uti
 La tabla `usuario` incluye la columna `must_change_password BOOLEAN NOT NULL DEFAULT FALSE`.
 
 Cuando un ADMINISTRADOR resetea la contraseña de un usuario:
+
 - La contraseña se cambia a `Temporal123456`.
 - Se activa el flag `must_change_password = true` en la base de datos.
 - Al iniciar sesión, el frontend detecta este flag y muestra el modal de cambio de contraseña.

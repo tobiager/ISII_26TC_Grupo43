@@ -14,12 +14,14 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
+    private static final String DEFAULT_JWT_SECRET = "clinicks-local-dev-secret-clinicks-local-dev-secret";
+
     private final SecretKey secretKey;
     private final long expirationMs;
 
     public JwtUtil(
-            @Value("${app.jwt.secret}") String secret,
-            @Value("${app.jwt.expiration-ms}") long expirationMs) {
+            @Value("${JWT_SECRET:" + DEFAULT_JWT_SECRET + "}") String secret,
+            @Value("${JWT_EXPIRATION_MS:86400000}") long expirationMs) {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expirationMs = expirationMs;
     }
