@@ -1,0 +1,387 @@
+classDiagram
+direction TB
+
+%% Los DTOs usan Lombok (@Data/@Builder): no se listan getters generados.
+
+%% ═══════════════════════════════════════════════════════════════════
+%% AUTH
+%% ═══════════════════════════════════════════════════════════════════
+
+class LoginRequestDTO {
+  -String email
+  -String password
+}
+
+class LoginResponseDTO {
+  -String token
+  -UsuarioAuthDTO usuario
+}
+
+class UsuarioAuthDTO {
+  -Integer idUsuario
+  -String email
+  -String nombre
+  -String apellido
+  -String nombreCompleto
+  -String iniciales
+  -String rol
+  -String autorizacion
+  -boolean mustChangePassword
+  -boolean esAdminProtegido
+}
+
+class RegisterRequestDTO {
+  -String token
+  -String nombre
+  -String apellido
+  -String fechaNacimiento
+  -String password
+}
+
+class InvitacionRequestDTO {
+  -String email
+  -String rol
+  -String fechaExpiracion
+}
+
+class InvitacionResponseDTO {
+  -Integer idInvitacion
+  -String email
+  -String rol
+  -String invitationLink
+  -LocalDateTime fechaCreacion
+  -LocalDateTime fechaExpiracion
+  -LocalDateTime fechaUso
+  -boolean usada
+  -boolean vencida
+}
+
+class ValidarTokenResponseDTO {
+  -String email
+  -String rol
+}
+
+%% ═══════════════════════════════════════════════════════════════════
+%% GENERALES
+%% ═══════════════════════════════════════════════════════════════════
+
+class UsuarioResponseDTO {
+  -Integer id
+  -String email
+  -String nombre
+  -String apellido
+  -String nombreCompleto
+  -String iniciales
+  -String rol
+}
+
+%% ═══════════════════════════════════════════════════════════════════
+%% PACIENTE
+%% ═══════════════════════════════════════════════════════════════════
+
+class PacienteRequestDTO {
+  -String nombre
+  -String apellido
+  -Integer dni
+  -LocalDate fechaNacimiento
+  -String tipoSangre
+  -List~String~ alergias
+  -List~String~ enfermedadesCronicas
+  -List~String~ antecedentesFamiliares
+  -String antecedentesText
+  -String telefono
+  -String tipoTelefono
+  -String direccion
+  -Integer numeroDireccion
+  -Integer piso
+  -Integer idLocalidad
+  -String tipoResidencia
+  -List~ContactoEmergenciaDTO~ contactosEmergencia
+  -Integer idObraSocial
+  -String nombreObraSocial
+  -String nroAfiliado
+  -LocalDate fechaVencimientoAfiliacion
+}
+
+class PacienteResponseDTO {
+  -Integer id
+  -String nombre
+  -String apellido
+  -String nombreCompleto
+  -Integer dni
+  -Integer edad
+  -LocalDate fechaNacimiento
+  -String tipoSangre
+  -List~String~ alergias
+  -List~String~ enfermedadesCronicas
+  -List~String~ antecedentesFamiliares
+  -String antecedentesText
+  -String obraSocial
+  -Integer idObraSocial
+  -String nroAfiliado
+  -LocalDate fechaVencimientoAfiliacion
+  -String estado
+  -String numeroHabitacion
+  -LocalDate ultimaVisita
+  -String telefono
+  -String tipoTelefono
+  -String direccion
+  -Integer numeroDireccion
+  -Integer piso
+  -String tipoResidencia
+  -Integer idLocalidad
+  -String nombreLocalidad
+  -Integer idProvincia
+  -String nombreProvincia
+  -List~ContactoEmergenciaDTO~ contactosEmergencia
+}
+
+class ContactoEmergenciaDTO {
+  -String nombre
+  -String telefono
+  -String parentesco
+}
+
+%% ═══════════════════════════════════════════════════════════════════
+%% ADMIN
+%% ═══════════════════════════════════════════════════════════════════
+
+class AdminUsuarioDTO {
+  -Integer idUsuario
+  -String email
+  -String nombre
+  -String apellido
+  -String nombreCompleto
+  -String iniciales
+  -String rol
+  -String autorizacion
+  -boolean activo
+}
+
+class CambiarRolRequestDTO {
+  -String rol
+}
+
+class ResetPasswordResponseDTO {
+  -String message
+  -String temporaryPassword
+}
+
+%% ═══════════════════════════════════════════════════════════════════
+%% PERFIL
+%% ═══════════════════════════════════════════════════════════════════
+
+class PerfilResponseDTO {
+  -Integer idUsuario
+  -String email
+  -String nombre
+  -String apellido
+  -String rol
+  -String autorizacion
+  -boolean mustChangePassword
+  -boolean esAdminProtegido
+}
+
+class CambiarDatosBasicosRequestDTO {
+  -String nombre
+  -String apellido
+  -String fechaNacimiento
+}
+
+class CambiarPasswordRequestDTO {
+  -String passwordActual
+  -String nuevaPassword
+  -String confirmarPassword
+}
+
+class CambiarEmailRequestDTO {
+  -String nuevoEmail
+  -String password
+}
+
+%% ═══════════════════════════════════════════════════════════════════
+%% HISTORIAL
+%% ═══════════════════════════════════════════════════════════════════
+
+class HistorialDetalleResponseDTO {
+  -Integer id
+  -String fechaCreacion
+  -String fechaActualizacion
+  -String observaciones
+  -String estadoHistorial
+  -List~RegistroClinicoResponseDTO~ registros
+  -List~RegistroClinicoResponseDTO~ eventosAmbulatorios
+  -List~InternacionHistorialDTO~ internaciones
+}
+
+class RegistroClinicoRequestDTO {
+  -Integer idTipoProcedimiento
+  -String descripcion
+}
+
+class RegistroClinicoResponseDTO {
+  -Integer id
+  -String descripcion
+  -String fechaRegistro
+  -Integer idTipoProcedimiento
+  -String tipoProcedimiento
+  -Integer idUsuario
+  -String usuarioNombre
+  -String usuarioRol
+}
+
+class TipoProcedimientoDTO {
+  -Integer id
+  -String nombre
+}
+
+class InternacionHistorialDTO {
+  -Integer idInternacion
+  -String fechaInicio
+  -String fechaFin
+  -String estado
+  -String numeroHabitacion
+  -Integer pisoHabitacion
+  -Integer cantidadTraslados
+  -List~RegistroClinicoResponseDTO~ eventos
+}
+
+%% ═══════════════════════════════════════════════════════════════════
+%% HABITACION
+%% ═══════════════════════════════════════════════════════════════════
+
+class HabitacionResponseDTO {
+  -Integer id
+  -String numeroHabitacion
+  -Integer pisoHabitacion
+  -String estadoHabitacion
+  -PacienteOcupanteDTO pacienteActual
+  -InternacionActualDTO internacionActual
+}
+
+class PacienteOcupanteDTO {
+  -Integer id
+  -String nombreCompleto
+  -Integer dni
+}
+
+class InternacionActualDTO {
+  -Integer id
+  -String fechaInicio
+  -Integer cantidadTraslados
+}
+
+class InternacionRequestDTO {
+  -Integer idPaciente
+  -String motivo
+  -String observaciones
+}
+
+class TrasladoRequestDTO {
+  -Integer idHabitacionDestino
+  -String motivo
+  -String observaciones
+}
+
+class EgresoRequestDTO {
+  -String observaciones
+}
+
+%% ═══════════════════════════════════════════════════════════════════
+%% EXCEPCIONES Y HANDLER GLOBAL
+%% ═══════════════════════════════════════════════════════════════════
+
+class ManejadorGlobalDeExcepciones {
+  <<RestControllerAdvice>>
+  +manejarNoEncontrado(PacienteNoEncontradoException) ResponseEntity
+  +manejarUsuarioNoEncontrado(UsuarioNoEncontradoException) ResponseEntity
+  +manejarCredenciales(CredencialesInvalidasException) ResponseEntity
+  +manejarInvitacion(InvitacionInvalidaException) ResponseEntity
+  +manejarUsuarioDuplicado(UsuarioDuplicadoException) ResponseEntity
+  +manejarRolNoEncontrado(RolNoEncontradoException) ResponseEntity
+  +manejarOperacionNoPermitida(OperacionNoPermitidaException) ResponseEntity
+  +manejarAccesoNoAutorizado(AccessDeniedException) ResponseEntity
+  +manejarDniDuplicado(DniDuplicadoException) ResponseEntity
+  +manejarAfiliadoDuplicado(AfiliadoDuplicadoException) ResponseEntity
+  +manejarTelefonoDuplicado(TelefonoDuplicadoException) ResponseEntity
+  +manejarHabitacionNoDisponible(HabitacionNoDisponibleException) ResponseEntity
+  +manejarInternacionNoEncontrada(InternacionNoEncontradaException) ResponseEntity
+  +manejarIntegridadDeDatos(DataIntegrityViolationException) ResponseEntity
+  +manejarValidacion(MethodArgumentNotValidException) ResponseEntity
+  +manejarGenerico(Exception) ResponseEntity
+}
+
+class DniDuplicadoException {
+  +DniDuplicadoException(Integer)
+}
+
+class TelefonoDuplicadoException {
+  +TelefonoDuplicadoException(String)
+}
+
+class AfiliadoDuplicadoException {
+  +AfiliadoDuplicadoException(String)
+}
+
+class PacienteNoEncontradoException {
+  +PacienteNoEncontradoException(Integer)
+}
+
+class UsuarioNoEncontradoException {
+  +UsuarioNoEncontradoException(Integer)
+}
+
+class UsuarioDuplicadoException {
+  +UsuarioDuplicadoException(String)
+}
+
+class RolNoEncontradoException {
+  +RolNoEncontradoException(String)
+}
+
+class CredencialesInvalidasException {
+  +CredencialesInvalidasException()
+}
+
+class InvitacionInvalidaException {
+  +InvitacionInvalidaException(String)
+}
+
+class HabitacionNoDisponibleException {
+  +HabitacionNoDisponibleException(String)
+}
+
+class InternacionNoEncontradaException {
+  +InternacionNoEncontradaException(Integer)
+  +InternacionNoEncontradaException(String)
+}
+
+class OperacionNoPermitidaException {
+  +OperacionNoPermitidaException(String)
+}
+
+%% ═══════════════════════════════════════════════════════════════════
+%% RELACIONES
+%% ═══════════════════════════════════════════════════════════════════
+
+LoginResponseDTO "1" *-- "1" UsuarioAuthDTO
+PacienteRequestDTO "1" *-- "0..*" ContactoEmergenciaDTO
+PacienteResponseDTO "1" *-- "0..*" ContactoEmergenciaDTO
+HistorialDetalleResponseDTO "1" *-- "0..*" RegistroClinicoResponseDTO
+HistorialDetalleResponseDTO "1" *-- "0..*" InternacionHistorialDTO
+InternacionHistorialDTO "1" *-- "0..*" RegistroClinicoResponseDTO
+HabitacionResponseDTO "1" *-- "1" PacienteOcupanteDTO
+HabitacionResponseDTO "1" *-- "0..1" InternacionActualDTO
+
+ManejadorGlobalDeExcepciones --> DniDuplicadoException
+ManejadorGlobalDeExcepciones --> TelefonoDuplicadoException
+ManejadorGlobalDeExcepciones --> AfiliadoDuplicadoException
+ManejadorGlobalDeExcepciones --> PacienteNoEncontradoException
+ManejadorGlobalDeExcepciones --> UsuarioNoEncontradoException
+ManejadorGlobalDeExcepciones --> UsuarioDuplicadoException
+ManejadorGlobalDeExcepciones --> RolNoEncontradoException
+ManejadorGlobalDeExcepciones --> CredencialesInvalidasException
+ManejadorGlobalDeExcepciones --> InvitacionInvalidaException
+ManejadorGlobalDeExcepciones --> HabitacionNoDisponibleException
+ManejadorGlobalDeExcepciones --> InternacionNoEncontradaException
+ManejadorGlobalDeExcepciones --> OperacionNoPermitidaException

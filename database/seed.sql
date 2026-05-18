@@ -112,8 +112,8 @@ INSERT INTO enfermedad_cronica (nombre_enfermedad) VALUES ('Hipertensión arteri
 INSERT INTO antecedente_familiar (nombre_enfermedad) VALUES ('Diabetes tipo 2'), ('Hipertensión'), ('Cardiopatía'), ('Cáncer de colon'), ('Alzheimer');
 
 -- ============================================================
--- 5. PERSONAS (10 Pacientes + 3 Staff)
--- IDs resultantes: 1..13
+-- 5. PERSONAS (10 Pacientes + 4 Staff)
+-- IDs resultantes: 1..14
 --   1=Juan Pérez        (paciente)
 --   2=María García      (paciente)
 --   3=Ricardo Darín     (paciente)
@@ -124,9 +124,10 @@ INSERT INTO antecedente_familiar (nombre_enfermedad) VALUES ('Diabetes tipo 2'),
 --   8=Lali Espósito     (paciente)
 --   9=Duki Mauro        (paciente)
 --  10=Nicki Nicole      (paciente)
---  11=Claudia Medina    (staff/médico)    → claudia@hospital.com / MEDICO
---  12=Roberto Admin     (staff/admin)     → admin@hospital.com   / ADMINISTRATIVO
---  13=Admin Clinicks    (superadmin)      → admin@clinicks.com   / ADMINISTRADOR
+--  11=Claudia Medina    (staff/médico)     → claudia@hospital.com  / MEDICO
+--  12=Roberto Admin     (staff/admin)      → admin@hospital.com    / ADMINISTRATIVO
+--  13=Admin Clinicks    (superadmin)       → admin@clinicks.com    / ADMINISTRADOR
+--  14=Laura Enfermera   (staff/enfermero)  → enfermera@hospital.com / ENFERMERO
 -- ============================================================
 INSERT INTO persona (nombre_persona, apellido_persona, fecha_nacimiento) VALUES
   ('Juan',     'Pérez',    '1980-01-01'),
@@ -141,7 +142,8 @@ INSERT INTO persona (nombre_persona, apellido_persona, fecha_nacimiento) VALUES
   ('Nicki',    'Nicole',   '2000-08-25'),
   ('Claudia',  'Medina',   '1982-04-20'),
   ('Roberto',  'Admin',    '1980-06-15'),
-  ('Admin',    'Clinicks',  '1990-01-01');
+  ('Admin',    'Clinicks',  '1990-01-01'),
+  ('Laura',    'Enfermera', '1990-03-15');
 
 -- ============================================================
 -- 6. DOMICILIOS (10 para pacientes)
@@ -241,18 +243,20 @@ INSERT INTO ficha_antecedente_familiar (id_ficha_medica, id_antecedente_familiar
 
 -- ============================================================
 -- 12. USUARIOS
--- admin@clinicks.com  → id_persona=13 (Admin Clinicks), rol=1 (ADMINISTRADOR) ← SUPERADMIN PROTEGIDO
--- admin@hospital.com  → id_persona=12 (Roberto Admin),  rol=2 (ADMINISTRATIVO) ← dato de prueba
--- claudia@hospital.com → id_persona=11 (Claudia Medina), rol=3 (MEDICO)       ← dato de prueba
+-- admin@clinicks.com   → id_persona=13 (Admin Clinicks),  rol=1 (ADMINISTRADOR) ← SUPERADMIN PROTEGIDO
+-- admin@hospital.com   → id_persona=12 (Roberto Admin),   rol=2 (ADMINISTRATIVO) ← dato de prueba
+-- claudia@hospital.com → id_persona=11 (Claudia Medina),  rol=3 (MEDICO)         ← dato de prueba
+-- enfermera@hospital.com → id_persona=14 (Laura Enfermera), rol=4 (ENFERMERO)    ← dato de prueba
 --
 -- Todos los usuarios de prueba usan la misma contraseña inicial: Admin123456
 -- Hash BCrypt (cost 10): $2a$10$GrSosoIMBYHEFVBQUQMEQ.tcaITI44c.eEUHY.Pvrps0WRHwW0T2K
 -- must_change_password=TRUE en los usuarios de prueba → deben cambiar al primer login.
 -- ============================================================
 INSERT INTO usuario (email, pass, autorizacion, id_rol, id_persona, must_change_password) VALUES
-  ('admin@clinicks.com',   '$2a$10$GrSosoIMBYHEFVBQUQMEQ.tcaITI44c.eEUHY.Pvrps0WRHwW0T2K', 'ACTIVO', 1, 13, FALSE),
-  ('admin@hospital.com',   '$2a$10$GrSosoIMBYHEFVBQUQMEQ.tcaITI44c.eEUHY.Pvrps0WRHwW0T2K', 'ACTIVO', 2, 12, TRUE),
-  ('claudia@hospital.com', '$2a$10$GrSosoIMBYHEFVBQUQMEQ.tcaITI44c.eEUHY.Pvrps0WRHwW0T2K', 'ACTIVO', 3, 11, TRUE);
+  ('admin@clinicks.com',    '$2a$10$GrSosoIMBYHEFVBQUQMEQ.tcaITI44c.eEUHY.Pvrps0WRHwW0T2K', 'ACTIVO', 1, 13, FALSE),
+  ('admin@hospital.com',    '$2a$10$GrSosoIMBYHEFVBQUQMEQ.tcaITI44c.eEUHY.Pvrps0WRHwW0T2K', 'ACTIVO', 2, 12, TRUE),
+  ('claudia@hospital.com',  '$2a$10$GrSosoIMBYHEFVBQUQMEQ.tcaITI44c.eEUHY.Pvrps0WRHwW0T2K', 'ACTIVO', 3, 11, TRUE),
+  ('enfermera@hospital.com','$2a$10$GrSosoIMBYHEFVBQUQMEQ.tcaITI44c.eEUHY.Pvrps0WRHwW0T2K', 'ACTIVO', 4, 14, TRUE);
 
 -- ============================================================
 -- 13. DATOS ADICIONALES DE SOPORTE
@@ -260,8 +264,35 @@ INSERT INTO usuario (email, pass, autorizacion, id_rol, id_persona, must_change_
 INSERT INTO habitacion_internacion (numero_habitacion, piso_habitacion, estado_habitacion) VALUES
   ('101', 1, 'disponible'), ('102', 1, 'disponible'), ('201', 2, 'disponible');
 
-INSERT INTO tipo_procedimiento (nombre_tipo_procedimiento) VALUES
-  ('Consulta clínica'), ('Extracción de sangre'), ('Radiografía');
+INSERT INTO tipo_procedimiento (nombre_tipo_procedimiento)
+SELECT v.nombre FROM (VALUES
+  -- Tipos manuales (visibles en formulario clínico)
+  ('Consulta clínica'),
+  ('Evolución médica'),
+  ('Evolución de enfermería'),
+  ('Control de signos vitales'),
+  ('Administración de medicación'),
+  ('Extracción de sangre'),
+  ('Laboratorio'),
+  ('Radiografía'),
+  ('Ecografía'),
+  ('Tomografía'),
+  ('Resonancia magnética'),
+  ('Electrocardiograma'),
+  ('Diagnóstico'),
+  ('Indicación médica'),
+  ('Procedimiento'),
+  ('Curación'),
+  ('Observación general'),
+  ('Otro'),
+  -- Tipos automáticos (generados por sistema, NO mostrar en select manual)
+  ('Internación'),
+  ('Traslado de habitación'),
+  ('Alta médica')
+) AS v(nombre)
+WHERE NOT EXISTS (
+  SELECT 1 FROM tipo_procedimiento WHERE nombre_tipo_procedimiento = v.nombre
+);
 
 SET session_replication_role = DEFAULT;
 
@@ -269,9 +300,9 @@ SET session_replication_role = DEFAULT;
 -- VERIFICACIÓN RÁPIDA (descomentar para validar)
 -- Esperado: provincias=24, localidades=120, roles=4, obras=5,
 --           alergias=5, enf_cronicas=5, antecedentes=5,
---           personas=13, domicilios=10, residencias=10,
+--           personas=14, domicilios=10, residencias=10,
 --           fichas=10, afiliaciones=10, pacientes=10,
---           usuarios=3, habitaciones=3, tipo_proc=3
+--           usuarios=4, habitaciones=3, tipo_proc=21
 -- ============================================================
 /*
 SELECT 'provincias'              AS tabla, COUNT(*) AS total FROM provincia
