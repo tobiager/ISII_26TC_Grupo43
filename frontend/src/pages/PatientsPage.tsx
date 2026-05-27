@@ -5,6 +5,7 @@ import {
   Users, UserCheck, BedDouble, ClipboardList,
   Search, ChevronDown, UserPlus, Stethoscope, UserX, X, Eye, RotateCcw, Shield,
 } from 'lucide-react'
+import CustomSelect from '../components/CustomSelect'
 import Modal from '../components/Modal'
 import PatientForm from '../components/PatientForm'
 import PatientTable from '../components/PatientTable'
@@ -18,7 +19,7 @@ import { canEditPatients, canDeletePatients, canAccessAdmin } from '../utils/per
 import type { Patient, PatientRequest } from '../types/patient'
 
 const OBRAS_SOCIALES = ['Todas las Obras Sociales', 'OSDE', 'Swiss Medical', 'PAMI', 'Galeno', 'Medicus']
-const ESTADOS = ['Todos los estados', 'Ambulatorio', 'Internado', 'Egresado']
+const ESTADOS = ['Todos los estados', 'Ambulatorio', 'Internado']
 
 export default function PatientsPage() {
   const navigate = useNavigate()
@@ -160,8 +161,9 @@ export default function PatientsPage() {
       toast.success(`${deleteConfirm.nombreCompleto} fue dado de baja`)
       setDeleteConfirm(null)
       fetchPatients()
-    } catch {
-      toast.error('No se pudo dar de baja al paciente')
+    } catch (err: any) {
+      const msg = err?.response?.data?.error ?? 'No se pudo dar de baja al paciente'
+      toast.error(msg)
     }
   }
 
@@ -245,8 +247,8 @@ export default function PatientsPage() {
                 <p className="text-xs text-gray-500 mt-0.5">
                   {filtered.length} de {patients.length} pacientes
                   {stats.internados > 0 && ` (${stats.internados} internados`}
-                  {stats.total - stats.internados - patients.filter(p => p.estado === 'Egresado').length > 0
-                    && `, ${stats.total - stats.internados - patients.filter(p => p.estado === 'Egresado').length} ambulatorios`}
+                  {stats.total - stats.internados > 0
+                    && `, ${stats.total - stats.internados} ambulatorios`}
                   {stats.internados > 0 && ')'}
                 </p>
               </div>
@@ -284,26 +286,18 @@ export default function PatientsPage() {
                 className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
               />
             </div>
-            <div className="relative">
-              <select
-                value={filterOS}
-                onChange={e => setFilterOS(e.target.value)}
-                className="appearance-none pr-8 pl-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-blue-400 bg-white"
-              >
-                {OBRAS_SOCIALES.map(os => <option key={os}>{os}</option>)}
-              </select>
-              <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            </div>
-            <div className="relative">
-              <select
-                value={filterEstado}
-                onChange={e => setFilterEstado(e.target.value)}
-                className="appearance-none pr-8 pl-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-blue-400 bg-white"
-              >
-                {ESTADOS.map(e => <option key={e}>{e}</option>)}
-              </select>
-              <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            </div>
+            <CustomSelect
+              value={filterOS}
+              onChange={setFilterOS}
+              options={OBRAS_SOCIALES.map(os => ({ value: os, label: os }))}
+              className="pl-3 pr-2 py-2 text-sm border border-gray-200 rounded-lg bg-white cursor-pointer"
+            />
+            <CustomSelect
+              value={filterEstado}
+              onChange={setFilterEstado}
+              options={ESTADOS.map(e => ({ value: e, label: e }))}
+              className="pl-3 pr-2 py-2 text-sm border border-gray-200 rounded-lg bg-white cursor-pointer"
+            />
           </div>
 
           {/* Contenido tabla */}

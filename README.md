@@ -23,9 +23,10 @@ El sistema está construido bajo una arquitectura robusta y escalable:
 * **Seguridad:** Spring Security + JSON Web Tokens (JWT)
 * **Infraestructura:** Despliegue en Vercel (Front) y Supabase (Backend)
 
-
 ## Documentación del Proyecto
+
 Puedes encontrar los detalles técnicos en la carpeta `/docs`:
+
 * **ERD:** Modelo Entidad-Relación normalizado.
 * **Diccionario de Datos:** Detalle de cada tabla y restricción del sistema.
 * **Arquitectura:** Diagramas de flujo y estructura de red.

@@ -6,6 +6,7 @@ import {
   Shield, ClipboardList, ArrowRightLeft, LogOut, User, ChevronDown,
 } from 'lucide-react'
 import UserMenu from '../components/UserMenu'
+import CustomSelect from '../components/CustomSelect'
 import ReadOnlyBadge from '../components/ReadOnlyBadge'
 import PatientDetailModal from '../components/PatientDetailModal'
 import { roomService } from '../services/roomService'
@@ -311,19 +312,15 @@ export default function HabitacionesPage() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Paciente</label>
-              <div className="relative">
-                <select
-                  value={internPatientId}
-                  onChange={e => setInternPatientId(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full appearance-none pl-3 pr-8 py-2.5 text-sm border border-gray-200 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 bg-white"
-                >
-                  <option value="">Seleccionar paciente...</option>
-                  {pacientesNoInternados.map(p => (
-                    <option key={p.id} value={p.id}>{p.nombreCompleto} — DNI {p.dni}</option>
-                  ))}
-                </select>
-                <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-              </div>
+              <CustomSelect
+                value={String(internPatientId)}
+                onChange={val => setInternPatientId(val === '' ? '' : Number(val))}
+                options={[
+                  { value: '', label: 'Seleccionar paciente...' },
+                  ...pacientesNoInternados.map(p => ({ value: String(p.id), label: `${p.nombreCompleto} — DNI ${p.dni}` })),
+                ]}
+                className="w-full py-2.5 px-3 text-sm border border-gray-200 rounded-xl bg-white cursor-pointer"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Motivo de Internación</label>
@@ -370,21 +367,15 @@ export default function HabitacionesPage() {
             )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Habitación destino</label>
-              <div className="relative">
-                <select
-                  value={trasladoDestino}
-                  onChange={e => setTrasladoDestino(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full appearance-none pl-3 pr-8 py-2.5 text-sm border border-gray-200 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 bg-white"
-                >
-                  <option value="">Seleccionar habitación...</option>
-                  {disponiblesParaTraslado.map(h => (
-                    <option key={h.id} value={h.id}>
-                      Habitación {h.numeroHabitacion} — Piso {h.pisoHabitacion}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-              </div>
+              <CustomSelect
+                value={String(trasladoDestino)}
+                onChange={val => setTrasladoDestino(val === '' ? '' : Number(val))}
+                options={[
+                  { value: '', label: 'Seleccionar habitación...' },
+                  ...disponiblesParaTraslado.map(h => ({ value: String(h.id), label: `Habitación ${h.numeroHabitacion} — Piso ${h.pisoHabitacion}` })),
+                ]}
+                className="w-full py-2.5 px-3 text-sm border border-gray-200 rounded-xl bg-white cursor-pointer"
+              />
               {disponiblesParaTraslado.length === 0 && (
                 <p className="text-xs text-amber-600 mt-1">No hay habitaciones disponibles para traslado.</p>
               )}

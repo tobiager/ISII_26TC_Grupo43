@@ -2,11 +2,14 @@ package com.clinicks.controller;
 
 import com.clinicks.dto.PacienteRequestDTO;
 import com.clinicks.dto.PacienteResponseDTO;
+import com.clinicks.model.Usuario;
+import com.clinicks.repository.UsuarioRepository;
 import com.clinicks.service.PacienteService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,7 +20,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PacienteController {
 
-    private final PacienteService pacienteService;
+    private final PacienteService    pacienteService;
+    private final UsuarioRepository  usuarioRepository;
 
     // GET /api/pacientes — Lista todos los pacientes activos con estado calculado
     @GetMapping
@@ -39,8 +43,12 @@ public class PacienteController {
 
     // POST /api/pacientes — Registrar nuevo paciente (transaccional: persona + ficha + residencia + paciente)
     @PostMapping
-    public ResponseEntity<PacienteResponseDTO> crearPaciente(@Valid @RequestBody PacienteRequestDTO dto) {
-        PacienteResponseDTO created = pacienteService.crearPaciente(dto);
+    public ResponseEntity<PacienteResponseDTO> crearPaciente(
+            @Valid @RequestBody PacienteRequestDTO dto,
+            Authentication auth) {
+        Usuario usuario = usuarioRepository.findByEmailActivo(auth.getName())
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        PacienteResponseDTO created = pacienteService.crearPaciente(dto, usuario.getIdUsuario());
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 

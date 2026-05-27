@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Plus, X, Loader2, Trash2, Info } from 'lucide-react'
+import CustomSelect from './CustomSelect'
+import SingleDatePicker from './SingleDatePicker'
 import { toast } from 'sonner'
 import type { EmergencyContact, Patient, PatientRequest } from '../types/patient'
 import { BLOOD_TYPES } from '../types/patient'
@@ -182,6 +184,7 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
     reset,
     watch,
     setValue,
+    control,
     formState: { errors, isValid, isSubmitted },
   } = useForm<PatientFormValues>({
     resolver: zodResolver(patientSchema) as any,
@@ -517,11 +520,19 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Fecha de Nacimiento <span className="text-red-500">*</span>
           </label>
-          <input
-            type="date"
-            max={today}
-            {...register('fechaNacimiento')}
-            className={inputCls(!!errors.fechaNacimiento)}
+          <Controller
+            name="fechaNacimiento"
+            control={control}
+            render={({ field }) => (
+              <SingleDatePicker
+                value={field.value ?? ''}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                max={today}
+                hasError={!!errors.fechaNacimiento}
+                placeholder="dd/mm/aaaa"
+              />
+            )}
           />
           <FieldError msg={errors.fechaNacimiento?.message} />
         </div>
@@ -533,10 +544,22 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Tipo de Sangre <span className="text-red-500">*</span>
           </label>
-          <select {...register('tipoSangre')} className={inputCls(!!errors.tipoSangre)}>
-            <option value="">Seleccionar...</option>
-            {BLOOD_TYPES.map(bt => <option key={bt} value={bt}>{bt}</option>)}
-          </select>
+          <Controller
+            name="tipoSangre"
+            control={control}
+            render={({ field }) => (
+              <CustomSelect
+                value={field.value ?? ''}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                options={[
+                  { value: '', label: 'Seleccionar...' },
+                  ...BLOOD_TYPES.map(bt => ({ value: bt, label: bt })),
+                ]}
+                hasError={!!errors.tipoSangre}
+              />
+            )}
+          />
           <FieldError msg={errors.tipoSangre?.message} />
         </div>
       </div>
@@ -559,10 +582,22 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
           </div>
           <div>
             <label className="block text-xs text-gray-600 mb-1">Tipo de Teléfono</label>
-            <select {...register('tipoTelefono')} className={inputCls(!!errors.tipoTelefono)}>
-              <option value="personal">Personal</option>
-              <option value="emergencia">Emergencia</option>
-            </select>
+            <Controller
+              name="tipoTelefono"
+              control={control}
+              render={({ field }) => (
+                <CustomSelect
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  options={[
+                    { value: 'personal', label: 'Personal' },
+                    { value: 'emergencia', label: 'Emergencia' },
+                  ]}
+                  hasError={!!errors.tipoTelefono}
+                />
+              )}
+            />
             <FieldError msg={errors.tipoTelefono?.message} />
           </div>
         </div>
@@ -578,35 +613,51 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs text-gray-600 mb-1">Provincia</label>
-            <select {...register('idProvincia')} value={idProvinciaWatch || ''} className={inputCls()}>
-              <option value="">- Seleccionar provincia -</option>
-              {provincias.map(p => (
-                <option key={p.id} value={p.id}>{p.nombre}</option>
-              ))}
-            </select>
+            <Controller
+              name="idProvincia"
+              control={control}
+              render={({ field }) => (
+                <CustomSelect
+                  value={field.value != null ? String(field.value) : ''}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  options={[
+                    { value: '', label: '- Seleccionar provincia -' },
+                    ...provincias.map(p => ({ value: String(p.id), label: p.nombre })),
+                  ]}
+                />
+              )}
+            />
           </div>
           <div>
             <label className="block text-xs text-gray-600 mb-1">
               Localidad <span className="text-red-500">*</span>
               {loadingLoc && <Loader2 size={11} className="inline ml-1 animate-spin text-blue-500" />}
             </label>
-            <select
-              {...register('idLocalidad')}
-              value={idLocalidadWatch || ''}
-              className={inputCls(!!errors.idLocalidad)}
-              disabled={!idProvinciaWatch || loadingLoc}
-            >
-              <option value="">
-                {!idProvinciaWatch
-                  ? '- Primero elegí una provincia -'
-                  : loadingLoc
-                    ? 'Cargando...'
-                    : '- Seleccionar localidad -'}
-              </option>
-              {localidades.map(l => (
-                <option key={l.id} value={l.id}>{l.nombre} ({l.codigoPostal})</option>
-              ))}
-            </select>
+            <Controller
+              name="idLocalidad"
+              control={control}
+              render={({ field }) => (
+                <CustomSelect
+                  value={field.value != null ? String(field.value) : ''}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  disabled={!idProvinciaWatch || loadingLoc}
+                  options={[
+                    {
+                      value: '',
+                      label: !idProvinciaWatch
+                        ? '- Primero elegí una provincia -'
+                        : loadingLoc
+                          ? 'Cargando...'
+                          : '- Seleccionar localidad -',
+                    },
+                    ...localidades.map(l => ({ value: String(l.id), label: `${l.nombre} (${l.codigoPostal})` })),
+                  ]}
+                  hasError={!!errors.idLocalidad}
+                />
+              )}
+            />
             <FieldError msg={errors.idLocalidad?.message} />
           </div>
         </div>
@@ -655,10 +706,22 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
           <label className="block text-xs text-gray-600 mb-1">
             Tipo de Residencia <span className="text-red-500">*</span>
           </label>
-          <select {...register('tipoResidencia')} className={inputCls(!!errors.tipoResidencia)}>
-            <option value="permanente">Permanente</option>
-            <option value="transitorio">Transitorio</option>
-          </select>
+          <Controller
+            name="tipoResidencia"
+            control={control}
+            render={({ field }) => (
+              <CustomSelect
+                value={field.value ?? ''}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                options={[
+                  { value: 'permanente', label: 'Permanente' },
+                  { value: 'transitorio', label: 'Transitorio' },
+                ]}
+                hasError={!!errors.tipoResidencia}
+              />
+            )}
+          />
           <FieldError msg={errors.tipoResidencia?.message} />
         </div>
       </div>
@@ -827,13 +890,22 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs text-gray-600 mb-1">Seleccionar</label>
-            <select {...register('idObraSocial')} value={idObraSocialWatch || ''} className={inputCls()}>
-              <option value="">Sin obra social</option>
-              {obrasSociales.map(os => (
-                <option key={os.id} value={os.id}>{os.nombre}</option>
-              ))}
-              <option value="nueva">+ Otra (ingresar nombre)</option>
-            </select>
+            <Controller
+              name="idObraSocial"
+              control={control}
+              render={({ field }) => (
+                <CustomSelect
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  options={[
+                    { value: '', label: 'Sin obra social' },
+                    ...obrasSociales.map(os => ({ value: String(os.id), label: os.nombre })),
+                    { value: 'nueva', label: '+ Otra (ingresar nombre)' },
+                  ]}
+                />
+              )}
+            />
           </div>
 
           {String(idObraSocialWatch) === 'nueva' ? (
@@ -908,11 +980,19 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
         {/* Fecha de vencimiento */}
         <div>
           <label className="block text-xs text-gray-600 mb-1">Fecha de Vencimiento de la Afiliación</label>
-          <input
-            type="date"
-            min={today}
-            {...register('fechaVencimientoAfiliacion')}
-            className={inputCls(!!errors.fechaVencimientoAfiliacion)}
+          <Controller
+            name="fechaVencimientoAfiliacion"
+            control={control}
+            render={({ field }) => (
+              <SingleDatePicker
+                value={field.value ?? ''}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                min={today}
+                hasError={!!errors.fechaVencimientoAfiliacion}
+                placeholder="Seleccionar fecha"
+              />
+            )}
           />
           <FieldError msg={errors.fechaVencimientoAfiliacion?.message} />
         </div>

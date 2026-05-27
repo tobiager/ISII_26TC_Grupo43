@@ -9,6 +9,7 @@ import com.clinicks.exception.TelefonoDuplicadoException;
 import com.clinicks.model.*;
 import com.clinicks.repository.*;
 import jakarta.validation.ConstraintViolation;
+import java.util.Optional;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
@@ -47,6 +48,9 @@ class PacienteServiceImplTest {
     @Mock private ContactoEmergenciaRepository   contactoEmergenciaRepository;
     @Mock private LocalidadRepository            localidadRepository;
     @Mock private HistorialMedicoRepository      historialMedicoRepository;
+    @Mock private RegistroClinicoRepository      registroClinicoRepository;
+    @Mock private TipoProcedimientoRepository    tipoProcedimientoRepository;
+    @Mock private UsuarioRepository              usuarioRepository;
 
     @InjectMocks
     private PacienteServiceImpl service;
@@ -113,11 +117,14 @@ class PacienteServiceImplTest {
         when(contactoEmergenciaRepository.existePorTelefono("1123456789")).thenReturn(false);
         when(localidadRepository.findAll()).thenReturn(new ArrayList<>());
         when(pacienteRepository.save(any(Paciente.class))).thenReturn(pacienteGuardado);
-        when(historialMedicoRepository.existePorPaciente(pacienteGuardado)).thenReturn(false);
+        when(historialMedicoRepository.encontrarPorIdPaciente(anyInt())).thenReturn(Optional.empty());
+        when(historialMedicoRepository.save(any())).thenReturn(HistorialMedico.builder()
+                .estadoHistorial("activo").build());
+        when(tipoProcedimientoRepository.findByNombreTipoProcedimiento(anyString())).thenReturn(Optional.empty());
         when(telefonoRepository.encontrarPorPaciente(pacienteGuardado)).thenReturn(new ArrayList<>());
         when(contactoEmergenciaRepository.encontrarPorPaciente(pacienteGuardado)).thenReturn(new ArrayList<>());
 
-        PacienteResponseDTO resultado = service.crearPaciente(dtoValido);
+        PacienteResponseDTO resultado = service.crearPaciente(dtoValido, 1);
 
         assertThat(resultado).isNotNull();
         assertThat(resultado.getDni()).isEqualTo(12345678);
@@ -137,14 +144,17 @@ class PacienteServiceImplTest {
             p.setIdPaciente(1);
             return p;
         });
-        when(historialMedicoRepository.existePorPaciente(any())).thenReturn(false);
+        when(historialMedicoRepository.encontrarPorIdPaciente(anyInt())).thenReturn(Optional.empty());
+        when(historialMedicoRepository.save(any())).thenReturn(HistorialMedico.builder()
+                .estadoHistorial("activo").build());
+        when(tipoProcedimientoRepository.findByNombreTipoProcedimiento(anyString())).thenReturn(Optional.empty());
         when(telefonoRepository.encontrarPorPaciente(any())).thenReturn(new ArrayList<>());
         when(contactoEmergenciaRepository.encontrarPorPaciente(any())).thenReturn(new ArrayList<>());
 
         dtoValido.setNombre("JUAN carlos");
         dtoValido.setApellido("del VALLE");
 
-        PacienteResponseDTO resultado = service.crearPaciente(dtoValido);
+        PacienteResponseDTO resultado = service.crearPaciente(dtoValido, 1);
 
         assertThat(resultado.getNombre()).isEqualTo("Juan Carlos");
         assertThat(resultado.getApellido()).isEqualTo("Del Valle");
@@ -156,7 +166,7 @@ class PacienteServiceImplTest {
     void crearPaciente_lanzaDniDuplicadoException_siDniYaExiste() {
         when(pacienteRepository.existePorDni(12345678)).thenReturn(true);
 
-        assertThatThrownBy(() -> service.crearPaciente(dtoValido))
+        assertThatThrownBy(() -> service.crearPaciente(dtoValido, 1))
                 .isInstanceOf(DniDuplicadoException.class)
                 .hasMessageContaining("12345678");
     }
@@ -178,7 +188,7 @@ class PacienteServiceImplTest {
         when(pacienteRepository.existePorDni(12345678)).thenReturn(false);
         when(telefonoRepository.existePorNumero("1123456789")).thenReturn(true);
 
-        assertThatThrownBy(() -> service.crearPaciente(dtoValido))
+        assertThatThrownBy(() -> service.crearPaciente(dtoValido, 1))
                 .isInstanceOf(TelefonoDuplicadoException.class)
                 .hasMessageContaining("1123456789");
     }
@@ -189,7 +199,7 @@ class PacienteServiceImplTest {
         when(telefonoRepository.existePorNumero("1123456789")).thenReturn(false);
         when(contactoEmergenciaRepository.existePorTelefono("1123456789")).thenReturn(true);
 
-        assertThatThrownBy(() -> service.crearPaciente(dtoValido))
+        assertThatThrownBy(() -> service.crearPaciente(dtoValido, 1))
                 .isInstanceOf(TelefonoDuplicadoException.class);
     }
 
@@ -207,7 +217,7 @@ class PacienteServiceImplTest {
         when(telefonoRepository.existePorNumero("1187654321")).thenReturn(false);
         when(contactoEmergenciaRepository.existePorTelefono("1187654321")).thenReturn(false);
 
-        assertThatThrownBy(() -> service.crearPaciente(dtoValido))
+        assertThatThrownBy(() -> service.crearPaciente(dtoValido, 1))
                 .isInstanceOf(TelefonoDuplicadoException.class)
                 .hasMessageContaining("1187654321");
     }
@@ -222,7 +232,7 @@ class PacienteServiceImplTest {
         when(pacienteRepository.existePorDni(12345678)).thenReturn(false);
         when(pacienteRepository.existePorAfiliacionYObraSocialId("ABC123", 1, null)).thenReturn(true);
 
-        assertThatThrownBy(() -> service.crearPaciente(dtoValido))
+        assertThatThrownBy(() -> service.crearPaciente(dtoValido, 1))
                 .isInstanceOf(AfiliadoDuplicadoException.class)
                 .hasMessageContaining("ABC123");
     }
