@@ -1,92 +1,52 @@
-# Diagrama de clases unificado de Clinicks
+# Diagrama de clases lógico de Clinicks
 
-## ¿Qué es este diagrama?
+## Qué representa este documento
 
-Este es un mapa completo de la logica interna del sistema, mostrando todas las clases principales que conforman la aplicación y cómo se relacionan entre sí. Te ayuda a entender:
+Este documento explica el diagrama de clases lógico del sistema, donde cada clase resume un concepto de negocio y no una capa técnica. Aquí se describen:
 
-- **Qué datos se guardan** en la base de datos (entidades)
-- **Cómo la aplicación procesa esos datos** (controllers, servicios y repositorios)
-- **Qué información se envía entre cliente y servidor** (DTOs)
-- **Qué errores puede generar el sistema** (excepciones)
+- Los atributos que forman cada concepto.
+- Los métodos del diagrama y el lugar del código donde se implementan.
+- Las relaciones principales entre conceptos del dominio.
 
-## composicion del diagrama
+El diagrama fuente está en [diagrama de clases/diagrama-clases-logico.mermaid](diagrama%20de%20clases/diagrama-clases-logico.mermaid).
 
-El diagrama está organizado en **4 bloques principales**, de arriba hacia abajo:
-
-### 1. **Dominio (Entidades de base de datos)**
-
-Aquí están todas las tablas y sus campos. Por ejemplo:
-
-- Un `Paciente` tiene atributos como DNI, nombre, edad
-- Un `Paciente` está conectado a `HistorialMedico`, `ContactoEmergencia`, etc.
-- Las líneas sólidas (`─`) y punteadas representan cómo las tablas se relacionan
-
-### 2. **Capa de aplicación (Controllers → Services → Repositories)**
-
-Es el "motor" que procesa las solicitudes:
-
-- Los **Controllers** reciben peticiones del cliente (por ejemplo: "traer un paciente")
-- Los **Services** contienen la lógica (validar datos, transformarlos, etc.)
-- Los **Repositories** acceden directamente a la base de datos
-- Las flechas muestran quién le pide datos a quién
-
-### 3. **DTOs (Objetos de transferencia)**
-
-Son los datos que viajan entre el cliente y el servidor:
-
-- `LoginRequestDTO`: lo que el usuario envía para entrar
-- `PacienteResponseDTO`: lo que el servidor devuelve con los datos del paciente
-- No incluyen toda la información de la base de datos, solo lo necesario
-
-### 4. **Excepciones (Errores)**
-
-Define qué errores puede tirar el sistema y cómo se manejan:
-
-- `DniDuplicadoException`: cuando intentas registrar un DNI que ya existe
-- `ManejadorGlobalDeExcepciones`: atrapa todos los errores y devuelve un mensaje claro al cliente
-
-## Símbolos
-
-- **Rectángulos**: Clases
-- **→**: "depende de" o "usa"
-- **-->\|**: "implementa" (cuando una clase concreta implementa una interfaz)
-- **\*--**: "contiene" (composición fuerte)
-- **Números** (como `"1" --> "many"`) indican cardinalidad (1 a 1, 1 a muchos, etc.)
+## Diagrama
 
 ```mermaid
 classDiagram
 direction TB
 
-%% Diagrama unificado basado en los tres diagramas verificados:
-%% 1) dominio, 2) aplicacion, 3) DTOs y excepciones.
-%% Se priorizan atributos y relaciones reales para que la vista sea mas limpia.
-
-%% ═══════════════════════════════════════════════════════════════════
-%% DOMINIO
-%% ═══════════════════════════════════════════════════════════════════
-
 class Persona {
   -Integer idPersona
   -String nombrePersona
   -String apellidoPersona
-  -LocalDateTime fechaNacimiento
-  -LocalDateTime fechaFallecimiento
+  -LocalDate fechaNacimiento
+  -LocalDate fechaFallecimiento
+  +getNombreCompleto() String
+  +cambiarNombre(String, String) void
 }
 
 class Usuario {
   -Integer idUsuario
   -String email
-  -String pass
+  -String passwordHash
   -String autorizacion
   -boolean mustChangePassword
   -OffsetDateTime deletedAt
   -Rol rol
   -Persona persona
+  +autenticar(String) boolean
+  +cambiarPassword(String) void
+  +cambiarEmail(String) void
+  +asignarRol(Rol) void
+  +desactivar() void
 }
 
 class Rol {
   -Integer idRol
   -String nombreRol
+  -boolean protegido
+  +tienePermiso(String) boolean
 }
 
 class Paciente {
@@ -97,12 +57,18 @@ class Paciente {
   -Residencia residencia
   -FichaMedica fichaMedica
   -AfiliacionObraSocial afiliacion
+  +actualizarDatos(Persona, Residencia, FichaMedica) void
+  +eliminarLogicamente() void
+  +restaurar() void
+  +agregarTelefono(Telefono) void
+  +agregarContactoEmergencia(ContactoEmergencia) void
 }
 
 class Residencia {
   -Integer idResidencia
   -String tipoResidencia
   -Domicilio domicilio
+  +cambiarDomicilio(Domicilio) void
 }
 
 class Domicilio {
@@ -111,6 +77,7 @@ class Domicilio {
   -Integer numero
   -Integer piso
   -Localidad localidad
+  +actualizarUbicacion(String, Integer, Integer, Localidad) void
 }
 
 class Localidad {
@@ -125,6 +92,12 @@ class Provincia {
   -String nombreProvincia
 }
 
+class ObraSocial {
+  -Integer idObraSocial
+  -String nombreObra
+  +estaActiva() boolean
+}
+
 class AfiliacionObraSocial {
   -Integer idAfiliacion
   -String numeroAfiliado
@@ -132,20 +105,22 @@ class AfiliacionObraSocial {
   -LocalDate fechaVencimiento
   -LocalDate fechaBaja
   -ObraSocial obraSocial
-}
-
-class ObraSocial {
-  -Integer idObraSocial
-  -String nombreObra
+  +estaVigente() boolean
+  +darDeBaja(LocalDate) void
+  +renovar(LocalDate) void
 }
 
 class FichaMedica {
   -Integer idFichaMedica
   -String tipoSangre
   -String antecedentesText
-  -Set alergias
-  -Set enfermedadesCronicas
-  -Set antecedentesFamiliares
+  -Set~Alergia~ alergias
+  -Set~EnfermedadCronica~ enfermedadesCronicas
+  -Set~AntecedenteFamiliar~ antecedentesFamiliares
+  +agregarAlergia(Alergia) void
+  +agregarEnfermedadCronica(EnfermedadCronica) void
+  +agregarAntecedenteFamiliar(AntecedenteFamiliar) void
+  +actualizarAntecedentes(String) void
 }
 
 class Alergia {
@@ -168,6 +143,7 @@ class Telefono {
   -String numeroTelefono
   -String tipoTelefono
   -Paciente paciente
+  +cambiarNumero(String) void
 }
 
 class ContactoEmergencia {
@@ -176,6 +152,7 @@ class ContactoEmergencia {
   -String parentesco
   -String telefonoCelular
   -Paciente paciente
+  +actualizarContacto(String, String, String) void
 }
 
 class HistorialMedico {
@@ -185,6 +162,17 @@ class HistorialMedico {
   -String observaciones
   -String estadoHistorial
   -Paciente paciente
+  -List~RegistroClinico~ registros
+  -List~Internacion~ internaciones
+  +registrarEvento(RegistroClinico) void
+  +agregarInternacion(Internacion) void
+  +abrir() void
+  +cerrar() void
+}
+
+class TipoProcedimiento {
+  -Integer id
+  -String nombreTipoProcedimiento
 }
 
 class RegistroClinico {
@@ -194,11 +182,7 @@ class RegistroClinico {
   -HistorialMedico historial
   -TipoProcedimiento tipoProcedimiento
   -Usuario usuario
-}
-
-class TipoProcedimiento {
-  -Integer id
-  -String nombreTipoProcedimiento
+  +esAmbulatorio() boolean
 }
 
 class Internacion {
@@ -208,6 +192,9 @@ class Internacion {
   -Integer cantidadTraslados
   -HistorialMedico historial
   -HabitacionInternacion habitacion
+  +trasladar(HabitacionInternacion) void
+  +egresar(LocalDateTime) void
+  +finalizar() void
 }
 
 class HabitacionInternacion {
@@ -215,6 +202,9 @@ class HabitacionInternacion {
   -String numeroHabitacion
   -Integer pisoHabitacion
   -String estadoHabitacion
+  +estaDisponible() boolean
+  +ocupar() void
+  +liberar() void
 }
 
 class InvitacionRegistro {
@@ -227,664 +217,162 @@ class InvitacionRegistro {
   -LocalDateTime fechaExpiracion
   -LocalDateTime fechaUso
   -OffsetDateTime deletedAt
+  +estaVigente() boolean
+  +aceptar() void
 }
 
-%% Relaciones de dominio
-Usuario "many" --> "1" Rol : rol
-Usuario "many" --> "1" Persona : persona
-Paciente "many" --> "1" Persona : persona
+Usuario "*" --> "1" Rol : rol
+Usuario "1" --> "1" Persona : persona
+Paciente "1" --> "1" Persona : persona
 Paciente "1" *-- "1" Residencia : residencia
 Paciente "1" *-- "1" FichaMedica : fichaMedica
-Paciente "many" --> "0..1" AfiliacionObraSocial : afiliacion
-Paciente "1" --> "many" Telefono : telefonos
-Paciente "1" --> "many" ContactoEmergencia : contactos
-Paciente "1" --> "many" HistorialMedico : historiales
+Paciente "*" --> "0..1" AfiliacionObraSocial : afiliacion
+Paciente "1" --> "*" Telefono : telefonos
+Paciente "1" --> "*" ContactoEmergencia : contactos
+Paciente "1" --> "*" HistorialMedico : historiales
 Residencia "1" *-- "1" Domicilio : domicilio
-Domicilio "many" --> "1" Localidad : localidad
-Localidad "many" --> "1" Provincia : provincia
-AfiliacionObraSocial "many" --> "1" ObraSocial : obraSocial
-FichaMedica "many" --> "many" Alergia : alergias
-FichaMedica "many" --> "many" EnfermedadCronica : enfermedadesCronicas
-FichaMedica "many" --> "many" AntecedenteFamiliar : antecedentesFamiliares
-HistorialMedico "many" --> "1" Paciente : paciente
-RegistroClinico "many" --> "1" HistorialMedico : historial
-RegistroClinico "many" --> "1" TipoProcedimiento : tipoProcedimiento
-RegistroClinico "many" --> "1" Usuario : usuario
-Internacion "many" --> "1" HistorialMedico : historial
-Internacion "many" --> "1" HabitacionInternacion : habitacion
-InvitacionRegistro "many" --> "1" Rol : rol
-InvitacionRegistro "many" --> "1" Usuario : usuarioCreador
-
-%% ═══════════════════════════════════════════════════════════════════
-%% CAPA DE APLICACION
-%% ═══════════════════════════════════════════════════════════════════
-
-class PacienteController {
-  -PacienteService pacienteService
-}
-
-class AuthController {
-  -AuthService authService
-}
-
-class AdminController {
-  -AdminService adminService
-}
-
-class HistorialController {
-  -HistorialService historialService
-  -UsuarioRepository usuarioRepository
-}
-
-class HabitacionController {
-  -HabitacionService habitacionService
-  -UsuarioRepository usuarioRepository
-}
-
-class PerfilController {
-  -PerfilService perfilService
-}
-
-class LocalidadController {
-  -LocalidadRepository localidadRepository
-}
-
-class ObraSocialController {
-  -ObraSocialRepository obraSocialRepository
-}
-
-class ProvinciaController {
-  -ProvinciaRepository provinciaRepository
-}
-
-class UsuarioController {
-  -UsuarioRepository usuarioRepository
-}
-
-class PacienteService {
-  <<interface>>
-}
-
-class AuthService {
-  <<interface>>
-}
-
-class AdminService {
-  <<interface>>
-}
-
-class HistorialService {
-  <<interface>>
-}
-
-class HabitacionService {
-  <<interface>>
-}
-
-class PerfilService {
-  <<interface>>
-}
-
-class PacienteServiceImpl {
-  -PacienteRepository pacienteRepository
-  -ObraSocialRepository obraSocialRepository
-  -AfiliacionObraSocialRepository afiliacionRepository
-  -TelefonoRepository telefonoRepository
-  -AlergiaRepository alergiaRepository
-  -EnfermedadCronicaRepository enfermedadCronicaRepository
-  -AntecedenteFamiliarRepository antecedenteFamiliarRepository
-  -ContactoEmergenciaRepository contactoEmergenciaRepository
-  -LocalidadRepository localidadRepository
-  -HistorialMedicoRepository historialMedicoRepository
-}
-
-class AuthServiceImpl {
-  -UsuarioRepository usuarioRepository
-  -PersonaRepository personaRepository
-  -RolRepository rolRepository
-  -InvitacionRegistroRepository invitacionRepository
-  -PasswordEncoder passwordEncoder
-  -JwtUtil jwtUtil
-}
-
-class AdminServiceImpl {
-  -UsuarioRepository usuarioRepository
-  -RolRepository rolRepository
-  -PasswordEncoder passwordEncoder
-}
-
-class HistorialServiceImpl {
-  -PacienteRepository pacienteRepository
-  -HistorialMedicoRepository historialRepository
-  -RegistroClinicoRepository registroRepository
-  -InternacionRepository internacionRepository
-  -TipoProcedimientoRepository tipoRepository
-  -UsuarioRepository usuarioRepository
-}
-
-class HabitacionServiceImpl {
-  -HabitacionInternacionRepository habitacionRepository
-  -InternacionRepository internacionRepository
-  -PacienteRepository pacienteRepository
-  -HistorialMedicoRepository historialRepository
-  -RegistroClinicoRepository registroRepository
-  -TipoProcedimientoRepository tipoRepository
-  -UsuarioRepository usuarioRepository
-}
-
-class PerfilServiceImpl {
-  -UsuarioRepository usuarioRepository
-  -PasswordEncoder passwordEncoder
-}
-
-class PacienteRepository {
-  <<interface>>
-}
-
-class UsuarioRepository {
-  <<interface>>
-}
-
-class RolRepository {
-  <<interface>>
-}
-
-class PersonaRepository {
-  <<interface>>
-}
-
-class ObraSocialRepository {
-  <<interface>>
-}
-
-class AfiliacionObraSocialRepository {
-  <<interface>>
-}
-
-class LocalidadRepository {
-  <<interface>>
-}
-
-class ProvinciaRepository {
-  <<interface>>
-}
-
-class TelefonoRepository {
-  <<interface>>
-}
-
-class AlergiaRepository {
-  <<interface>>
-}
-
-class EnfermedadCronicaRepository {
-  <<interface>>
-}
-
-class AntecedenteFamiliarRepository {
-  <<interface>>
-}
-
-class ContactoEmergenciaRepository {
-  <<interface>>
-}
-
-class HistorialMedicoRepository {
-  <<interface>>
-}
-
-class RegistroClinicoRepository {
-  <<interface>>
-}
-
-class InternacionRepository {
-  <<interface>>
-}
-
-class HabitacionInternacionRepository {
-  <<interface>>
-}
-
-class InvitacionRegistroRepository {
-  <<interface>>
-}
-
-class TipoProcedimientoRepository {
-  <<interface>>
-}
-
-%% Relaciones de aplicacion
-PacienteController --> PacienteService
-AuthController --> AuthService
-AdminController --> AdminService
-HistorialController --> HistorialService
-HabitacionController --> HabitacionService
-PerfilController --> PerfilService
-LocalidadController --> LocalidadRepository
-ObraSocialController --> ObraSocialRepository
-ProvinciaController --> ProvinciaRepository
-UsuarioController --> UsuarioRepository
-
-PacienteServiceImpl ..|> PacienteService
-AuthServiceImpl ..|> AuthService
-AdminServiceImpl ..|> AdminService
-HistorialServiceImpl ..|> HistorialService
-HabitacionServiceImpl ..|> HabitacionService
-PerfilServiceImpl ..|> PerfilService
-
-PacienteServiceImpl --> PacienteRepository
-PacienteServiceImpl --> ObraSocialRepository
-PacienteServiceImpl --> AfiliacionObraSocialRepository
-PacienteServiceImpl --> TelefonoRepository
-PacienteServiceImpl --> AlergiaRepository
-PacienteServiceImpl --> EnfermedadCronicaRepository
-PacienteServiceImpl --> AntecedenteFamiliarRepository
-PacienteServiceImpl --> ContactoEmergenciaRepository
-PacienteServiceImpl --> LocalidadRepository
-PacienteServiceImpl --> HistorialMedicoRepository
-
-AuthServiceImpl --> UsuarioRepository
-AuthServiceImpl --> PersonaRepository
-AuthServiceImpl --> RolRepository
-AuthServiceImpl --> InvitacionRegistroRepository
-
-AdminServiceImpl --> UsuarioRepository
-AdminServiceImpl --> RolRepository
-
-HistorialServiceImpl --> PacienteRepository
-HistorialServiceImpl --> HistorialMedicoRepository
-HistorialServiceImpl --> RegistroClinicoRepository
-HistorialServiceImpl --> InternacionRepository
-HistorialServiceImpl --> TipoProcedimientoRepository
-HistorialServiceImpl --> UsuarioRepository
-
-HabitacionServiceImpl --> HabitacionInternacionRepository
-HabitacionServiceImpl --> InternacionRepository
-HabitacionServiceImpl --> PacienteRepository
-HabitacionServiceImpl --> HistorialMedicoRepository
-HabitacionServiceImpl --> RegistroClinicoRepository
-HabitacionServiceImpl --> TipoProcedimientoRepository
-HabitacionServiceImpl --> UsuarioRepository
-
-PerfilServiceImpl --> UsuarioRepository
-
-%% ═══════════════════════════════════════════════════════════════════
-%% DTOs
-%% ═══════════════════════════════════════════════════════════════════
-
-class LoginRequestDTO {
-  -String email
-  -String password
-}
-
-class LoginResponseDTO {
-  -String token
-  -UsuarioAuthDTO usuario
-}
-
-class UsuarioAuthDTO {
-  -Integer idUsuario
-  -String email
-  -String nombre
-  -String apellido
-  -String nombreCompleto
-  -String iniciales
-  -String rol
-  -String autorizacion
-  -boolean mustChangePassword
-  -boolean esAdminProtegido
-}
-
-class RegisterRequestDTO {
-  -String token
-  -String nombre
-  -String apellido
-  -String fechaNacimiento
-  -String password
-}
-
-class InvitacionRequestDTO {
-  -String email
-  -String rol
-  -String fechaExpiracion
-}
-
-class InvitacionResponseDTO {
-  -Integer idInvitacion
-  -String email
-  -String rol
-  -String invitationLink
-  -LocalDateTime fechaCreacion
-  -LocalDateTime fechaExpiracion
-  -LocalDateTime fechaUso
-  -boolean usada
-  -boolean vencida
-}
-
-class ValidarTokenResponseDTO {
-  -String email
-  -String rol
-}
-
-class UsuarioResponseDTO {
-  -Integer id
-  -String email
-  -String nombre
-  -String apellido
-  -String nombreCompleto
-  -String iniciales
-  -String rol
-}
-
-class PacienteRequestDTO {
-  -String nombre
-  -String apellido
-  -Integer dni
-  -LocalDate fechaNacimiento
-  -String tipoSangre
-  -List~String~ alergias
-  -List~String~ enfermedadesCronicas
-  -List~String~ antecedentesFamiliares
-  -String antecedentesText
-  -String telefono
-  -String tipoTelefono
-  -String direccion
-  -Integer numeroDireccion
-  -Integer piso
-  -Integer idLocalidad
-  -String tipoResidencia
-  -List~ContactoEmergenciaDTO~ contactosEmergencia
-  -Integer idObraSocial
-  -String nombreObraSocial
-  -String nroAfiliado
-  -LocalDate fechaVencimientoAfiliacion
-}
-
-class PacienteResponseDTO {
-  -Integer id
-  -String nombre
-  -String apellido
-  -String nombreCompleto
-  -Integer dni
-  -Integer edad
-  -LocalDate fechaNacimiento
-  -String tipoSangre
-  -List~String~ alergias
-  -List~String~ enfermedadesCronicas
-  -List~String~ antecedentesFamiliares
-  -String antecedentesText
-  -String obraSocial
-  -Integer idObraSocial
-  -String nroAfiliado
-  -LocalDate fechaVencimientoAfiliacion
-  -String estado
-  -String numeroHabitacion
-  -LocalDate ultimaVisita
-  -String telefono
-  -String tipoTelefono
-  -String direccion
-  -Integer numeroDireccion
-  -Integer piso
-  -String tipoResidencia
-  -Integer idLocalidad
-  -String nombreLocalidad
-  -Integer idProvincia
-  -String nombreProvincia
-  -List~ContactoEmergenciaDTO~ contactosEmergencia
-}
-
-class ContactoEmergenciaDTO {
-  -String nombre
-  -String telefono
-  -String parentesco
-}
-
-class AdminUsuarioDTO {
-  -Integer idUsuario
-  -String email
-  -String nombre
-  -String apellido
-  -String nombreCompleto
-  -String iniciales
-  -String rol
-  -String autorizacion
-  -boolean activo
-}
-
-class CambiarRolRequestDTO {
-  -String rol
-}
-
-class ResetPasswordResponseDTO {
-  -String message
-  -String temporaryPassword
-}
-
-class PerfilResponseDTO {
-  -Integer idUsuario
-  -String email
-  -String nombre
-  -String apellido
-  -String rol
-  -String autorizacion
-  -boolean mustChangePassword
-  -boolean esAdminProtegido
-}
-
-class CambiarDatosBasicosRequestDTO {
-  -String nombre
-  -String apellido
-  -String fechaNacimiento
-}
-
-class CambiarPasswordRequestDTO {
-  -String passwordActual
-  -String nuevaPassword
-  -String confirmarPassword
-}
-
-class CambiarEmailRequestDTO {
-  -String nuevoEmail
-  -String password
-}
-
-class HistorialDetalleResponseDTO {
-  -Integer id
-  -String fechaCreacion
-  -String fechaActualizacion
-  -String observaciones
-  -String estadoHistorial
-  -List~RegistroClinicoResponseDTO~ registros
-  -List~RegistroClinicoResponseDTO~ eventosAmbulatorios
-  -List~InternacionHistorialDTO~ internaciones
-}
-
-class RegistroClinicoRequestDTO {
-  -Integer idTipoProcedimiento
-  -String descripcion
-}
-
-class RegistroClinicoResponseDTO {
-  -Integer id
-  -String descripcion
-  -String fechaRegistro
-  -Integer idTipoProcedimiento
-  -String tipoProcedimiento
-  -Integer idUsuario
-  -String usuarioNombre
-  -String usuarioRol
-}
-
-class TipoProcedimientoDTO {
-  -Integer id
-  -String nombre
-}
-
-class InternacionHistorialDTO {
-  -Integer idInternacion
-  -String fechaInicio
-  -String fechaFin
-  -String estado
-  -String numeroHabitacion
-  -Integer pisoHabitacion
-  -Integer cantidadTraslados
-  -List~RegistroClinicoResponseDTO~ eventos
-}
-
-class HabitacionResponseDTO {
-  -Integer id
-  -String numeroHabitacion
-  -Integer pisoHabitacion
-  -String estadoHabitacion
-  -PacienteOcupanteDTO pacienteActual
-  -InternacionActualDTO internacionActual
-}
-
-class PacienteOcupanteDTO {
-  -Integer id
-  -String nombreCompleto
-  -Integer dni
-}
-
-class InternacionActualDTO {
-  -Integer id
-  -String fechaInicio
-  -Integer cantidadTraslados
-}
-
-class InternacionRequestDTO {
-  -Integer idPaciente
-  -String motivo
-  -String observaciones
-}
-
-class TrasladoRequestDTO {
-  -Integer idHabitacionDestino
-  -String motivo
-  -String observaciones
-}
-
-class EgresoRequestDTO {
-  -String observaciones
-}
-
-%% Relaciones de DTOs
-LoginResponseDTO "1" *-- "1" UsuarioAuthDTO
-PacienteRequestDTO "1" *-- "0..*" ContactoEmergenciaDTO
-PacienteResponseDTO "1" *-- "0..*" ContactoEmergenciaDTO
-HistorialDetalleResponseDTO "1" *-- "0..*" RegistroClinicoResponseDTO
-HistorialDetalleResponseDTO "1" *-- "0..*" InternacionHistorialDTO
-InternacionHistorialDTO "1" *-- "0..*" RegistroClinicoResponseDTO
-HabitacionResponseDTO "1" *-- "1" PacienteOcupanteDTO
-HabitacionResponseDTO "1" *-- "0..1" InternacionActualDTO
-
-%% ═══════════════════════════════════════════════════════════════════
-%% EXCEPCIONES
-%% ═══════════════════════════════════════════════════════════════════
-
-class ManejadorGlobalDeExcepciones {
-  <<RestControllerAdvice>>
-}
-
-class DniDuplicadoException {
-  <<RuntimeException>>
-  +DniDuplicadoException(Integer)
-}
-
-class TelefonoDuplicadoException {
-  <<RuntimeException>>
-  +TelefonoDuplicadoException(String)
-}
-
-class AfiliadoDuplicadoException {
-  <<RuntimeException>>
-  +AfiliadoDuplicadoException(String)
-}
-
-class PacienteNoEncontradoException {
-  <<RuntimeException>>
-  +PacienteNoEncontradoException(Integer)
-}
-
-class UsuarioNoEncontradoException {
-  <<RuntimeException>>
-  +UsuarioNoEncontradoException(Integer)
-}
-
-class UsuarioDuplicadoException {
-  <<RuntimeException>>
-  +UsuarioDuplicadoException(String)
-}
-
-class RolNoEncontradoException {
-  <<RuntimeException>>
-  +RolNoEncontradoException(String)
-}
-
-class CredencialesInvalidasException {
-  <<RuntimeException>>
-  +CredencialesInvalidasException()
-}
-
-class InvitacionInvalidaException {
-  <<RuntimeException>>
-  +InvitacionInvalidaException(String)
-}
-
-class HabitacionNoDisponibleException {
-  <<RuntimeException>>
-  +HabitacionNoDisponibleException(String)
-}
-
-class InternacionNoEncontradaException {
-  <<RuntimeException>>
-  +InternacionNoEncontradaException(Integer)
-  +InternacionNoEncontradaException(String)
-}
-
-class OperacionNoPermitidaException {
-  <<RuntimeException>>
-  +OperacionNoPermitidaException(String)
-}
-
-%% Relaciones de excepciones
-ManejadorGlobalDeExcepciones --> DniDuplicadoException
-ManejadorGlobalDeExcepciones --> TelefonoDuplicadoException
-ManejadorGlobalDeExcepciones --> AfiliadoDuplicadoException
-ManejadorGlobalDeExcepciones --> PacienteNoEncontradoException
-ManejadorGlobalDeExcepciones --> UsuarioNoEncontradoException
-ManejadorGlobalDeExcepciones --> UsuarioDuplicadoException
-ManejadorGlobalDeExcepciones --> RolNoEncontradoException
-ManejadorGlobalDeExcepciones --> CredencialesInvalidasException
-ManejadorGlobalDeExcepciones --> InvitacionInvalidaException
-ManejadorGlobalDeExcepciones --> HabitacionNoDisponibleException
-ManejadorGlobalDeExcepciones --> InternacionNoEncontradaException
-ManejadorGlobalDeExcepciones --> OperacionNoPermitidaException
+Domicilio "*" --> "1" Localidad : localidad
+Localidad "*" --> "1" Provincia : provincia
+AfiliacionObraSocial "*" --> "1" ObraSocial : obraSocial
+FichaMedica "*" --> "*" Alergia : alergias
+FichaMedica "*" --> "*" EnfermedadCronica : enfermedadesCronicas
+FichaMedica "*" --> "*" AntecedenteFamiliar : antecedentesFamiliares
+HistorialMedico "1" --> "*" RegistroClinico : registros
+HistorialMedico "1" --> "*" Internacion : internaciones
+RegistroClinico "*" --> "1" TipoProcedimiento : tipoProcedimiento
+RegistroClinico "*" --> "1" Usuario : usuario
+Internacion "*" --> "1" HabitacionInternacion : habitacion
+Internacion "*" --> "1" HistorialMedico : historial
+InvitacionRegistro "*" --> "1" Rol : rol
+InvitacionRegistro "*" --> "1" Usuario : usuarioCreador
 ```
 
-## Ejemplos
+## Cómo leerlo
 
-**Ejemplo 1: ¿Cómo se registra un paciente?**
+Este diagrama muestra una sola clase por concepto de negocio. Las relaciones principales son:
 
-- El cliente envía un `PacienteRequestDTO` con los datos
-- `PacienteController` recibe la solicitud
-- `PacienteService` valida que el DNI no esté duplicado
-- `PacienteServiceImpl` guarda los datos usando múltiples `*Repository` (PacienteRepository, TelefonoRepository, etc.)
-- Se devuelve un `PacienteResponseDTO` al cliente
+- `Paciente` se apoya en `Persona`, `Residencia`, `FichaMedica` y `AfiliacionObraSocial`.
+- `HistorialMedico` agrupa `RegistroClinico` e `Internacion`.
+- `RegistroClinico` siempre pertenece a un `TipoProcedimiento` y a un `Usuario` que lo cargó.
+- `InvitacionRegistro` vincula el alta de un usuario con `Rol` y `Usuario` creador.
 
-**Ejemplo 2: ¿Qué pasa si un error ocurre?**
+## Mapeo de atributos y métodos al código
 
-- Si el DNI ya existe → se lanza `DniDuplicadoException`
-- `ManejadorGlobalDeExcepciones` atrapa el error
-- Se devuelve un mensaje de error claro al cliente
+### Persona
 
-## Notas
+- Atributos: `idPersona`, `nombrePersona`, `apellidoPersona`, `fechaNacimiento`, `fechaFallecimiento` → [../backend/src/main/java/com/clinicks/model/Persona.java#L20](../backend/src/main/java/com/clinicks/model/Persona.java#L20)
+- `getNombreCompleto()` → [../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L188](../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L188), [../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L111](../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L111), [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L541](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L541)
+- `cambiarNombre(String, String)` → [../backend/src/main/java/com/clinicks/service/impl/PerfilServiceImpl.java#L81](../backend/src/main/java/com/clinicks/service/impl/PerfilServiceImpl.java#L81), [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188)
 
-- **Dos tipos de flechas**:
-  - Flechas simples (`→`): "depende de" (inyección de dependencias)
-  - Flechas con diamante sólido (`*--`): "contiene" (un objeto tiene otro dentro)
+### Usuario
 
-Hay DTOs y excepciones que no dependen de nada más; son datos simples o errores sin lógica compleja. Por ejemplo:
+- Atributos: `idUsuario`, `email`, `pass`, `autorizacion`, `mustChangePassword`, `deletedAt`, `rol`, `persona` → [../backend/src/main/java/com/clinicks/model/Usuario.java#L20](../backend/src/main/java/com/clinicks/model/Usuario.java#L20)
+- `autenticar(String)` → [../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L42](../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L42), [../backend/src/main/java/com/clinicks/repository/UsuarioRepository.java#L24](../backend/src/main/java/com/clinicks/repository/UsuarioRepository.java#L24)
+- `cambiarPassword(String)` → [../backend/src/main/java/com/clinicks/service/impl/PerfilServiceImpl.java#L60](../backend/src/main/java/com/clinicks/service/impl/PerfilServiceImpl.java#L60)
+- `cambiarEmail(String)` → [../backend/src/main/java/com/clinicks/service/impl/PerfilServiceImpl.java#L37](../backend/src/main/java/com/clinicks/service/impl/PerfilServiceImpl.java#L37)
+- `asignarRol(Rol)` → [../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L41](../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L41)
+- `desactivar()` → [../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L63](../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L63)
 
-- `ContactoEmergenciaDTO`: solo tiene nombre, teléfono y parentesco
-- `DniDuplicadoException`: solo define un tipo de error
+### Rol
+
+- Atributos: `idRol`, `nombreRol` → [../backend/src/main/java/com/clinicks/model/Rol.java#L18](../backend/src/main/java/com/clinicks/model/Rol.java#L18)
+- `tienePermiso(String)` → [../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L42](../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L42), [../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L41](../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L41)
+
+### Paciente
+
+- Atributos: `idPaciente`, `dni`, `deletedAt`, `persona`, `residencia`, `fichaMedica`, `afiliacion` → [../backend/src/main/java/com/clinicks/model/Paciente.java#L20](../backend/src/main/java/com/clinicks/model/Paciente.java#L20)
+- `actualizarDatos(Persona, Residencia, FichaMedica)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188)
+- `eliminarLogicamente()` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L256](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L256)
+- `restaurar()` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L270](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L270)
+- `agregarTelefono(Telefono)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L422](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L422), [../backend/src/main/java/com/clinicks/repository/TelefonoRepository.java#L18](../backend/src/main/java/com/clinicks/repository/TelefonoRepository.java#L18)
+- `agregarContactoEmergencia(ContactoEmergencia)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L432](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L432), [../backend/src/main/java/com/clinicks/repository/ContactoEmergenciaRepository.java#L17](../backend/src/main/java/com/clinicks/repository/ContactoEmergenciaRepository.java#L17)
+
+### Residencia
+
+- Atributos: `idResidencia`, `tipoResidencia`, `domicilio` → [../backend/src/main/java/com/clinicks/model/Residencia.java#L18](../backend/src/main/java/com/clinicks/model/Residencia.java#L18)
+- `cambiarDomicilio(Domicilio)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L108](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L108), [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188)
+
+### Domicilio
+
+- Atributos: `idDireccion`, `calle`, `numero`, `piso`, `localidad` → [../backend/src/main/java/com/clinicks/model/Domicilio.java#L18](../backend/src/main/java/com/clinicks/model/Domicilio.java#L18)
+- `actualizarUbicacion(String, Integer, Integer, Localidad)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188)
+
+### Localidad
+
+- Atributos: `idLocalidad`, `nombreLocalidad`, `codigoPostal`, `provincia` → [../backend/src/main/java/com/clinicks/model/Localidad.java#L18](../backend/src/main/java/com/clinicks/model/Localidad.java#L18)
+
+### Provincia
+
+- Atributos: `idProvincia`, `nombreProvincia` → [../backend/src/main/java/com/clinicks/model/Provincia.java#L18](../backend/src/main/java/com/clinicks/model/Provincia.java#L18)
+
+### ObraSocial
+
+- Atributos: `idObraSocial`, `nombreObra` → [../backend/src/main/java/com/clinicks/model/ObraSocial.java#L18](../backend/src/main/java/com/clinicks/model/ObraSocial.java#L18)
+- `estaActiva()` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L384](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L384)
+
+### AfiliacionObraSocial
+
+- Atributos: `idAfiliacion`, `numeroAfiliado`, `fechaAlta`, `fechaVencimiento`, `fechaBaja`, `obraSocial` → [../backend/src/main/java/com/clinicks/model/AfiliacionObraSocial.java#L20](../backend/src/main/java/com/clinicks/model/AfiliacionObraSocial.java#L20)
+- `estaVigente()` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L384](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L384)
+- `darDeBaja(LocalDate)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L384](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L384)
+- `renovar(LocalDate)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L384](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L384)
+
+### FichaMedica
+
+- Atributos: `idFichaMedica`, `tipoSangre`, `antecedentesText`, `alergias`, `enfermedadesCronicas`, `antecedentesFamiliares` → [../backend/src/main/java/com/clinicks/model/FichaMedica.java#L21](../backend/src/main/java/com/clinicks/model/FichaMedica.java#L21)
+- `agregarAlergia(Alergia)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L341](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L341)
+- `agregarEnfermedadCronica(EnfermedadCronica)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L353](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L353)
+- `agregarAntecedenteFamiliar(AntecedenteFamiliar)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L365](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L365)
+- `actualizarAntecedentes(String)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188)
+
+### Alergia / EnfermedadCronica / AntecedenteFamiliar
+
+- Atributos de cada una: identificador y nombre → [../backend/src/main/java/com/clinicks/model/Alergia.java#L18](../backend/src/main/java/com/clinicks/model/Alergia.java#L18), [../backend/src/main/java/com/clinicks/model/EnfermedadCronica.java#L18](../backend/src/main/java/com/clinicks/model/EnfermedadCronica.java#L18), [../backend/src/main/java/com/clinicks/model/AntecedenteFamiliar.java#L18](../backend/src/main/java/com/clinicks/model/AntecedenteFamiliar.java#L18)
+
+### Telefono
+
+- Atributos: `idTelefono`, `numeroTelefono`, `tipoTelefono`, `paciente` → [../backend/src/main/java/com/clinicks/model/Telefono.java#L18](../backend/src/main/java/com/clinicks/model/Telefono.java#L18)
+- `cambiarNumero(String)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L422](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L422)
+
+### ContactoEmergencia
+
+- Atributos: `idContactoEmergencia`, `nombreCompleto`, `parentesco`, `telefonoCelular`, `paciente` → [../backend/src/main/java/com/clinicks/model/ContactoEmergencia.java#L18](../backend/src/main/java/com/clinicks/model/ContactoEmergencia.java#L18)
+- `actualizarContacto(String, String, String)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L432](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L432)
+
+### HistorialMedico
+
+- Atributos: `idHistorial`, `fechaCreacion`, `fechaActualizacion`, `observaciones`, `estadoHistorial`, `paciente`, `registros`, `internaciones` → [../backend/src/main/java/com/clinicks/model/HistorialMedico.java#L20](../backend/src/main/java/com/clinicks/model/HistorialMedico.java#L20)
+- `registrarEvento(RegistroClinico)` → [../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L119](../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L119), [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L447](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L447), [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L147](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L147)
+- `agregarInternacion(Internacion)` → [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L39](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L39)
+- `abrir()` / `cerrar()` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L108](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L108), [../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L36](../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L36)
+
+### TipoProcedimiento
+
+- Atributos: `id`, `nombreTipoProcedimiento` → [../backend/src/main/java/com/clinicks/model/TipoProcedimiento.java#L18](../backend/src/main/java/com/clinicks/model/TipoProcedimiento.java#L18)
+
+### RegistroClinico
+
+- Atributos: `id`, `descripcion`, `fechaRegistro`, `historial`, `tipoProcedimiento`, `usuario` → [../backend/src/main/java/com/clinicks/model/RegistroClinico.java#L20](../backend/src/main/java/com/clinicks/model/RegistroClinico.java#L20)
+- `esAmbulatorio()` → [../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L36](../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L36)
+
+### Internacion
+
+- Atributos: `id`, `fechaInicio`, `fechaFin`, `cantidadTraslados`, `historial`, `habitacion` → [../backend/src/main/java/com/clinicks/model/Internacion.java#L20](../backend/src/main/java/com/clinicks/model/Internacion.java#L20)
+- `trasladar(HabitacionInternacion)` → [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L78](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L78)
+- `egresar(LocalDateTime)` → [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L109](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L109)
+- `finalizar()` → [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L109](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L109)
+
+### HabitacionInternacion
+
+- Atributos: `id`, `numeroHabitacion`, `pisoHabitacion`, `estadoHabitacion` → [../backend/src/main/java/com/clinicks/model/HabitacionInternacion.java#L18](../backend/src/main/java/com/clinicks/model/HabitacionInternacion.java#L18)
+- `estaDisponible()` / `ocupar()` / `liberar()` → [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L134](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L134), [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L39](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L39), [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L109](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L109)
+
+### InvitacionRegistro
+
+- Atributos: `idInvitacion`, `email`, `token`, `rol`, `usuarioCreador`, `fechaCreacion`, `fechaExpiracion`, `fechaUso`, `deletedAt` → [../backend/src/main/java/com/clinicks/model/InvitacionRegistro.java#L21](../backend/src/main/java/com/clinicks/model/InvitacionRegistro.java#L21)
+- `estaVigente()` → [../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L166](../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L166)
+- `aceptar()` → [../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L64](../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L64)
+
+## Nota final
+
+El documento describe el modelo lógico del negocio y enlaza cada concepto con el código real donde se define o se ejecuta. Los enlaces con `#L...` abren el archivo en la línea de la declaración o de la implementación principal.

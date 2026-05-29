@@ -1,0 +1,234 @@
+classDiagram
+direction TB
+
+
+class Persona {
+  -Integer idPersona
+  -String nombrePersona
+  -String apellidoPersona
+  -LocalDate fechaNacimiento
+  -LocalDate fechaFallecimiento
+  +getNombreCompleto() String
+  +cambiarNombre(String, String) void
+}
+
+class Usuario {
+  -Integer idUsuario
+  -String email
+  -String passwordHash
+  -String autorizacion
+  -boolean mustChangePassword
+  -OffsetDateTime deletedAt
+  -Rol rol
+  -Persona persona
+  +autenticar(String) boolean
+  +cambiarPassword(String) void
+  +cambiarEmail(String) void
+  +asignarRol(Rol) void
+  +desactivar() void
+}
+
+class Rol {
+  -Integer idRol
+  -String nombreRol
+  -boolean protegido
+  +tienePermiso(String) boolean
+}
+
+class Paciente {
+  -Integer idPaciente
+  -Integer dni
+  -OffsetDateTime deletedAt
+  -Persona persona
+  -Residencia residencia
+  -FichaMedica fichaMedica
+  -AfiliacionObraSocial afiliacion
+  +actualizarDatos(Persona, Residencia, FichaMedica) void
+  +eliminarLogicamente() void
+  +restaurar() void
+  +agregarTelefono(Telefono) void
+  +agregarContactoEmergencia(ContactoEmergencia) void
+}
+
+class Residencia {
+  -Integer idResidencia
+  -String tipoResidencia
+  -Domicilio domicilio
+  +cambiarDomicilio(Domicilio) void
+}
+
+class Domicilio {
+  -Integer idDireccion
+  -String calle
+  -Integer numero
+  -Integer piso
+  -Localidad localidad
+  +actualizarUbicacion(String, Integer, Integer, Localidad) void
+}
+
+class Localidad {
+  -Integer idLocalidad
+  -String nombreLocalidad
+  -Integer codigoPostal
+  -Provincia provincia
+}
+
+class Provincia {
+  -Integer idProvincia
+  -String nombreProvincia
+}
+
+class ObraSocial {
+  -Integer idObraSocial
+  -String nombreObra
+  +estaActiva() boolean
+}
+
+class AfiliacionObraSocial {
+  -Integer idAfiliacion
+  -String numeroAfiliado
+  -LocalDate fechaAlta
+  -LocalDate fechaVencimiento
+  -LocalDate fechaBaja
+  -ObraSocial obraSocial
+  +estaVigente() boolean
+  +darDeBaja(LocalDate) void
+  +renovar(LocalDate) void
+}
+
+class FichaMedica {
+  -Integer idFichaMedica
+  -String tipoSangre
+  -String antecedentesText
+  -Set~Alergia~ alergias
+  -Set~EnfermedadCronica~ enfermedadesCronicas
+  -Set~AntecedenteFamiliar~ antecedentesFamiliares
+  +agregarAlergia(Alergia) void
+  +agregarEnfermedadCronica(EnfermedadCronica) void
+  +agregarAntecedenteFamiliar(AntecedenteFamiliar) void
+  +actualizarAntecedentes(String) void
+}
+
+class Alergia {
+  -Integer idAlergia
+  -String nombreAlergia
+}
+
+class EnfermedadCronica {
+  -Integer idEnfermedadCronica
+  -String nombreEnfermedad
+}
+
+class AntecedenteFamiliar {
+  -Integer idAntecedenteFamiliar
+  -String nombreEnfermedad
+}
+
+class Telefono {
+  -Integer idTelefono
+  -String numeroTelefono
+  -String tipoTelefono
+  -Paciente paciente
+  +cambiarNumero(String) void
+}
+
+class ContactoEmergencia {
+  -Integer idContactoEmergencia
+  -String nombreCompleto
+  -String parentesco
+  -String telefonoCelular
+  -Paciente paciente
+  +actualizarContacto(String, String, String) void
+}
+
+class HistorialMedico {
+  -Integer idHistorial
+  -LocalDateTime fechaCreacion
+  -LocalDateTime fechaActualizacion
+  -String observaciones
+  -String estadoHistorial
+  -Paciente paciente
+  -List~RegistroClinico~ registros
+  -List~Internacion~ internaciones
+  +registrarEvento(RegistroClinico) void
+  +agregarInternacion(Internacion) void
+  +abrir() void
+  +cerrar() void
+}
+
+class TipoProcedimiento {
+  -Integer id
+  -String nombreTipoProcedimiento
+}
+
+class RegistroClinico {
+  -Integer id
+  -String descripcion
+  -LocalDateTime fechaRegistro
+  -HistorialMedico historial
+  -TipoProcedimiento tipoProcedimiento
+  -Usuario usuario
+  +esAmbulatorio() boolean
+}
+
+class Internacion {
+  -Integer id
+  -LocalDateTime fechaInicio
+  -LocalDateTime fechaFin
+  -Integer cantidadTraslados
+  -HistorialMedico historial
+  -HabitacionInternacion habitacion
+  +trasladar(HabitacionInternacion) void
+  +egresar(LocalDateTime) void
+  +finalizar() void
+}
+
+class HabitacionInternacion {
+  -Integer id
+  -String numeroHabitacion
+  -Integer pisoHabitacion
+  -String estadoHabitacion
+  +estaDisponible() boolean
+  +ocupar() void
+  +liberar() void
+}
+
+class InvitacionRegistro {
+  -Integer idInvitacion
+  -String email
+  -String token
+  -Rol rol
+  -Usuario usuarioCreador
+  -LocalDateTime fechaCreacion
+  -LocalDateTime fechaExpiracion
+  -LocalDateTime fechaUso
+  -OffsetDateTime deletedAt
+  +estaVigente() boolean
+  +aceptar() void
+}
+
+%% Relaciones principales
+Usuario "*" --> "1" Rol : rol
+Usuario "1" --> "1" Persona : persona
+Paciente "1" --> "1" Persona : persona
+Paciente "1" *-- "1" Residencia : residencia
+Paciente "1" *-- "1" FichaMedica : fichaMedica
+Paciente "*" --> "0..1" AfiliacionObraSocial : afiliacion
+Paciente "1" --> "*" Telefono : telefonos
+Paciente "1" --> "*" ContactoEmergencia : contactos
+Paciente "1" --> "*" HistorialMedico : historiales
+Residencia "1" *-- "1" Domicilio : domicilio
+Domicilio "*" --> "1" Localidad : localidad
+Localidad "*" --> "1" Provincia : provincia
+AfiliacionObraSocial "*" --> "1" ObraSocial : obraSocial
+FichaMedica "*" --> "*" Alergia : alergias
+FichaMedica "*" --> "*" EnfermedadCronica : enfermedadesCronicas
+FichaMedica "*" --> "*" AntecedenteFamiliar : antecedentesFamiliares
+HistorialMedico "1" --> "*" RegistroClinico : registros
+HistorialMedico "1" --> "*" Internacion : internaciones
+RegistroClinico "*" --> "1" TipoProcedimiento : tipoProcedimiento
+RegistroClinico "*" --> "1" Usuario : usuario
+Internacion "*" --> "1" HabitacionInternacion : habitacion
+Internacion "*" --> "1" HistorialMedico : historial
+InvitacionRegistro "*" --> "1" Rol : rol
+InvitacionRegistro "*" --> "1" Usuario : usuarioCreador

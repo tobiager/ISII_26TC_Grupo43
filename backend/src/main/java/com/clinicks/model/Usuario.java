@@ -39,7 +39,7 @@ public class Usuario {
     @JoinColumn(name = "id_rol", nullable = false)
     private Rol rol;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "id_persona", nullable = false)
+    @OneToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "id_persona", nullable = false, unique = true)
     private Persona persona;
 }

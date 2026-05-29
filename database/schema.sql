@@ -143,7 +143,8 @@ CREATE TABLE paciente (
   CONSTRAINT fk_paciente_afiliacion FOREIGN KEY (id_afiliacion) REFERENCES afiliacion_obra_social(id_afiliacion),
   CONSTRAINT uq_paciente_dni UNIQUE (dni),
   CONSTRAINT uq_paciente_residencia UNIQUE (id_residencia),
-  CONSTRAINT uq_paciente_ficha_medica UNIQUE (id_ficha_medica)
+  CONSTRAINT uq_paciente_ficha_medica UNIQUE (id_ficha_medica),
+  CONSTRAINT uq_paciente_persona UNIQUE (id_persona)
 );
 
 -- ============================================================
@@ -164,6 +165,9 @@ CREATE TABLE usuario (
   CONSTRAINT uq_usuario_email UNIQUE (email),
   CONSTRAINT ck_usuario_email_formato CHECK (email ~* '^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$')
 );
+
+-- Hacer 1:1 entre usuario y persona
+ALTER TABLE usuario ADD CONSTRAINT uq_usuario_persona UNIQUE (id_persona);
 
 CREATE TABLE invitacion_registro (
   id_invitacion INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
