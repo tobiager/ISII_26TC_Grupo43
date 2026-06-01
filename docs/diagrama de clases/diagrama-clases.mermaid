@@ -3,7 +3,6 @@ direction TB
 
 
 class Persona {
-  -Integer idPersona
   -String nombrePersona
   -String apellidoPersona
   -LocalDate fechaNacimiento
@@ -13,7 +12,6 @@ class Persona {
 }
 
 class Usuario {
-  -Integer idUsuario
   -String email
   -String passwordHash
   -String autorizacion
@@ -29,14 +27,12 @@ class Usuario {
 }
 
 class Rol {
-  -Integer idRol
   -String nombreRol
   -boolean protegido
   +tienePermiso(String) boolean
 }
 
 class Paciente {
-  -Integer idPaciente
   -Integer dni
   -OffsetDateTime deletedAt
   -Persona persona
@@ -51,14 +47,12 @@ class Paciente {
 }
 
 class Residencia {
-  -Integer idResidencia
   -String tipoResidencia
   -Domicilio domicilio
   +cambiarDomicilio(Domicilio) void
 }
 
 class Domicilio {
-  -Integer idDireccion
   -String calle
   -Integer numero
   -Integer piso
@@ -67,25 +61,21 @@ class Domicilio {
 }
 
 class Localidad {
-  -Integer idLocalidad
   -String nombreLocalidad
   -Integer codigoPostal
   -Provincia provincia
 }
 
 class Provincia {
-  -Integer idProvincia
   -String nombreProvincia
 }
 
 class ObraSocial {
-  -Integer idObraSocial
   -String nombreObra
   +estaActiva() boolean
 }
 
 class AfiliacionObraSocial {
-  -Integer idAfiliacion
   -String numeroAfiliado
   -LocalDate fechaAlta
   -LocalDate fechaVencimiento
@@ -97,7 +87,6 @@ class AfiliacionObraSocial {
 }
 
 class FichaMedica {
-  -Integer idFichaMedica
   -String tipoSangre
   -String antecedentesText
   -Set~Alergia~ alergias
@@ -110,22 +99,18 @@ class FichaMedica {
 }
 
 class Alergia {
-  -Integer idAlergia
   -String nombreAlergia
 }
 
 class EnfermedadCronica {
-  -Integer idEnfermedadCronica
   -String nombreEnfermedad
 }
 
 class AntecedenteFamiliar {
-  -Integer idAntecedenteFamiliar
   -String nombreEnfermedad
 }
 
 class Telefono {
-  -Integer idTelefono
   -String numeroTelefono
   -String tipoTelefono
   -Paciente paciente
@@ -133,7 +118,6 @@ class Telefono {
 }
 
 class ContactoEmergencia {
-  -Integer idContactoEmergencia
   -String nombreCompleto
   -String parentesco
   -String telefonoCelular
@@ -142,7 +126,6 @@ class ContactoEmergencia {
 }
 
 class HistorialMedico {
-  -Integer idHistorial
   -LocalDateTime fechaCreacion
   -LocalDateTime fechaActualizacion
   -String observaciones
@@ -157,12 +140,10 @@ class HistorialMedico {
 }
 
 class TipoProcedimiento {
-  -Integer id
   -String nombreTipoProcedimiento
 }
 
 class RegistroClinico {
-  -Integer id
   -String descripcion
   -LocalDateTime fechaRegistro
   -HistorialMedico historial
@@ -172,7 +153,6 @@ class RegistroClinico {
 }
 
 class Internacion {
-  -Integer id
   -LocalDateTime fechaInicio
   -LocalDateTime fechaFin
   -Integer cantidadTraslados
@@ -184,7 +164,6 @@ class Internacion {
 }
 
 class HabitacionInternacion {
-  -Integer id
   -String numeroHabitacion
   -Integer pisoHabitacion
   -String estadoHabitacion
@@ -194,7 +173,6 @@ class HabitacionInternacion {
 }
 
 class InvitacionRegistro {
-  -Integer idInvitacion
   -String email
   -String token
   -Rol rol

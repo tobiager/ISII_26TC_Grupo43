@@ -8,7 +8,7 @@ Este documento explica el diagrama de clases lógico del sistema, donde cada cla
 - Los métodos del diagrama y el lugar del código donde se implementan.
 - Las relaciones principales entre conceptos del dominio.
 
-El diagrama fuente está en [diagrama de clases/diagrama-clases-logico.mermaid](diagrama%20de%20clases/diagrama-clases-logico.mermaid).
+El diagrama fuente está en [diagrama de clases/diagrama-clases.mermaid](diagrama%20de%20clases/diagrama-clases.mermaid).
 
 ## Diagrama
 
@@ -17,7 +17,6 @@ classDiagram
 direction TB
 
 class Persona {
-  -Integer idPersona
   -String nombrePersona
   -String apellidoPersona
   -LocalDate fechaNacimiento
@@ -27,7 +26,6 @@ class Persona {
 }
 
 class Usuario {
-  -Integer idUsuario
   -String email
   -String passwordHash
   -String autorizacion
@@ -43,14 +41,12 @@ class Usuario {
 }
 
 class Rol {
-  -Integer idRol
   -String nombreRol
   -boolean protegido
   +tienePermiso(String) boolean
 }
 
 class Paciente {
-  -Integer idPaciente
   -Integer dni
   -OffsetDateTime deletedAt
   -Persona persona
@@ -65,14 +61,12 @@ class Paciente {
 }
 
 class Residencia {
-  -Integer idResidencia
   -String tipoResidencia
   -Domicilio domicilio
   +cambiarDomicilio(Domicilio) void
 }
 
 class Domicilio {
-  -Integer idDireccion
   -String calle
   -Integer numero
   -Integer piso
@@ -81,25 +75,21 @@ class Domicilio {
 }
 
 class Localidad {
-  -Integer idLocalidad
   -String nombreLocalidad
   -Integer codigoPostal
   -Provincia provincia
 }
 
 class Provincia {
-  -Integer idProvincia
   -String nombreProvincia
 }
 
 class ObraSocial {
-  -Integer idObraSocial
   -String nombreObra
   +estaActiva() boolean
 }
 
 class AfiliacionObraSocial {
-  -Integer idAfiliacion
   -String numeroAfiliado
   -LocalDate fechaAlta
   -LocalDate fechaVencimiento
@@ -111,7 +101,6 @@ class AfiliacionObraSocial {
 }
 
 class FichaMedica {
-  -Integer idFichaMedica
   -String tipoSangre
   -String antecedentesText
   -Set~Alergia~ alergias
@@ -124,22 +113,18 @@ class FichaMedica {
 }
 
 class Alergia {
-  -Integer idAlergia
   -String nombreAlergia
 }
 
 class EnfermedadCronica {
-  -Integer idEnfermedadCronica
   -String nombreEnfermedad
 }
 
 class AntecedenteFamiliar {
-  -Integer idAntecedenteFamiliar
   -String nombreEnfermedad
 }
 
 class Telefono {
-  -Integer idTelefono
   -String numeroTelefono
   -String tipoTelefono
   -Paciente paciente
@@ -147,7 +132,6 @@ class Telefono {
 }
 
 class ContactoEmergencia {
-  -Integer idContactoEmergencia
   -String nombreCompleto
   -String parentesco
   -String telefonoCelular
@@ -156,7 +140,6 @@ class ContactoEmergencia {
 }
 
 class HistorialMedico {
-  -Integer idHistorial
   -LocalDateTime fechaCreacion
   -LocalDateTime fechaActualizacion
   -String observaciones
@@ -171,12 +154,10 @@ class HistorialMedico {
 }
 
 class TipoProcedimiento {
-  -Integer id
   -String nombreTipoProcedimiento
 }
 
 class RegistroClinico {
-  -Integer id
   -String descripcion
   -LocalDateTime fechaRegistro
   -HistorialMedico historial
@@ -186,7 +167,6 @@ class RegistroClinico {
 }
 
 class Internacion {
-  -Integer id
   -LocalDateTime fechaInicio
   -LocalDateTime fechaFin
   -Integer cantidadTraslados
@@ -198,7 +178,6 @@ class Internacion {
 }
 
 class HabitacionInternacion {
-  -Integer id
   -String numeroHabitacion
   -Integer pisoHabitacion
   -String estadoHabitacion
@@ -208,7 +187,6 @@ class HabitacionInternacion {
 }
 
 class InvitacionRegistro {
-  -Integer idInvitacion
   -String email
   -String token
   -Rol rol
@@ -260,13 +238,13 @@ Este diagrama muestra una sola clase por concepto de negocio. Las relaciones pri
 
 ### Persona
 
-- Atributos: `idPersona`, `nombrePersona`, `apellidoPersona`, `fechaNacimiento`, `fechaFallecimiento` → [../backend/src/main/java/com/clinicks/model/Persona.java#L20](../backend/src/main/java/com/clinicks/model/Persona.java#L20)
-- `getNombreCompleto()` → [../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L188](../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L188), [../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L111](../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L111), [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L541](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L541)
+- Atributos: `nombrePersona`, `apellidoPersona`, `fechaNacimiento`, `fechaFallecimiento` → [../backend/src/main/java/com/clinicks/model/Persona.java#L20](../backend/src/main/java/com/clinicks/model/Persona.java#L20)
+- `getNombreCompleto()` → [../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L197](../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L197), [../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L120](../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L120), [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L525](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L525)
 - `cambiarNombre(String, String)` → [../backend/src/main/java/com/clinicks/service/impl/PerfilServiceImpl.java#L81](../backend/src/main/java/com/clinicks/service/impl/PerfilServiceImpl.java#L81), [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188)
 
 ### Usuario
 
-- Atributos: `idUsuario`, `email`, `pass`, `autorizacion`, `mustChangePassword`, `deletedAt`, `rol`, `persona` → [../backend/src/main/java/com/clinicks/model/Usuario.java#L20](../backend/src/main/java/com/clinicks/model/Usuario.java#L20)
+- Atributos: `email`, `pass`, `autorizacion`, `mustChangePassword`, `deletedAt`, `rol`, `persona` → [../backend/src/main/java/com/clinicks/model/Usuario.java#L20](../backend/src/main/java/com/clinicks/model/Usuario.java#L20)
 - `autenticar(String)` → [../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L42](../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L42), [../backend/src/main/java/com/clinicks/repository/UsuarioRepository.java#L24](../backend/src/main/java/com/clinicks/repository/UsuarioRepository.java#L24)
 - `cambiarPassword(String)` → [../backend/src/main/java/com/clinicks/service/impl/PerfilServiceImpl.java#L60](../backend/src/main/java/com/clinicks/service/impl/PerfilServiceImpl.java#L60)
 - `cambiarEmail(String)` → [../backend/src/main/java/com/clinicks/service/impl/PerfilServiceImpl.java#L37](../backend/src/main/java/com/clinicks/service/impl/PerfilServiceImpl.java#L37)
@@ -275,12 +253,12 @@ Este diagrama muestra una sola clase por concepto de negocio. Las relaciones pri
 
 ### Rol
 
-- Atributos: `idRol`, `nombreRol` → [../backend/src/main/java/com/clinicks/model/Rol.java#L18](../backend/src/main/java/com/clinicks/model/Rol.java#L18)
+- Atributos: `nombreRol` → [../backend/src/main/java/com/clinicks/model/Rol.java#L18](../backend/src/main/java/com/clinicks/model/Rol.java#L18)
 - `tienePermiso(String)` → [../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L42](../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L42), [../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L41](../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L41)
 
 ### Paciente
 
-- Atributos: `idPaciente`, `dni`, `deletedAt`, `persona`, `residencia`, `fichaMedica`, `afiliacion` → [../backend/src/main/java/com/clinicks/model/Paciente.java#L20](../backend/src/main/java/com/clinicks/model/Paciente.java#L20)
+- Atributos: `dni`, `deletedAt`, `persona`, `residencia`, `fichaMedica`, `afiliacion` → [../backend/src/main/java/com/clinicks/model/Paciente.java#L20](../backend/src/main/java/com/clinicks/model/Paciente.java#L20)
 - `actualizarDatos(Persona, Residencia, FichaMedica)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188)
 - `eliminarLogicamente()` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L256](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L256)
 - `restaurar()` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L270](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L270)
@@ -289,37 +267,37 @@ Este diagrama muestra una sola clase por concepto de negocio. Las relaciones pri
 
 ### Residencia
 
-- Atributos: `idResidencia`, `tipoResidencia`, `domicilio` → [../backend/src/main/java/com/clinicks/model/Residencia.java#L18](../backend/src/main/java/com/clinicks/model/Residencia.java#L18)
+- Atributos: `tipoResidencia`, `domicilio` → [../backend/src/main/java/com/clinicks/model/Residencia.java#L18](../backend/src/main/java/com/clinicks/model/Residencia.java#L18)
 - `cambiarDomicilio(Domicilio)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L108](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L108), [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188)
 
 ### Domicilio
 
-- Atributos: `idDireccion`, `calle`, `numero`, `piso`, `localidad` → [../backend/src/main/java/com/clinicks/model/Domicilio.java#L18](../backend/src/main/java/com/clinicks/model/Domicilio.java#L18)
+- Atributos: `calle`, `numero`, `piso`, `localidad` → [../backend/src/main/java/com/clinicks/model/Domicilio.java#L18](../backend/src/main/java/com/clinicks/model/Domicilio.java#L18)
 - `actualizarUbicacion(String, Integer, Integer, Localidad)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188)
 
 ### Localidad
 
-- Atributos: `idLocalidad`, `nombreLocalidad`, `codigoPostal`, `provincia` → [../backend/src/main/java/com/clinicks/model/Localidad.java#L18](../backend/src/main/java/com/clinicks/model/Localidad.java#L18)
+- Atributos: `nombreLocalidad`, `codigoPostal`, `provincia` → [../backend/src/main/java/com/clinicks/model/Localidad.java#L18](../backend/src/main/java/com/clinicks/model/Localidad.java#L18)
 
 ### Provincia
 
-- Atributos: `idProvincia`, `nombreProvincia` → [../backend/src/main/java/com/clinicks/model/Provincia.java#L18](../backend/src/main/java/com/clinicks/model/Provincia.java#L18)
+- Atributos: `nombreProvincia` → [../backend/src/main/java/com/clinicks/model/Provincia.java#L18](../backend/src/main/java/com/clinicks/model/Provincia.java#L18)
 
 ### ObraSocial
 
-- Atributos: `idObraSocial`, `nombreObra` → [../backend/src/main/java/com/clinicks/model/ObraSocial.java#L18](../backend/src/main/java/com/clinicks/model/ObraSocial.java#L18)
+- Atributos: `nombreObra` → [../backend/src/main/java/com/clinicks/model/ObraSocial.java#L18](../backend/src/main/java/com/clinicks/model/ObraSocial.java#L18)
 - `estaActiva()` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L384](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L384)
 
 ### AfiliacionObraSocial
 
-- Atributos: `idAfiliacion`, `numeroAfiliado`, `fechaAlta`, `fechaVencimiento`, `fechaBaja`, `obraSocial` → [../backend/src/main/java/com/clinicks/model/AfiliacionObraSocial.java#L20](../backend/src/main/java/com/clinicks/model/AfiliacionObraSocial.java#L20)
+- Atributos: `numeroAfiliado`, `fechaAlta`, `fechaVencimiento`, `fechaBaja`, `obraSocial` → [../backend/src/main/java/com/clinicks/model/AfiliacionObraSocial.java#L20](../backend/src/main/java/com/clinicks/model/AfiliacionObraSocial.java#L20)
 - `estaVigente()` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L384](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L384)
 - `darDeBaja(LocalDate)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L384](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L384)
 - `renovar(LocalDate)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L384](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L384)
 
 ### FichaMedica
 
-- Atributos: `idFichaMedica`, `tipoSangre`, `antecedentesText`, `alergias`, `enfermedadesCronicas`, `antecedentesFamiliares` → [../backend/src/main/java/com/clinicks/model/FichaMedica.java#L21](../backend/src/main/java/com/clinicks/model/FichaMedica.java#L21)
+- Atributos: `tipoSangre`, `antecedentesText`, `alergias`, `enfermedadesCronicas`, `antecedentesFamiliares` → [../backend/src/main/java/com/clinicks/model/FichaMedica.java#L21](../backend/src/main/java/com/clinicks/model/FichaMedica.java#L21)
 - `agregarAlergia(Alergia)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L341](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L341)
 - `agregarEnfermedadCronica(EnfermedadCronica)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L353](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L353)
 - `agregarAntecedenteFamiliar(AntecedenteFamiliar)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L365](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L365)
@@ -331,45 +309,45 @@ Este diagrama muestra una sola clase por concepto de negocio. Las relaciones pri
 
 ### Telefono
 
-- Atributos: `idTelefono`, `numeroTelefono`, `tipoTelefono`, `paciente` → [../backend/src/main/java/com/clinicks/model/Telefono.java#L18](../backend/src/main/java/com/clinicks/model/Telefono.java#L18)
+- Atributos: `numeroTelefono`, `tipoTelefono`, `paciente` → [../backend/src/main/java/com/clinicks/model/Telefono.java#L18](../backend/src/main/java/com/clinicks/model/Telefono.java#L18)
 - `cambiarNumero(String)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L422](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L422)
 
 ### ContactoEmergencia
 
-- Atributos: `idContactoEmergencia`, `nombreCompleto`, `parentesco`, `telefonoCelular`, `paciente` → [../backend/src/main/java/com/clinicks/model/ContactoEmergencia.java#L18](../backend/src/main/java/com/clinicks/model/ContactoEmergencia.java#L18)
+- Atributos: `nombreCompleto`, `parentesco`, `telefonoCelular`, `paciente` → [../backend/src/main/java/com/clinicks/model/ContactoEmergencia.java#L18](../backend/src/main/java/com/clinicks/model/ContactoEmergencia.java#L18)
 - `actualizarContacto(String, String, String)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L432](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L432)
 
 ### HistorialMedico
 
-- Atributos: `idHistorial`, `fechaCreacion`, `fechaActualizacion`, `observaciones`, `estadoHistorial`, `paciente`, `registros`, `internaciones` → [../backend/src/main/java/com/clinicks/model/HistorialMedico.java#L20](../backend/src/main/java/com/clinicks/model/HistorialMedico.java#L20)
+- Atributos: `fechaCreacion`, `fechaActualizacion`, `observaciones`, `estadoHistorial`, `paciente`, `registros`, `internaciones` → [../backend/src/main/java/com/clinicks/model/HistorialMedico.java#L20](../backend/src/main/java/com/clinicks/model/HistorialMedico.java#L20)
 - `registrarEvento(RegistroClinico)` → [../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L119](../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L119), [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L447](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L447), [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L147](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L147)
 - `agregarInternacion(Internacion)` → [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L39](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L39)
 - `abrir()` / `cerrar()` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L108](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L108), [../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L36](../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L36)
 
 ### TipoProcedimiento
 
-- Atributos: `id`, `nombreTipoProcedimiento` → [../backend/src/main/java/com/clinicks/model/TipoProcedimiento.java#L18](../backend/src/main/java/com/clinicks/model/TipoProcedimiento.java#L18)
+- Atributos: `nombreTipoProcedimiento` → [../backend/src/main/java/com/clinicks/model/TipoProcedimiento.java#L18](../backend/src/main/java/com/clinicks/model/TipoProcedimiento.java#L18)
 
 ### RegistroClinico
 
-- Atributos: `id`, `descripcion`, `fechaRegistro`, `historial`, `tipoProcedimiento`, `usuario` → [../backend/src/main/java/com/clinicks/model/RegistroClinico.java#L20](../backend/src/main/java/com/clinicks/model/RegistroClinico.java#L20)
+- Atributos: `descripcion`, `fechaRegistro`, `historial`, `tipoProcedimiento`, `usuario` → [../backend/src/main/java/com/clinicks/model/RegistroClinico.java#L20](../backend/src/main/java/com/clinicks/model/RegistroClinico.java#L20)
 - `esAmbulatorio()` → [../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L36](../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L36)
 
 ### Internacion
 
-- Atributos: `id`, `fechaInicio`, `fechaFin`, `cantidadTraslados`, `historial`, `habitacion` → [../backend/src/main/java/com/clinicks/model/Internacion.java#L20](../backend/src/main/java/com/clinicks/model/Internacion.java#L20)
+- Atributos: `fechaInicio`, `fechaFin`, `cantidadTraslados`, `historial`, `habitacion` → [../backend/src/main/java/com/clinicks/model/Internacion.java#L20](../backend/src/main/java/com/clinicks/model/Internacion.java#L20)
 - `trasladar(HabitacionInternacion)` → [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L78](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L78)
 - `egresar(LocalDateTime)` → [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L109](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L109)
 - `finalizar()` → [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L109](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L109)
 
 ### HabitacionInternacion
 
-- Atributos: `id`, `numeroHabitacion`, `pisoHabitacion`, `estadoHabitacion` → [../backend/src/main/java/com/clinicks/model/HabitacionInternacion.java#L18](../backend/src/main/java/com/clinicks/model/HabitacionInternacion.java#L18)
+- Atributos: `numeroHabitacion`, `pisoHabitacion`, `estadoHabitacion` → [../backend/src/main/java/com/clinicks/model/HabitacionInternacion.java#L18](../backend/src/main/java/com/clinicks/model/HabitacionInternacion.java#L18)
 - `estaDisponible()` / `ocupar()` / `liberar()` → [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L134](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L134), [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L39](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L39), [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L109](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L109)
 
 ### InvitacionRegistro
 
-- Atributos: `idInvitacion`, `email`, `token`, `rol`, `usuarioCreador`, `fechaCreacion`, `fechaExpiracion`, `fechaUso`, `deletedAt` → [../backend/src/main/java/com/clinicks/model/InvitacionRegistro.java#L21](../backend/src/main/java/com/clinicks/model/InvitacionRegistro.java#L21)
+- Atributos: `email`, `token`, `rol`, `usuarioCreador`, `fechaCreacion`, `fechaExpiracion`, `fechaUso`, `deletedAt` → [../backend/src/main/java/com/clinicks/model/InvitacionRegistro.java#L21](../backend/src/main/java/com/clinicks/model/InvitacionRegistro.java#L21)
 - `estaVigente()` → [../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L166](../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L166)
 - `aceptar()` → [../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L64](../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L64)
 
