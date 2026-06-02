@@ -154,6 +154,7 @@ export default function PatientsPage() {
     }
   }
 
+  // marcar paciente como dado de baja (sin eliminarlo realmente)
   const handleDelete = async () => {
     if (!deleteConfirm) return
     try {

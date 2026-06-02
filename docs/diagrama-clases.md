@@ -16,13 +16,14 @@ El diagrama fuente está en [diagrama de clases/diagrama-clases.mermaid](diagram
 classDiagram
 direction TB
 
+
 class Persona {
   -String nombrePersona
   -String apellidoPersona
   -LocalDate fechaNacimiento
   -LocalDate fechaFallecimiento
-  +getNombreCompleto() String
-  +cambiarNombre(String, String) void
+  +getNombreCompleto(u : Usuario) String
+  +cambiarNombre(nombre : String, apellido : String) void
 }
 
 class Usuario {
@@ -33,17 +34,24 @@ class Usuario {
   -OffsetDateTime deletedAt
   -Rol rol
   -Persona persona
-  +autenticar(String) boolean
-  +cambiarPassword(String) void
-  +cambiarEmail(String) void
-  +asignarRol(Rol) void
-  +desactivar() void
+  +registrar(request : RegisterRequestDTO) LoginResponseDTO
+  +autenticar(request : LoginRequestDTO) LoginResponseDTO
+  +cambiarPassword(email : String, request : CambiarPasswordRequestDTO) PerfilResponseDTO
+  +cambiarEmail(emailActual : String, request : CambiarEmailRequestDTO) PerfilResponseDTO
+}
+
+class Administrador  {
+  <<rol>>
+  +cambiarRol(idUsuario : Integer, request : CambiarRolRequestDTO) AdminUsuarioDTO
+  +desactivarUsuario(idUsuario : Integer, emailSolicitante : String) AdminUsuarioDTO
+  +activarUsuario(idUsuario : Integer) AdminUsuarioDTO
+  +resetearPassword(idUsuario : Integer) ResetPasswordResponseDTO
 }
 
 class Rol {
   -String nombreRol
   -boolean protegido
-  +tienePermiso(String) boolean
+  +tienePermiso(permiso : String) boolean
 }
 
 class Paciente {
@@ -53,17 +61,17 @@ class Paciente {
   -Residencia residencia
   -FichaMedica fichaMedica
   -AfiliacionObraSocial afiliacion
-  +actualizarDatos(Persona, Residencia, FichaMedica) void
-  +eliminarLogicamente() void
-  +restaurar() void
-  +agregarTelefono(Telefono) void
-  +agregarContactoEmergencia(ContactoEmergencia) void
+  +actualizarDatos(idPaciente : Integer, dto : PacienteRequestDTO) PacienteResponseDTO
+  +eliminarLogicamente(idPaciente : Integer) void
+  +restaurarPaciente(idPaciente : Integer) void
+  +agregarTelefono(paciente : Paciente, numero : String, tipo : String) void
+  +agregarContactoEmergencia(paciente : Paciente, contactos : List<ContactoEmergencia>) void
 }
 
 class Residencia {
   -String tipoResidencia
   -Domicilio domicilio
-  +cambiarDomicilio(Domicilio) void
+  +cambiarDomicilio(idPaciente : Integer, dto : PacienteRequestDTO) Residencia
 }
 
 class Domicilio {
@@ -71,13 +79,14 @@ class Domicilio {
   -Integer numero
   -Integer piso
   -Localidad localidad
-  +actualizarUbicacion(String, Integer, Integer, Localidad) void
+  +actualizarUbicacion(idPaciente : Integer, dto : PacienteRequestDTO) Domicilio
 }
 
 class Localidad {
   -String nombreLocalidad
   -Integer codigoPostal
   -Provincia provincia
+  +actualizarLocalidad(idPaciente : Integer, dto : PacienteRequestDTO) Localidad
 }
 
 class Provincia {
@@ -86,7 +95,7 @@ class Provincia {
 
 class ObraSocial {
   -String nombreObra
-  +estaActiva() boolean
+  +estaActiva(dto : PacienteRequestDTO) boolean
 }
 
 class AfiliacionObraSocial {
@@ -95,21 +104,21 @@ class AfiliacionObraSocial {
   -LocalDate fechaVencimiento
   -LocalDate fechaBaja
   -ObraSocial obraSocial
-  +estaVigente() boolean
-  +darDeBaja(LocalDate) void
-  +renovar(LocalDate) void
+  +estaVigente(dto : PacienteRequestDTO) boolean
+  +darDeBaja(dto : PacienteRequestDTO) void
+  +renovar(dto : PacienteRequestDTO) AfiliacionObraSocial
 }
 
 class FichaMedica {
   -String tipoSangre
   -String antecedentesText
-  -Set~Alergia~ alergias
-  -Set~EnfermedadCronica~ enfermedadesCronicas
-  -Set~AntecedenteFamiliar~ antecedentesFamiliares
-  +agregarAlergia(Alergia) void
-  +agregarEnfermedadCronica(EnfermedadCronica) void
-  +agregarAntecedenteFamiliar(AntecedenteFamiliar) void
-  +actualizarAntecedentes(String) void
+  -Set<Alergia> alergias
+  -Set<EnfermedadCronica> enfermedadesCronicas
+  -Set<AntecedenteFamiliar> antecedentesFamiliares
+  +agregarAlergia(ficha : FichaMedica, nombres : List<String>) void
+  +agregarEnfermedadCronica(ficha : FichaMedica, nombres : List<String>) void
+  +agregarAntecedenteFamiliar(ficha : FichaMedica, nombres : List<String>) void
+  +actualizarAntecedentes(idPaciente : Integer, dto : PacienteRequestDTO) PacienteResponseDTO
 }
 
 class Alergia {
@@ -128,7 +137,7 @@ class Telefono {
   -String numeroTelefono
   -String tipoTelefono
   -Paciente paciente
-  +cambiarNumero(String) void
+  +cambiarNumero(paciente : Paciente, numero : String, tipo : String) void
 }
 
 class ContactoEmergencia {
@@ -136,7 +145,7 @@ class ContactoEmergencia {
   -String parentesco
   -String telefonoCelular
   -Paciente paciente
-  +actualizarContacto(String, String, String) void
+  +actualizarContacto(paciente : Paciente, contactos : List<ContactoEmergencia>) void
 }
 
 class HistorialMedico {
@@ -145,12 +154,12 @@ class HistorialMedico {
   -String observaciones
   -String estadoHistorial
   -Paciente paciente
-  -List~RegistroClinico~ registros
-  -List~Internacion~ internaciones
-  +registrarEvento(RegistroClinico) void
-  +agregarInternacion(Internacion) void
-  +abrir() void
-  +cerrar() void
+  -List<RegistroClinico> registros
+  -List<Internacion> internaciones
+  +registrarEvento(idPaciente : Integer, dto : RegistroClinicoRequestDTO, idUsuario : Integer) void
+  +agregarInternacion(idHabitacion : Integer, dto : InternacionRequestDTO, idUsuario : Integer) void
+  +abrir(idPaciente : Integer) void
+  +cerrar(idPaciente : Integer) void
 }
 
 class TipoProcedimiento {
@@ -163,7 +172,7 @@ class RegistroClinico {
   -HistorialMedico historial
   -TipoProcedimiento tipoProcedimiento
   -Usuario usuario
-  +esAmbulatorio() boolean
+  +esAmbulatorio(idPaciente : Integer) boolean
 }
 
 class Internacion {
@@ -172,18 +181,18 @@ class Internacion {
   -Integer cantidadTraslados
   -HistorialMedico historial
   -HabitacionInternacion habitacion
-  +trasladar(HabitacionInternacion) void
-  +egresar(LocalDateTime) void
-  +finalizar() void
+  +trasladar(idInternacion : Integer, dto : TrasladoRequestDTO, idUsuario : Integer) void
+  +egresar(idInternacion : Integer, dto : EgresoRequestDTO, idUsuario : Integer) void
+  +finalizar(dto : EgresoRequestDTO) String
 }
 
 class HabitacionInternacion {
   -String numeroHabitacion
   -Integer pisoHabitacion
   -String estadoHabitacion
-  +estaDisponible() boolean
-  +ocupar() void
-  +liberar() void
+  +estaDisponible(idHabitacion : Integer) boolean
+  +ocupar(idHabitacion : Integer, nuevoEstado : String) void
+  +liberar(idHabitacion : Integer, nuevoEstado : String) void
 }
 
 class InvitacionRegistro {
@@ -195,12 +204,14 @@ class InvitacionRegistro {
   -LocalDateTime fechaExpiracion
   -LocalDateTime fechaUso
   -OffsetDateTime deletedAt
-  +estaVigente() boolean
-  +aceptar() void
+  +estaVigente(token : String) boolean
+  +aceptar(token : String) LoginResponseDTO
 }
+
 
 Usuario "*" --> "1" Rol : rol
 Usuario "1" --> "1" Persona : persona
+Usuario "1" --> "0..1" Administrador : administrador
 Paciente "1" --> "1" Persona : persona
 Paciente "1" *-- "1" Residencia : residencia
 Paciente "1" *-- "1" FichaMedica : fichaMedica
@@ -239,45 +250,52 @@ Este diagrama muestra una sola clase por concepto de negocio. Las relaciones pri
 ### Persona
 
 - Atributos: `nombrePersona`, `apellidoPersona`, `fechaNacimiento`, `fechaFallecimiento` → [../backend/src/main/java/com/clinicks/model/Persona.java#L20](../backend/src/main/java/com/clinicks/model/Persona.java#L20)
-- `getNombreCompleto()` → [../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L197](../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L197), [../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L120](../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L120), [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L525](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L525)
+- `getNombreCompleto(u : Usuario)` → [../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L197](../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L197), [../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L120](../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L120), [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L537](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L537)
 - `cambiarNombre(String, String)` → [../backend/src/main/java/com/clinicks/service/impl/PerfilServiceImpl.java#L81](../backend/src/main/java/com/clinicks/service/impl/PerfilServiceImpl.java#L81), [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188)
 
 ### Usuario
 
 - Atributos: `email`, `pass`, `autorizacion`, `mustChangePassword`, `deletedAt`, `rol`, `persona` → [../backend/src/main/java/com/clinicks/model/Usuario.java#L20](../backend/src/main/java/com/clinicks/model/Usuario.java#L20)
-- `autenticar(String)` → [../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L42](../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L42), [../backend/src/main/java/com/clinicks/repository/UsuarioRepository.java#L24](../backend/src/main/java/com/clinicks/repository/UsuarioRepository.java#L24)
-- `cambiarPassword(String)` → [../backend/src/main/java/com/clinicks/service/impl/PerfilServiceImpl.java#L60](../backend/src/main/java/com/clinicks/service/impl/PerfilServiceImpl.java#L60)
-- `cambiarEmail(String)` → [../backend/src/main/java/com/clinicks/service/impl/PerfilServiceImpl.java#L37](../backend/src/main/java/com/clinicks/service/impl/PerfilServiceImpl.java#L37)
-- `asignarRol(Rol)` → [../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L41](../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L41)
-- `desactivar()` → [../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L63](../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L63)
+- `registrar(request : RegisterRequest)` → [../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L64](../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L64)
+- `autenticar(request : LoginRequest)` → [../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L42](../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L42), [../backend/src/main/java/com/clinicks/repository/UsuarioRepository.java#L24](../backend/src/main/java/com/clinicks/repository/UsuarioRepository.java#L24)
+- `cambiarPassword(email : String, request : CambiarPasswordRequest)` → [../backend/src/main/java/com/clinicks/service/impl/PerfilServiceImpl.java#L60](../backend/src/main/java/com/clinicks/service/impl/PerfilServiceImpl.java#L60), [../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L91](../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L91)
+- `cambiarEmail(emailActual : String, request : CambiarEmailRequest)` → [../backend/src/main/java/com/clinicks/service/impl/PerfilServiceImpl.java#L37](../backend/src/main/java/com/clinicks/service/impl/PerfilServiceImpl.java#L37)
+
+### Administrador
+
+- `cambiarRol(idUsuario : Integer, request : CambiarRolRequestDTO)` → [../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L26](../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L26)
+- `desactivarUsuario(idUsuario : Integer, emailSolicitante : String)` → [../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L63](../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L63)
+- `activarUsuario(idUsuario : Integer)` → [../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L79](../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L79)
+- `resetearPassword(idUsuario : Integer)` → [../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L99](../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L99)
 
 ### Rol
 
 - Atributos: `nombreRol` → [../backend/src/main/java/com/clinicks/model/Rol.java#L18](../backend/src/main/java/com/clinicks/model/Rol.java#L18)
-- `tienePermiso(String)` → [../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L42](../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L42), [../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L41](../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L41)
+- `tienePermiso(String)` → [../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L56](../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L56), [../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L52](../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L52)
 
 ### Paciente
 
 - Atributos: `dni`, `deletedAt`, `persona`, `residencia`, `fichaMedica`, `afiliacion` → [../backend/src/main/java/com/clinicks/model/Paciente.java#L20](../backend/src/main/java/com/clinicks/model/Paciente.java#L20)
-- `actualizarDatos(Persona, Residencia, FichaMedica)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188)
-- `eliminarLogicamente()` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L256](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L256)
-- `restaurar()` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L270](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L270)
-- `agregarTelefono(Telefono)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L422](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L422), [../backend/src/main/java/com/clinicks/repository/TelefonoRepository.java#L18](../backend/src/main/java/com/clinicks/repository/TelefonoRepository.java#L18)
-- `agregarContactoEmergencia(ContactoEmergencia)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L432](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L432), [../backend/src/main/java/com/clinicks/repository/ContactoEmergenciaRepository.java#L17](../backend/src/main/java/com/clinicks/repository/ContactoEmergenciaRepository.java#L17)
+- `actualizarDatos(idPaciente : Integer , dto : PacienteRequest)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188)
+- `eliminarLogicamente(idPaciente : Integer)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L256](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L256)
+- `restaurarPaciente(idPaciente : Integer)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L270](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L270)
+- `agregarTelefono(paciente : Paciente, numero : String, tipo : String)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L446](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L446), [../backend/src/main/java/com/clinicks/repository/TelefonoRepository.java#L18](../backend/src/main/java/com/clinicks/repository/TelefonoRepository.java#L18)
+- `agregarContactoEmergencia(paciente : Paciente, contactos : List<ContactoEmergencia>)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L456](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L456), [../backend/src/main/java/com/clinicks/repository/ContactoEmergenciaRepository.java#L17](../backend/src/main/java/com/clinicks/repository/ContactoEmergenciaRepository.java#L17)
 
 ### Residencia
 
 - Atributos: `tipoResidencia`, `domicilio` → [../backend/src/main/java/com/clinicks/model/Residencia.java#L18](../backend/src/main/java/com/clinicks/model/Residencia.java#L18)
-- `cambiarDomicilio(Domicilio)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L108](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L108), [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188)
+- `cambiarDomicilio(idPaciente : Integer, dto : PacienteRequest)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L139](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L139), [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L222](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L222)
 
 ### Domicilio
 
 - Atributos: `calle`, `numero`, `piso`, `localidad` → [../backend/src/main/java/com/clinicks/model/Domicilio.java#L18](../backend/src/main/java/com/clinicks/model/Domicilio.java#L18)
-- `actualizarUbicacion(String, Integer, Integer, Localidad)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188)
+- `actualizarUbicacion(idPaciente : Integer, dto : PacienteRequest)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L129](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L129), [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L223](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L223)
 
 ### Localidad
 
 - Atributos: `nombreLocalidad`, `codigoPostal`, `provincia` → [../backend/src/main/java/com/clinicks/model/Localidad.java#L18](../backend/src/main/java/com/clinicks/model/Localidad.java#L18)
+- `actualizarLocalidad(idPaciente : Integer, dto : PacienteRequest)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L127](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L127), [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L231](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L231)
 
 ### Provincia
 
@@ -286,22 +304,22 @@ Este diagrama muestra una sola clase por concepto de negocio. Las relaciones pri
 ### ObraSocial
 
 - Atributos: `nombreObra` → [../backend/src/main/java/com/clinicks/model/ObraSocial.java#L18](../backend/src/main/java/com/clinicks/model/ObraSocial.java#L18)
-- `estaActiva()` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L384](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L384)
+- `estaActiva(dto : PacienteRequest)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L397](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L397)
 
 ### AfiliacionObraSocial
 
 - Atributos: `numeroAfiliado`, `fechaAlta`, `fechaVencimiento`, `fechaBaja`, `obraSocial` → [../backend/src/main/java/com/clinicks/model/AfiliacionObraSocial.java#L20](../backend/src/main/java/com/clinicks/model/AfiliacionObraSocial.java#L20)
-- `estaVigente()` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L384](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L384)
-- `darDeBaja(LocalDate)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L384](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L384)
-- `renovar(LocalDate)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L384](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L384)
+- `estaVigente(dto : PacienteRequest)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L397](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L397)
+- `darDeBaja(dto : PacienteRequest)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L397](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L397)
+- `renovar(dto : PacienteRequest)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L431](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L431)
 
 ### FichaMedica
 
 - Atributos: `tipoSangre`, `antecedentesText`, `alergias`, `enfermedadesCronicas`, `antecedentesFamiliares` → [../backend/src/main/java/com/clinicks/model/FichaMedica.java#L21](../backend/src/main/java/com/clinicks/model/FichaMedica.java#L21)
-- `agregarAlergia(Alergia)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L341](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L341)
-- `agregarEnfermedadCronica(EnfermedadCronica)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L353](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L353)
-- `agregarAntecedenteFamiliar(AntecedenteFamiliar)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L365](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L365)
-- `actualizarAntecedentes(String)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188)
+- `agregarAlergia(ficha : FichaMedica, nombres : List<String>)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L341](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L341)
+- `agregarEnfermedadCronica(ficha : FichaMedica, nombres : List<String>)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L353](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L353)
+- `agregarAntecedenteFamiliar(ficha : FichaMedica, nombres : List<String>)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L365](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L365)
+- `actualizarAntecedentes(idPaciente : Integer , dto : PacienteRequestDTO)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188)
 
 ### Alergia / EnfermedadCronica / AntecedenteFamiliar
 
@@ -310,46 +328,46 @@ Este diagrama muestra una sola clase por concepto de negocio. Las relaciones pri
 ### Telefono
 
 - Atributos: `numeroTelefono`, `tipoTelefono`, `paciente` → [../backend/src/main/java/com/clinicks/model/Telefono.java#L18](../backend/src/main/java/com/clinicks/model/Telefono.java#L18)
-- `cambiarNumero(String)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L422](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L422)
+- `cambiarNumero(paciente : Paciente ,numero : String , tipo : String)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L446](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L446)
 
 ### ContactoEmergencia
 
 - Atributos: `nombreCompleto`, `parentesco`, `telefonoCelular`, `paciente` → [../backend/src/main/java/com/clinicks/model/ContactoEmergencia.java#L18](../backend/src/main/java/com/clinicks/model/ContactoEmergencia.java#L18)
-- `actualizarContacto(String, String, String)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L432](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L432)
+- `actualizarContacto(paciente : Paciente, contactos : List<ContactoEmergencia>)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L456](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L456)
 
 ### HistorialMedico
 
 - Atributos: `fechaCreacion`, `fechaActualizacion`, `observaciones`, `estadoHistorial`, `paciente`, `registros`, `internaciones` → [../backend/src/main/java/com/clinicks/model/HistorialMedico.java#L20](../backend/src/main/java/com/clinicks/model/HistorialMedico.java#L20)
-- `registrarEvento(RegistroClinico)` → [../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L119](../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L119), [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L447](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L447), [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L147](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L147)
-- `agregarInternacion(Internacion)` → [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L39](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L39)
-- `abrir()` / `cerrar()` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L108](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L108), [../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L36](../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L36)
+- `registrarEvento(idPaciente : Integer, dto : RegistroClinicoRequest, idUsuario : Integer)` → [../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L119](../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L119), [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L471](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L471), [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L147](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L147)
+- `agregarInternacion(idHabitacion : Integer , dto : InternacionRequest , idUsuario : Integer)` → [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L39](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L39)
+- `abrir(idPaciente : Integer)` / `cerrar(idPaciente : Integer)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L164](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L164), [../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L36](../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L36)
 
 ### TipoProcedimiento
 
-- Atributos: `nombreTipoProcedimiento` → [../backend/src/main/java/com/clinicks/model/TipoProcedimiento.java#L18](../backend/src/main/java/com/clinicks/model/TipoProcedimiento.java#L18)
+- Atributos: `nombreTipoProcedimiento` → [../backend/src/main/java/com/clinicks/model/TipoProcedimiento.java#L20](../backend/src/main/java/com/clinicks/model/TipoProcedimiento.java#L20)
 
 ### RegistroClinico
 
 - Atributos: `descripcion`, `fechaRegistro`, `historial`, `tipoProcedimiento`, `usuario` → [../backend/src/main/java/com/clinicks/model/RegistroClinico.java#L20](../backend/src/main/java/com/clinicks/model/RegistroClinico.java#L20)
-- `esAmbulatorio()` → [../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L36](../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L36)
+- `esAmbulatorio(idPaciente : Integer)` → [../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L68](../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L68)
 
 ### Internacion
 
 - Atributos: `fechaInicio`, `fechaFin`, `cantidadTraslados`, `historial`, `habitacion` → [../backend/src/main/java/com/clinicks/model/Internacion.java#L20](../backend/src/main/java/com/clinicks/model/Internacion.java#L20)
-- `trasladar(HabitacionInternacion)` → [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L78](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L78)
-- `egresar(LocalDateTime)` → [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L109](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L109)
-- `finalizar()` → [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L109](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L109)
+- `trasladar(idInternacion : Integer , dto : TrasladoRequest, idUsuario : Integer)` → [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L78](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L78)
+- `egresar(idInternacion : Integer, dto : EgresoRequest, idUsuario : Integer)` → [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L109](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L109)
+- `finalizar(dto : EgresoRequest)` → [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L189](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L189)
 
 ### HabitacionInternacion
 
 - Atributos: `numeroHabitacion`, `pisoHabitacion`, `estadoHabitacion` → [../backend/src/main/java/com/clinicks/model/HabitacionInternacion.java#L18](../backend/src/main/java/com/clinicks/model/HabitacionInternacion.java#L18)
-- `estaDisponible()` / `ocupar()` / `liberar()` → [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L134](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L134), [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L39](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L39), [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L109](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L109)
+- `estaDisponible(idHabitacion : Integer)` / `ocupar(idHabitacion : Integer , nuevoEstado: String)` / `liberar(idHabitacion : Integer, nuevoEstado: String)` → [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L134](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L134), [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L43](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L43), [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L121](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L121)
 
 ### InvitacionRegistro
 
 - Atributos: `email`, `token`, `rol`, `usuarioCreador`, `fechaCreacion`, `fechaExpiracion`, `fechaUso`, `deletedAt` → [../backend/src/main/java/com/clinicks/model/InvitacionRegistro.java#L21](../backend/src/main/java/com/clinicks/model/InvitacionRegistro.java#L21)
-- `estaVigente()` → [../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L166](../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L166)
-- `aceptar()` → [../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L64](../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L64)
+- `estaVigente(token : String)` → [../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L165](../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L165)
+- `aceptar(token : String)` → [../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L64](../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L64)
 
 ## Nota final
 

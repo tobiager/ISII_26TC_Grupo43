@@ -55,38 +55,38 @@ Si recién estás entrando al proyecto, este orden suele ser el más útil:
 
 ### 4.1 Raíz
 
-- `frontend/`: aplicación web.
-- `backend/`: API REST y reglas de negocio.
-- `database/`: scripts SQL de esquema y datos.
-- `docs/`: documentación técnica y funcional.
+- [../frontend/](../frontend/): aplicación web.
+- [../backend/](../backend/): API REST y reglas de negocio.
+- [../database/](../database/): scripts SQL de esquema y datos.
+- [../docs/](../docs/): documentación técnica y funcional.
 
 ### 4.2 Frontend
 
-- `frontend/src/pages/`: pantallas principales.
-- `frontend/src/components/`: componentes reutilizables.
-- `frontend/src/services/`: llamadas HTTP al backend.
-- `frontend/src/types/`: tipos TypeScript.
-- `frontend/src/utils/`: utilidades de permisos y comportamiento.
-- `frontend/src/validations/`: validaciones de formularios.
+- [../frontend/src/pages/](../frontend/src/pages/): pantallas principales.
+- [../frontend/src/components/](../frontend/src/components/): componentes reutilizables.
+- [../frontend/src/services/](../frontend/src/services/): llamadas HTTP al backend.
+- [../frontend/src/types/](../frontend/src/types/): tipos TypeScript.
+- [../frontend/src/utils/](../frontend/src/utils/): utilidades de permisos y comportamiento.
+- [../frontend/src/validations/](../frontend/src/validations/): validaciones de formularios.
 - Si quieres ver el flujo completo del frontend y su comunicación con el backend, revisa [Guia-Frontend-y-Comunicacion-con-Backend.md](Guia-Frontend-y-Comunicacion-con-Backend.md).
 
 ### 4.3 Backend
 
-- `backend/src/main/java/com/clinicks/controller/`: entradas HTTP.
-- `backend/src/main/java/com/clinicks/service/`: contratos de negocio.
-- `backend/src/main/java/com/clinicks/service/impl/`: implementación real de la lógica.
-- `backend/src/main/java/com/clinicks/repository/`: acceso a datos con Spring Data JPA.
-- `backend/src/main/java/com/clinicks/model/`: entidades JPA.
-- `backend/src/main/java/com/clinicks/dto/`: objetos que viajan entre capas.
-- `backend/src/main/java/com/clinicks/exception/`: errores de negocio y manejo global.
-- `backend/src/main/java/com/clinicks/security/`: JWT y control de acceso.
-- `backend/src/main/java/com/clinicks/config/`: configuración transversal.
+- [../backend/src/main/java/com/clinicks/controller/](../backend/src/main/java/com/clinicks/controller/): entradas HTTP.
+- [../backend/src/main/java/com/clinicks/service/](../backend/src/main/java/com/clinicks/service/): contratos de negocio.
+- [../backend/src/main/java/com/clinicks/service/impl/](../backend/src/main/java/com/clinicks/service/impl/): implementación real de la lógica.
+- [../backend/src/main/java/com/clinicks/repository/](../backend/src/main/java/com/clinicks/repository/): acceso a datos con Spring Data JPA.
+- [../backend/src/main/java/com/clinicks/model/](../backend/src/main/java/com/clinicks/model/): entidades JPA.
+- [../backend/src/main/java/com/clinicks/dto/](../backend/src/main/java/com/clinicks/dto/): objetos que viajan entre capas.
+- [../backend/src/main/java/com/clinicks/exception/](../backend/src/main/java/com/clinicks/exception/): errores de negocio y manejo global.
+- [../backend/src/main/java/com/clinicks/security/](../backend/src/main/java/com/clinicks/security/): JWT y control de acceso.
+- [../backend/src/main/java/com/clinicks/config/](../backend/src/main/java/com/clinicks/config/): configuración transversal.
 
 ### 4.4 Base de datos
 
-- `database/schema.sql`: estructura de tablas.
-- `database/seed.sql`: datos iniciales.
-- `database/reset_and_seed.sql`: reinicia y vuelve a cargar el entorno.
+- [../database/schema.sql](../database/schema.sql): estructura de tablas.
+- [../database/seed.sql](../database/seed.sql): datos iniciales.
+- [../database/reset_and_seed.sql](../database/reset_and_seed.sql): reinicia y vuelve a cargar el entorno.
 
 ---
 
@@ -203,11 +203,11 @@ Base de datos -> Repositorio -> Servicio -> Controlador -> Frontend
 Ejemplo con un paciente:
 
 1. El usuario completa el formulario.
-2. El frontend envía un POST a `/api/pacientes`.
-3. El controlador recibe el `PacienteRequestDTO`.
-4. `PacienteServiceImpl` valida DNI, afiliación, teléfonos y relaciones asociadas.
+2. El frontend envía un POST a [`/api/pacientes`](../backend/src/main/java/com/clinicks/controller/PacienteController.java#L19).
+3. El controlador recibe el [`PacienteRequestDTO`](../backend/src/main/java/com/clinicks/dto/PacienteRequestDTO.java).
+4. [`PacienteServiceImpl`](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java) valida DNI, afiliación, teléfonos y relaciones asociadas.
 5. Los repositorios guardan persona, residencia, ficha médica y demás datos.
-6. El backend devuelve un `PacienteResponseDTO`.
+6. El backend devuelve un [`PacienteResponseDTO`](../backend/src/main/java/com/clinicks/dto/PacienteResponseDTO.java).
 7. La UI se refresca con el nuevo estado.
 
 ---

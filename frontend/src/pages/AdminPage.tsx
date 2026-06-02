@@ -80,6 +80,7 @@ export default function AdminPage() {
     }
   }
 
+  // Activar/desactivar usuario (sin eliminarlo realmente)
   const handleToggleActivo = async (u: AdminUsuario) => {
     try {
       if (u.activo) {

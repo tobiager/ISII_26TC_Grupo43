@@ -185,6 +185,10 @@ public class AuthServiceImpl implements AuthService {
 
     // ─── HELPERS ────────────────────────────────────────────────────────────────
 
+    /**
+     * Convierte una entidad {@link Usuario} en el DTO de autenticación que se
+     * devuelve en el login y en la consulta del usuario autenticado.
+     */
     private LoginResponseDTO.UsuarioAuthDTO convertirAUsuarioAuthDTO(Usuario u) {
         String nombre = u.getPersona().getNombrePersona();
         String apellido = u.getPersona().getApellidoPersona();
@@ -203,6 +207,10 @@ public class AuthServiceImpl implements AuthService {
                 .build();
     }
 
+    /**
+     * Convierte una invitación de registro en un DTO de respuesta con su
+     * estado, fechas y enlace de acceso al formulario de registro.
+     */
     private InvitacionResponseDTO convertirAInvitacionDTO(InvitacionRegistro i, String link) {
         boolean vencida = i.getFechaExpiracion().isBefore(LocalDateTime.now());
         return InvitacionResponseDTO.builder()

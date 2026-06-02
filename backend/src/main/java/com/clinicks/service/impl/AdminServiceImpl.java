@@ -108,6 +108,15 @@ public class AdminServiceImpl implements AdminService {
 
     // ─── HELPERS ────────────────────────────────────────────────────────────────
 
+    /**
+     * Convierte una entidad Usuario a un DTO usado en el módulo de administración.
+     *
+     * @param u Usuario a convertir. Se asume que {@code u}, {@code u.getPersona()} y
+     *          los campos nombre/apellido no son nulos.
+     * @return AdminUsuarioDTO con los datos relevantes para la UI de administración:
+     *         id, email, nombre, apellido, nombre completo, iniciales (mayúsculas),
+     *         rol, autorización y estado activo (true si deletedAt es null).
+     */
     private AdminUsuarioDTO convertirAAdminUsuarioDTO(Usuario u) {
         String nombre = u.getPersona().getNombrePersona();
         String apellido = u.getPersona().getApellidoPersona();

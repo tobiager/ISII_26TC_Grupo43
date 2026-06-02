@@ -7,8 +7,8 @@ class Persona {
   -String apellidoPersona
   -LocalDate fechaNacimiento
   -LocalDate fechaFallecimiento
-  +getNombreCompleto() String
-  +cambiarNombre(String, String) void
+  +getNombreCompleto(u : Usuario) String
+  +cambiarNombre(nombre : String, apellido : String) void
 }
 
 class Usuario {
@@ -19,17 +19,24 @@ class Usuario {
   -OffsetDateTime deletedAt
   -Rol rol
   -Persona persona
-  +autenticar(String) boolean
-  +cambiarPassword(String) void
-  +cambiarEmail(String) void
-  +asignarRol(Rol) void
-  +desactivar() void
+  +registrar(request : RegisterRequestDTO) LoginResponseDTO
+  +autenticar(request : LoginRequestDTO) LoginResponseDTO
+  +cambiarPassword(email : String, request : CambiarPasswordRequestDTO) PerfilResponseDTO
+  +cambiarEmail(emailActual : String, request : CambiarEmailRequestDTO) PerfilResponseDTO
+}
+
+class Administrador  {
+  <<rol>>
+  +cambiarRol(idUsuario : Integer, request : CambiarRolRequestDTO) AdminUsuarioDTO
+  +desactivarUsuario(idUsuario : Integer, emailSolicitante : String) AdminUsuarioDTO
+  +activarUsuario(idUsuario : Integer) AdminUsuarioDTO
+  +resetearPassword(idUsuario : Integer) ResetPasswordResponseDTO
 }
 
 class Rol {
   -String nombreRol
   -boolean protegido
-  +tienePermiso(String) boolean
+  +tienePermiso(permiso : String) boolean
 }
 
 class Paciente {
@@ -39,17 +46,17 @@ class Paciente {
   -Residencia residencia
   -FichaMedica fichaMedica
   -AfiliacionObraSocial afiliacion
-  +actualizarDatos(Persona, Residencia, FichaMedica) void
-  +eliminarLogicamente() void
-  +restaurar() void
-  +agregarTelefono(Telefono) void
-  +agregarContactoEmergencia(ContactoEmergencia) void
+  +actualizarDatos(idPaciente : Integer, dto : PacienteRequestDTO) PacienteResponseDTO
+  +eliminarLogicamente(idPaciente : Integer) void
+  +restaurarPaciente(idPaciente : Integer) void
+  +agregarTelefono(paciente : Paciente, numero : String, tipo : String) void
+  +agregarContactoEmergencia(paciente : Paciente, contactos : List<ContactoEmergencia>) void
 }
 
 class Residencia {
   -String tipoResidencia
   -Domicilio domicilio
-  +cambiarDomicilio(Domicilio) void
+  +cambiarDomicilio(idPaciente : Integer, dto : PacienteRequestDTO) Residencia
 }
 
 class Domicilio {
@@ -57,13 +64,14 @@ class Domicilio {
   -Integer numero
   -Integer piso
   -Localidad localidad
-  +actualizarUbicacion(String, Integer, Integer, Localidad) void
+  +actualizarUbicacion(idPaciente : Integer, dto : PacienteRequestDTO) Domicilio
 }
 
 class Localidad {
   -String nombreLocalidad
   -Integer codigoPostal
   -Provincia provincia
+  +actualizarLocalidad(idPaciente : Integer, dto : PacienteRequestDTO) Localidad
 }
 
 class Provincia {
@@ -72,7 +80,7 @@ class Provincia {
 
 class ObraSocial {
   -String nombreObra
-  +estaActiva() boolean
+  +estaActiva(dto : PacienteRequestDTO) boolean
 }
 
 class AfiliacionObraSocial {
@@ -81,21 +89,21 @@ class AfiliacionObraSocial {
   -LocalDate fechaVencimiento
   -LocalDate fechaBaja
   -ObraSocial obraSocial
-  +estaVigente() boolean
-  +darDeBaja(LocalDate) void
-  +renovar(LocalDate) void
+  +estaVigente(dto : PacienteRequestDTO) boolean
+  +darDeBaja(dto : PacienteRequestDTO) void
+  +renovar(dto : PacienteRequestDTO) AfiliacionObraSocial
 }
 
 class FichaMedica {
   -String tipoSangre
   -String antecedentesText
-  -Set~Alergia~ alergias
-  -Set~EnfermedadCronica~ enfermedadesCronicas
-  -Set~AntecedenteFamiliar~ antecedentesFamiliares
-  +agregarAlergia(Alergia) void
-  +agregarEnfermedadCronica(EnfermedadCronica) void
-  +agregarAntecedenteFamiliar(AntecedenteFamiliar) void
-  +actualizarAntecedentes(String) void
+  -Set<Alergia> alergias
+  -Set<EnfermedadCronica> enfermedadesCronicas
+  -Set<AntecedenteFamiliar> antecedentesFamiliares
+  +agregarAlergia(ficha : FichaMedica, nombres : List<String>) void
+  +agregarEnfermedadCronica(ficha : FichaMedica, nombres : List<String>) void
+  +agregarAntecedenteFamiliar(ficha : FichaMedica, nombres : List<String>) void
+  +actualizarAntecedentes(idPaciente : Integer, dto : PacienteRequestDTO) PacienteResponseDTO
 }
 
 class Alergia {
@@ -114,7 +122,7 @@ class Telefono {
   -String numeroTelefono
   -String tipoTelefono
   -Paciente paciente
-  +cambiarNumero(String) void
+  +cambiarNumero(paciente : Paciente, numero : String, tipo : String) void
 }
 
 class ContactoEmergencia {
@@ -122,7 +130,7 @@ class ContactoEmergencia {
   -String parentesco
   -String telefonoCelular
   -Paciente paciente
-  +actualizarContacto(String, String, String) void
+  +actualizarContacto(paciente : Paciente, contactos : List<ContactoEmergencia>) void
 }
 
 class HistorialMedico {
@@ -131,12 +139,12 @@ class HistorialMedico {
   -String observaciones
   -String estadoHistorial
   -Paciente paciente
-  -List~RegistroClinico~ registros
-  -List~Internacion~ internaciones
-  +registrarEvento(RegistroClinico) void
-  +agregarInternacion(Internacion) void
-  +abrir() void
-  +cerrar() void
+  -List<RegistroClinico> registros
+  -List<Internacion> internaciones
+  +registrarEvento(idPaciente : Integer, dto : RegistroClinicoRequestDTO, idUsuario : Integer) void
+  +agregarInternacion(idHabitacion : Integer, dto : InternacionRequestDTO, idUsuario : Integer) void
+  +abrir(idPaciente : Integer) void
+  +cerrar(idPaciente : Integer) void
 }
 
 class TipoProcedimiento {
@@ -149,7 +157,7 @@ class RegistroClinico {
   -HistorialMedico historial
   -TipoProcedimiento tipoProcedimiento
   -Usuario usuario
-  +esAmbulatorio() boolean
+  +esAmbulatorio(idPaciente : Integer) boolean
 }
 
 class Internacion {
@@ -158,18 +166,18 @@ class Internacion {
   -Integer cantidadTraslados
   -HistorialMedico historial
   -HabitacionInternacion habitacion
-  +trasladar(HabitacionInternacion) void
-  +egresar(LocalDateTime) void
-  +finalizar() void
+  +trasladar(idInternacion : Integer, dto : TrasladoRequestDTO, idUsuario : Integer) void
+  +egresar(idInternacion : Integer, dto : EgresoRequestDTO, idUsuario : Integer) void
+  +finalizar(dto : EgresoRequestDTO) String
 }
 
 class HabitacionInternacion {
   -String numeroHabitacion
   -Integer pisoHabitacion
   -String estadoHabitacion
-  +estaDisponible() boolean
-  +ocupar() void
-  +liberar() void
+  +estaDisponible(idHabitacion : Integer) boolean
+  +ocupar(idHabitacion : Integer, nuevoEstado : String) void
+  +liberar(idHabitacion : Integer, nuevoEstado : String) void
 }
 
 class InvitacionRegistro {
@@ -181,13 +189,14 @@ class InvitacionRegistro {
   -LocalDateTime fechaExpiracion
   -LocalDateTime fechaUso
   -OffsetDateTime deletedAt
-  +estaVigente() boolean
-  +aceptar() void
+  +estaVigente(token : String) boolean
+  +aceptar(token : String) LoginResponseDTO
 }
 
-%% Relaciones principales
+
 Usuario "*" --> "1" Rol : rol
 Usuario "1" --> "1" Persona : persona
+Usuario "1" --> "0..1" Administrador : administrador
 Paciente "1" --> "1" Persona : persona
 Paciente "1" *-- "1" Residencia : residencia
 Paciente "1" *-- "1" FichaMedica : fichaMedica

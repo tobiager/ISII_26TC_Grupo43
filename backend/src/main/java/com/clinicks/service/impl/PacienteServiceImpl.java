@@ -381,43 +381,67 @@ public class PacienteServiceImpl implements PacienteService {
         return localidadRepository.findAll().stream().findFirst().orElse(null);
     }
 
-    private AfiliacionObraSocial resolverAfiliacion(PacienteRequestDTO dto) {
+        /**
+         * Resuelve y persiste la afiliación a una obra social a partir de los datos
+         * recibidos en el DTO.
+         *
+         * <p>Flujo general:</p>
+         * <ul>
+         *   <li>Primero intenta obtener la obra social por ID.</li>
+         *   <li>Si no viene ID, busca por nombre ignorando mayúsculas/minúsculas.</li>
+         *   <li>Si no existe, crea una nueva obra social.</li>
+         *   <li>Luego determina el número de afiliado, usando el enviado o generando uno.</li>
+         *   <li>Finalmente, actualiza una afiliación existente o crea una nueva.</li>
+         * </ul>
+         */
+        private AfiliacionObraSocial resolverAfiliacion(PacienteRequestDTO dto) {
+        // Obra social que se asociará a la afiliación.
         ObraSocial obraSocial = null;
 
+        // Si se recibió un ID, se busca la obra social existente en la base de datos.
         if (dto.getIdObraSocial() != null) {
             obraSocial = obraSocialRepository.findById(dto.getIdObraSocial()).orElse(null);
         } else if (StringUtils.hasText(dto.getNombreObraSocial())) {
+            // Si no hay ID, se usa el nombre para buscarla sin distinguir mayúsculas/minúsculas.
             String nombre = dto.getNombreObraSocial().trim();
             obraSocial = obraSocialRepository
-                    .encontrarPorNombreIgnorandoMayusculas(nombre)
-                    .orElseGet(() -> obraSocialRepository.save(
-                            ObraSocial.builder().nombreObra(nombre).build()
-                    ));
+                .encontrarPorNombreIgnorandoMayusculas(nombre)
+                // Si no existe, se crea una nueva obra social con el nombre recibido.
+                .orElseGet(() -> obraSocialRepository.save(
+                    ObraSocial.builder().nombreObra(nombre).build()
+                ));
         }
 
+        // Si no se pudo resolver la obra social, no se puede continuar con la afiliación.
         if (obraSocial == null) return null;
 
+        // Se toma el número de afiliado enviado por el cliente o se genera uno automático.
         String nro = StringUtils.hasText(dto.getNroAfiliado())
-                ? dto.getNroAfiliado().trim()
-                : obraSocial.getNombreObra().toUpperCase().replaceAll("\\s+", "-") + "-" + dto.getDni();
+            ? dto.getNroAfiliado().trim()
+            : obraSocial.getNombreObra().toUpperCase().replaceAll("\\s+", "-") + "-" + dto.getDni();
 
+        // Se guarda la referencia en una variable final para usarla dentro de expresiones lambda.
         ObraSocial finalOS = obraSocial;
+
+        // Fecha de vencimiento de la afiliación recibida desde el DTO.
         LocalDate vencimiento = dto.getFechaVencimientoAfiliacion();
 
+        // Si ya existe una afiliación con ese número y obra social, se actualiza la fecha de vencimiento.
+        // Si no existe, se crea una nueva afiliación con la fecha de alta actual.
         return afiliacionRepository.encontrarPorNumeroAfiliadoYObraSocial(nro, finalOS)
-                .map(existing -> {
-                    existing.setFechaVencimiento(vencimiento);
-                    return afiliacionRepository.save(existing);
-                })
-                .orElseGet(() -> afiliacionRepository.save(
-                        AfiliacionObraSocial.builder()
-                                .numeroAfiliado(nro)
-                                .fechaAlta(LocalDate.now())
-                                .fechaVencimiento(vencimiento)
-                                .obraSocial(finalOS)
-                                .build()
-                ));
-    }
+            .map(existing -> {
+                existing.setFechaVencimiento(vencimiento);
+                return afiliacionRepository.save(existing);
+            })
+            .orElseGet(() -> afiliacionRepository.save(
+                AfiliacionObraSocial.builder()
+                    .numeroAfiliado(nro)
+                    .fechaAlta(LocalDate.now())
+                    .fechaVencimiento(vencimiento)
+                    .obraSocial(finalOS)
+                    .build()
+            ));
+        }
 
     private void guardarTelefono(Paciente paciente, String numero, String tipo) {
         if (!StringUtils.hasText(numero)) return;
