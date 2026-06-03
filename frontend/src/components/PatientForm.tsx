@@ -124,7 +124,7 @@ function validateContactos(list: EmergencyContact[], patientPhone: string): Reco
     } else if (c.telefono.trim().length > CONTACT_TELEFONO_MAX) {
       errs[`${i}_telefono`] = `Máximo ${CONTACT_TELEFONO_MAX} caracteres`
     } else if (!TELEFONO_REGEX.test(c.telefono)) {
-      errs[`${i}_telefono`] = 'Solo números, espacios, guiones o paréntesis'
+      errs[`${i}_telefono`] = 'Solo números'
     } else if (!esTelefonoArgentinoValido(c.telefono)) {
       errs[`${i}_telefono`] = 'Formato argentino inválido (ej: 1123456789 ó 5491123456789)'
     } else {
@@ -364,7 +364,7 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
         const norm = normalizarTelefono(value)
         const patientNorm = normalizarTelefono(telefonoWatch ?? '')
         if (value && !TELEFONO_REGEX.test(value)) {
-          next[key] = 'Solo números, espacios, guiones o paréntesis'
+          next[key] = 'Solo números'
         } else if (value && !esTelefonoArgentinoValido(value)) {
           next[key] = 'Formato argentino inválido (ej: 1123456789)'
         } else if (value && patientNorm && norm === patientNorm) {
@@ -572,10 +572,10 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
             <label className="block text-xs text-gray-600 mb-1">Número</label>
             <input
               {...register('telefono')}
-              onKeyDown={blockInvalidPhone}
-              maxLength={25}
+              onKeyDown={blockNonDigits}
+              maxLength={13}
               className={inputCls(!!errors.telefono)}
-              placeholder="11-1234-5678"
+              placeholder="1112345678"
               inputMode="tel"
             />
             <FieldError msg={errors.telefono?.message} />
@@ -845,7 +845,7 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
                 <input
                   value={contacto.telefono}
                   onChange={e => updateContacto(idx, 'telefono', e.target.value)}
-                  onKeyDown={blockInvalidPhone}
+                  onKeyDown={blockNonDigits}
                   inputMode="tel"
                   maxLength={CONTACT_TELEFONO_MAX}
                   className={cls(
@@ -854,7 +854,7 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
                       ? 'border-red-400 focus:border-red-500'
                       : 'border-yellow-200 focus:border-yellow-400',
                   )}
-                  placeholder="11-9999-8888"
+                  placeholder="1199998888"
                 />
                 {contactosErr[`${idx}_telefono`] && (
                   <p className="mt-0.5 text-xs text-red-600 flex items-center gap-1"><Info size={10} /> {contactosErr[`${idx}_telefono`]}</p>

@@ -28,8 +28,8 @@ export const SOLO_LETRAS = /^[a-záéíóúüñA-ZÁÉÍÓÚÜÑ\s''`-]+$/
 /** Nombre de obra social: solo letras (con tildes y ñ) y espacios — sin números ni símbolos */
 export const NOMBRE_OS_REGEX = /^[a-záéíóúüñA-ZÁÉÍÓÚÜÑ\s]+$/
 
-/** Teléfono: dígitos, espacios, guiones, paréntesis, + y punto */
-export const TELEFONO_REGEX = /^[\d\s\-()+.]+$/
+/** Teléfono: solo dígitos numéricos */
+export const TELEFONO_REGEX = /^\d+$/
 
 /** Nro. de Afiliado: estrictamente alfanumérico (sin espacios ni símbolos) */
 export const NRO_AFILIADO_REGEX = /^[a-zA-Z0-9]+$/
@@ -40,7 +40,7 @@ export const CALLE_REGEX = /^[a-záéíóúüñA-ZÁÉÍÓÚÜÑ0-9\s.,\-#°]+$/
 /** Límites de longitud para campos de contactos de emergencia */
 export const CONTACT_NOMBRE_MAX = 200
 export const CONTACT_PARENTESCO_MAX = 100
-export const CONTACT_TELEFONO_MAX = 25
+export const CONTACT_TELEFONO_MAX = 13
 
 // ─── Helper interno ───────────────────────────────────────────────────────────
 
@@ -116,10 +116,10 @@ export const patientSchema = z
     // ── Teléfono ──────────────────────────────────────────────────────────────
     telefono: z
       .string()
-      .max(25, 'Máximo 25 caracteres')
+      .max(13, 'Máximo 13 caracteres')
       .refine(
-        (v) => v === '' || TELEFONO_REGEX.test(v),
-        'Formato inválido — solo números, espacios, guiones o paréntesis',
+        (v) => v === '' || /^\d+$/.test(v),
+        'Formato inválido — solo números',
       )
       .refine(
         (v) => esTelefonoArgentinoValido(v),

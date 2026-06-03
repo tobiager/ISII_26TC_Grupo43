@@ -10,7 +10,7 @@ const MONTH_NAMES = [
 ]
 const MONTH_SHORT = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 const DAY_NAMES = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do']
-const PANEL_H = 320
+const PANEL_H = 350
 
 type CalView = 'day' | 'month' | 'year'
 
@@ -251,6 +251,9 @@ export default function SingleDatePicker({
           {/* ── Day view ──────────────────────────────── */}
           {view === 'day' && (
             <>
+              <div className="text-[10px] text-gray-500 bg-blue-50/50 rounded-lg px-2.5 py-1.5 mb-2.5 text-center leading-normal">
+                💡 Hacé clic en el mes o año para alejar y seleccionar más cómodamente.
+              </div>
               <div className="flex items-center justify-between mb-3">
                 <button type="button" onClick={prevMonth}
                   className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">

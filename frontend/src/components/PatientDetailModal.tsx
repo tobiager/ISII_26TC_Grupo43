@@ -16,6 +16,7 @@ import type {
 import { historialService } from '../services/historialService'
 import { useAuth } from '../contexts/AuthContext'
 import { canEditMedicalHistory } from '../utils/permissions'
+import { formatArgentinePhone } from '../utils/formatters'
 import { getTipoColor, TIPOS_AUTOMATICOS } from '../utils/clinickEventColors'
 import CustomSelect from './CustomSelect'
 import { format } from 'date-fns'
@@ -223,7 +224,7 @@ export default function PatientDetailModal({ patient, onClose, defaultTab, roomA
                   </span>
                   <span className="text-xs text-gray-500">DNI: <span className="font-mono font-medium text-gray-800">{patient.dni}</span></span>
                   {patient.telefono && (
-                    <span className="text-xs text-gray-500 flex items-center gap-1"><Phone size={10} />{patient.telefono}</span>
+                    <span className="text-xs text-gray-500 flex items-center gap-1"><Phone size={10} />{formatArgentinePhone(patient.telefono)}</span>
                   )}
                   {!isRoomView && patient.ultimaVisita && (
                     <span className="text-xs text-gray-400 flex items-center gap-1">
@@ -283,7 +284,7 @@ export default function PatientDetailModal({ patient, onClose, defaultTab, roomA
                   <p className="text-sm font-semibold text-amber-900">{contactosList[0].nombre}</p>
                   {contactosList[0].parentesco && <p className="text-xs text-amber-600">{contactosList[0].parentesco}</p>}
                   {contactosList[0].telefono && (
-                    <p className="text-xs text-amber-700 flex items-center gap-1 mt-0.5"><Phone size={10} />{contactosList[0].telefono}</p>
+                    <p className="text-xs text-amber-700 flex items-center gap-1 mt-0.5"><Phone size={10} />{formatArgentinePhone(contactosList[0].telefono)}</p>
                   )}
                 </div>
               </div>
@@ -437,7 +438,7 @@ export default function PatientDetailModal({ patient, onClose, defaultTab, roomA
                     <div className="grid grid-cols-2 gap-3">
                       <InfoRow label="Fecha de nacimiento" value={formatDate(patient.fechaNacimiento)} />
                       <InfoRow label="Tipo de sangre" value={patient.tipoSangre} />
-                      <InfoRow label={`Teléfono${patient.tipoTelefono ? ` (${patient.tipoTelefono})` : ''}`} value={patient.telefono} icon={<Phone size={13} />} />
+                      <InfoRow label={`Teléfono${patient.tipoTelefono ? ` (${patient.tipoTelefono})` : ''}`} value={formatArgentinePhone(patient.telefono)} icon={<Phone size={13} />} />
                       <InfoRow label="Edad" value={`${patient.edad} años`} />
                     </div>
                   </section>
@@ -520,7 +521,7 @@ export default function PatientDetailModal({ patient, onClose, defaultTab, roomA
                               </div>
                               {c.telefono && (
                                 <span className="flex items-center gap-1 text-xs text-gray-600 bg-white border border-yellow-200 px-2 py-1 rounded-lg">
-                                  <Phone size={11} /> {c.telefono}
+                                  <Phone size={11} /> {formatArgentinePhone(c.telefono)}
                                 </span>
                               )}
                             </div>

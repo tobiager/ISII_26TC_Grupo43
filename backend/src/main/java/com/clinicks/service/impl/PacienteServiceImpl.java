@@ -294,6 +294,14 @@ public class PacienteServiceImpl implements PacienteService {
     }
 
     /**
+     * Elimina todos los caracteres que no sean dígitos numéricos.
+     */
+    private String normalizarTelefono(String telefono) {
+        if (!StringUtils.hasText(telefono)) return telefono;
+        return telefono.replaceAll("[^\\d]", "");
+    }
+
+    /**
      * Validates that a single phone number does not exist in the Telefono or
      * ContactoEmergencia tables for any patient other than {@code excluirPacienteId}.
      */
@@ -322,7 +330,7 @@ public class PacienteServiceImpl implements PacienteService {
         Set<String> vistos = new HashSet<>();
 
         if (StringUtils.hasText(telefono)) {
-            String t = telefono.trim();
+            String t = normalizarTelefono(telefono.trim());
             vistos.add(t);
             validarTelefonoUnico(t, excluirPacienteId);
         }
@@ -330,7 +338,7 @@ public class PacienteServiceImpl implements PacienteService {
         if (contactos == null) return;
         for (ContactoEmergenciaDTO c : contactos) {
             if (!StringUtils.hasText(c.getTelefono())) continue;
-            String t = c.getTelefono().trim();
+            String t = normalizarTelefono(c.getTelefono().trim());
             if (!vistos.add(t)) {
                 throw new TelefonoDuplicadoException(t);
             }
@@ -447,7 +455,7 @@ public class PacienteServiceImpl implements PacienteService {
         if (!StringUtils.hasText(numero)) return;
         String tipoFinal = StringUtils.hasText(tipo) ? tipo : "personal";
         telefonoRepository.save(Telefono.builder()
-                .numeroTelefono(numero.trim())
+                .numeroTelefono(normalizarTelefono(numero.trim()))
                 .tipoTelefono(tipoFinal)
                 .paciente(paciente)
                 .build());
@@ -461,7 +469,7 @@ public class PacienteServiceImpl implements PacienteService {
                     .paciente(paciente)
                     .nombreCompleto(StringUtils.hasText(c.getNombre()) ? c.getNombre().trim() : "Sin nombre")
                     .parentesco(StringUtils.hasText(c.getParentesco()) ? c.getParentesco().trim() : "Sin parentesco")
-                    .telefonoCelular(StringUtils.hasText(c.getTelefono()) ? c.getTelefono().trim() : "Sin teléfono")
+                    .telefonoCelular(StringUtils.hasText(c.getTelefono()) ? normalizarTelefono(c.getTelefono().trim()) : "Sin teléfono")
                     .build());
         }
     }
