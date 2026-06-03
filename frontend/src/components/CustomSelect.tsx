@@ -18,6 +18,7 @@ interface CustomSelectProps {
   id?: string
   name?: string
   onBlur?: () => void
+  searchable?: boolean
 }
 
 const PANEL_MAX_H = 240
@@ -33,9 +34,11 @@ export default function CustomSelect({
   id,
   name,
   onBlur,
+  searchable = false,
 }: CustomSelectProps) {
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState({ top: 0, left: 0, width: 0 })
+  const [searchQuery, setSearchQuery] = useState('')
   const triggerRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
 
@@ -53,7 +56,11 @@ export default function CustomSelect({
     setOpen(true)
   }
 
-  const closeDrop = () => { setOpen(false); onBlur?.() }
+  const closeDrop = () => { 
+    setOpen(false)
+    setSearchQuery('')
+    onBlur?.() 
+  }
 
   useEffect(() => {
     if (!open) return
@@ -129,9 +136,27 @@ export default function CustomSelect({
             maxHeight: PANEL_MAX_H,
             zIndex: 9999,
           }}
-          className="bg-white border border-gray-200 rounded-xl shadow-xl py-1 overflow-y-auto"
+          className="bg-white border border-gray-200 rounded-xl shadow-xl overflow-y-auto"
         >
-          {options.map(opt => {
+          {searchable && (
+            <div className="p-2 pb-2 sticky top-0 bg-white z-10 border-b border-gray-100">
+              <input
+                type="text"
+                placeholder="Buscar..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                onClick={e => e.stopPropagation()}
+                onKeyDown={e => {
+                  if (e.key === 'Escape') closeDrop()
+                  e.stopPropagation()
+                }}
+                className="w-full text-sm px-3 py-2 outline-none rounded-lg border border-gray-200 bg-gray-50 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-colors"
+                autoFocus
+              />
+            </div>
+          )}
+          <div className="py-1">
+          {(searchable ? options.filter(o => o.label.toLowerCase().includes(searchQuery.toLowerCase())) : options).map(opt => {
             const isSel = opt.value === value
             return (
               <button
@@ -149,6 +174,7 @@ export default function CustomSelect({
               </button>
             )
           })}
+          </div>
         </div>,
         document.body
       )}

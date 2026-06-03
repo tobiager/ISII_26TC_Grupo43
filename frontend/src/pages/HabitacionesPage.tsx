@@ -319,6 +319,7 @@ export default function HabitacionesPage() {
                   { value: '', label: 'Seleccionar paciente...' },
                   ...pacientesNoInternados.map(p => ({ value: String(p.id), label: `${p.nombreCompleto} — DNI ${p.dni}` })),
                 ]}
+                searchable
                 className="w-full py-2.5 px-3 text-sm border border-gray-200 rounded-xl bg-white cursor-pointer"
               />
             </div>
