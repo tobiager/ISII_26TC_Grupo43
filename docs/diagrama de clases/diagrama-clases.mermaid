@@ -21,6 +21,7 @@ class Usuario {
   - Persona persona
   + registrar(request : RegisterRequestDTO) LoginResponseDTO
   + autenticar(request : LoginRequestDTO) LoginResponseDTO
+  + esProtegido() : boolean
   + cambiarPassword(email : String, request : CambiarPasswordRequestDTO) PerfilResponseDTO
   + cambiarEmail(emailActual : String, request : CambiarEmailRequestDTO) PerfilResponseDTO
 }
@@ -28,6 +29,8 @@ class Usuario {
 class Administrador  {
   <<rol>>
   - cambiarRol(idUsuario : Integer, request : CambiarRolRequestDTO) AdminUsuarioDTO
+  + listarUsuarios() : List<AdminUsuarioDTO>
+  + crearInvitacion(request : InvitacionRequestDTO, emailCreador : String) : InvitacionResponseDTO
   + desactivarUsuario(idUsuario : Integer, emailSolicitante : String) AdminUsuarioDTO
   + activarUsuario(idUsuario : Integer) AdminUsuarioDTO
   + resetearPassword(idUsuario : Integer) ResetPasswordResponseDTO
@@ -35,7 +38,6 @@ class Administrador  {
 
 class Rol {
   - String nombreRol
-  - boolean protegido
   + tienePermiso(permiso : String) boolean
 }
 
@@ -46,6 +48,10 @@ class Paciente {
   - Residencia residencia
   - FichaMedica fichaMedica
   - AfiliacionObraSocial afiliacion
+  + crearPaciente(PacienteRequestDTO dto, Integer idUsuario) : PacienteResponseDTO
+  + existeDni(dni : Integer, excluirId : Integer) : boolean
+  + listarPacientes() : List<PacienteResponseDTO>
+  + listarPacientesEliminados() : List<PacienteResponseDTO>
   + actualizarDatos(idPaciente : Integer, dto : PacienteRequestDTO) PacienteResponseDTO
   + eliminarLogicamente(idPaciente : Integer) void
   + restaurarPaciente(idPaciente : Integer) void
@@ -145,7 +151,6 @@ class HistorialMedico {
   + registrarEvento(idPaciente : Integer, dto : RegistroClinicoRequestDTO, idUsuario : Integer) void
   + agregarInternacion(idHabitacion : Integer, dto : InternacionRequestDTO, idUsuario : Integer) void
   + abrir(idPaciente : Integer) void
-  - cerrar(idPaciente : Integer) void
 }
 
 class TipoProcedimiento {
@@ -169,6 +174,7 @@ class Internacion {
   - HabitacionInternacion habitacion
   + trasladar(idInternacion : Integer, dto : TrasladoRequestDTO, idUsuario : Integer) void
   + egresar(idInternacion : Integer, dto : EgresoRequestDTO, idUsuario : Integer) void
+  + cambiarEstadoHabitacion(idHabitacion : Integer, nuevoEstado : String) void
   - finalizar(dto : EgresoRequestDTO) String
 }
 
@@ -204,7 +210,7 @@ Paciente "1" *-- "1" FichaMedica : fichaMedica
 Paciente "*" --> "0..1" AfiliacionObraSocial : afiliacion
 Paciente "1" --> "*" Telefono : telefonos
 Paciente "1" --> "*" ContactoEmergencia : contactos
-Paciente "1" --> "*" HistorialMedico : historiales
+Paciente "1" --> "1" HistorialMedico : historiales
 Residencia "1" *-- "1" Domicilio : domicilio
 Domicilio "*" --> "1" Localidad : localidad
 Localidad "*" --> "1" Provincia : provincia
@@ -217,6 +223,5 @@ HistorialMedico "1" --> "*" Internacion : internaciones
 RegistroClinico "*" --> "1" TipoProcedimiento : tipoProcedimiento
 RegistroClinico "*" --> "1" Usuario : usuario
 Internacion "*" --> "1" HabitacionInternacion : habitacion
-Internacion "*" --> "1" HistorialMedico : historial
 InvitacionRegistro "*" --> "1" Rol : rol
 InvitacionRegistro "*" --> "1" Usuario : usuarioCreador

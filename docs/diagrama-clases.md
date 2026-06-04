@@ -36,6 +36,7 @@ class Usuario {
   - Persona persona
   + registrar(request : RegisterRequestDTO) LoginResponseDTO
   + autenticar(request : LoginRequestDTO) LoginResponseDTO
+  + esProtegido() : boolean
   + cambiarPassword(email : String, request : CambiarPasswordRequestDTO) PerfilResponseDTO
   + cambiarEmail(emailActual : String, request : CambiarEmailRequestDTO) PerfilResponseDTO
 }
@@ -43,6 +44,8 @@ class Usuario {
 class Administrador  {
   <<rol>>
   - cambiarRol(idUsuario : Integer, request : CambiarRolRequestDTO) AdminUsuarioDTO
+  + listarUsuarios() : List<AdminUsuarioDTO>
+  + crearInvitacion(request : InvitacionRequestDTO, emailCreador : String) : InvitacionResponseDTO
   + desactivarUsuario(idUsuario : Integer, emailSolicitante : String) AdminUsuarioDTO
   + activarUsuario(idUsuario : Integer) AdminUsuarioDTO
   + resetearPassword(idUsuario : Integer) ResetPasswordResponseDTO
@@ -50,7 +53,6 @@ class Administrador  {
 
 class Rol {
   - String nombreRol
-  - boolean protegido
   + tienePermiso(permiso : String) boolean
 }
 
@@ -61,6 +63,10 @@ class Paciente {
   - Residencia residencia
   - FichaMedica fichaMedica
   - AfiliacionObraSocial afiliacion
+  + crearPaciente(PacienteRequestDTO dto, Integer idUsuario) : PacienteResponseDTO
+  + existeDni(dni : Integer, excluirId : Integer) : boolean
+  + listarPacientes() : List<PacienteResponseDTO>
+  + listarPacientesEliminados() : List<PacienteResponseDTO>
   + actualizarDatos(idPaciente : Integer, dto : PacienteRequestDTO) PacienteResponseDTO
   + eliminarLogicamente(idPaciente : Integer) void
   + restaurarPaciente(idPaciente : Integer) void
@@ -160,7 +166,6 @@ class HistorialMedico {
   + registrarEvento(idPaciente : Integer, dto : RegistroClinicoRequestDTO, idUsuario : Integer) void
   + agregarInternacion(idHabitacion : Integer, dto : InternacionRequestDTO, idUsuario : Integer) void
   + abrir(idPaciente : Integer) void
-  - cerrar(idPaciente : Integer) void
 }
 
 class TipoProcedimiento {
@@ -184,6 +189,7 @@ class Internacion {
   - HabitacionInternacion habitacion
   + trasladar(idInternacion : Integer, dto : TrasladoRequestDTO, idUsuario : Integer) void
   + egresar(idInternacion : Integer, dto : EgresoRequestDTO, idUsuario : Integer) void
+  + cambiarEstadoHabitacion(idHabitacion : Integer, nuevoEstado : String) void
   - finalizar(dto : EgresoRequestDTO) String
 }
 
@@ -219,7 +225,7 @@ Paciente "1" *-- "1" FichaMedica : fichaMedica
 Paciente "*" --> "0..1" AfiliacionObraSocial : afiliacion
 Paciente "1" --> "*" Telefono : telefonos
 Paciente "1" --> "*" ContactoEmergencia : contactos
-Paciente "1" --> "*" HistorialMedico : historiales
+Paciente "1" --> "1" HistorialMedico : historiales
 Residencia "1" *-- "1" Domicilio : domicilio
 Domicilio "*" --> "1" Localidad : localidad
 Localidad "*" --> "1" Provincia : provincia
@@ -232,7 +238,6 @@ HistorialMedico "1" --> "*" Internacion : internaciones
 RegistroClinico "*" --> "1" TipoProcedimiento : tipoProcedimiento
 RegistroClinico "*" --> "1" Usuario : usuario
 Internacion "*" --> "1" HabitacionInternacion : habitacion
-Internacion "*" --> "1" HistorialMedico : historial
 InvitacionRegistro "*" --> "1" Rol : rol
 InvitacionRegistro "*" --> "1" Usuario : usuarioCreador
 ```
@@ -259,12 +264,15 @@ Este diagrama muestra una sola clase por concepto de negocio. Las relaciones pri
 - Atributos: `email`, `pass`, `autorizacion`, `mustChangePassword`, `deletedAt`, `rol`, `persona` → [../backend/src/main/java/com/clinicks/model/Usuario.java#L20](../backend/src/main/java/com/clinicks/model/Usuario.java#L20)
 - `registrar(request : RegisterRequest)` → [../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L64](../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L64)
 - `autenticar(request : LoginRequest)` → [../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L42](../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L42), [../backend/src/main/java/com/clinicks/repository/UsuarioRepository.java#L24](../backend/src/main/java/com/clinicks/repository/UsuarioRepository.java#L24)
+- `esProtegido()` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L108-L18](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L108-L182)
 - `cambiarPassword(email : String, request : CambiarPasswordRequest)` → [../backend/src/main/java/com/clinicks/service/impl/PerfilServiceImpl.java#L60](../backend/src/main/java/com/clinicks/service/impl/PerfilServiceImpl.java#L60), [../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L91](../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L91)
 - `cambiarEmail(emailActual : String, request : CambiarEmailRequest)` → [../backend/src/main/java/com/clinicks/service/impl/PerfilServiceImpl.java#L37](../backend/src/main/java/com/clinicks/service/impl/PerfilServiceImpl.java#L37)
 
 ### Administrador
 
 - `cambiarRol(idUsuario : Integer, request : CambiarRolRequestDTO)` → [../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L26](../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L26)
+- `listarUsuarios()` → [../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L33-L37](../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L33-L37)
+- `crearInvitacion(request : InvitacionRequestDTO, emailCreador : String)` → [../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L121-L156](../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L121-L156)
 - `desactivarUsuario(idUsuario : Integer, emailSolicitante : String)` → [../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L63](../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L63)
 - `activarUsuario(idUsuario : Integer)` → [../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L79](../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L79)
 - `resetearPassword(idUsuario : Integer)` → [../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L91](../backend/src/main/java/com/clinicks/service/impl/AdminServiceImpl.java#L91)
@@ -277,6 +285,10 @@ Este diagrama muestra una sola clase por concepto de negocio. Las relaciones pri
 ### Paciente
 
 - Atributos: `dni`, `deletedAt`, `persona`, `residencia`, `fichaMedica`, `afiliacion` → [../backend/src/main/java/com/clinicks/model/Paciente.java#L20](../backend/src/main/java/com/clinicks/model/Paciente.java#L20)
+- `crearPaciente(PacienteRequestDTO dto, Integer idUsuario)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L108-L182](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L108-L182)
+- `existeDni(dni : Integer, excluirId : Integer)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L78-L102](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L78-L102)
+- `listarPacientes()` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L53-L57](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L53-L57)
+- `listarPacientesEliminados()` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L62-L67](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L62-L67)
 - `actualizarDatos(idPaciente : Integer , dto : PacienteRequest)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L188)
 - `eliminarLogicamente(idPaciente : Integer)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L256](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L256)
 - `restaurarPaciente(idPaciente : Integer)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L270](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L270)
@@ -342,7 +354,7 @@ Este diagrama muestra una sola clase por concepto de negocio. Las relaciones pri
 - Atributos: `fechaCreacion`, `fechaActualizacion`, `observaciones`, `estadoHistorial`, `paciente`, `registros`, `internaciones` → [../backend/src/main/java/com/clinicks/model/HistorialMedico.java#L20](../backend/src/main/java/com/clinicks/model/HistorialMedico.java#L20)
 - `registrarEvento(idPaciente : Integer, dto : RegistroClinicoRequest, idUsuario : Integer)` → [../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L119](../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L119), [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L479](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L479), [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L147](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L147)
 - `agregarInternacion(idHabitacion : Integer , dto : InternacionRequest , idUsuario : Integer)` → [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L39](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L39)
-- `abrir(idPaciente : Integer)` / `cerrar(idPaciente : Integer)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L164](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L164), [../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L36](../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L36)
+- `abrir(idPaciente : Integer)` → [../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L164](../backend/src/main/java/com/clinicks/service/impl/PacienteServiceImpl.java#L164), [../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L36](../backend/src/main/java/com/clinicks/service/impl/HistorialServiceImpl.java#L36)
 
 ### TipoProcedimiento
 
@@ -358,6 +370,7 @@ Este diagrama muestra una sola clase por concepto de negocio. Las relaciones pri
 - Atributos: `fechaInicio`, `fechaFin`, `cantidadTraslados`, `historial`, `habitacion` → [../backend/src/main/java/com/clinicks/model/Internacion.java#L20](../backend/src/main/java/com/clinicks/model/Internacion.java#L20)
 - `trasladar(idInternacion : Integer , dto : TrasladoRequest, idUsuario : Integer)` → [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L78](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L78)
 - `egresar(idInternacion : Integer, dto : EgresoRequest, idUsuario : Integer)` → [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L109](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L109)
+- `cambiarEstadoHabitacion(idHabitacion : Integer, nuevoEstado : String)` → [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L134-L145](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L134-L145)
 - `finalizar(dto : EgresoRequest)` → [../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L189](../backend/src/main/java/com/clinicks/service/impl/HabitacionServiceImpl.java#L189)
 
 ### HabitacionInternacion
