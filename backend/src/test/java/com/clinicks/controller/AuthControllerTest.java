@@ -25,7 +25,8 @@ import java.util.Objects;
 @ExtendWith(MockitoExtension.class)
 class AuthControllerTest {
 
-    @Mock private AuthService authService;
+    @Mock
+    private AuthService authService;
 
     private MockMvc mockMvc;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -65,7 +66,8 @@ class AuthControllerTest {
 
         mockMvc.perform(post("/api/auth/login")
                 .contentType(Objects.requireNonNull(MediaType.APPLICATION_JSON))
-                .content(Objects.requireNonNull(objectMapper.writeValueAsString(loginJson("juan.perez@clinicks.com", "Clave123!")))))
+                .content(Objects.requireNonNull(
+                        objectMapper.writeValueAsString(loginJson("juan.perez@clinicks.com", "Clave123!")))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").value("token-jwt"))
                 .andExpect(jsonPath("$.usuario.email").value("juan.perez@clinicks.com"));
@@ -94,7 +96,8 @@ class AuthControllerTest {
     void login_conPasswordVacia_yEmailValido_devuelveErrorDeValidacion() throws Exception {
         mockMvc.perform(post("/api/auth/login")
                 .contentType(Objects.requireNonNull(MediaType.APPLICATION_JSON))
-                .content(Objects.requireNonNull(objectMapper.writeValueAsString(loginJson("juan.perez@clinicks.com", "")))))
+                .content(Objects
+                        .requireNonNull(objectMapper.writeValueAsString(loginJson("juan.perez@clinicks.com", "")))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.campos.password").value("La contraseña es obligatoria"));
     }
@@ -113,7 +116,8 @@ class AuthControllerTest {
     void login_conEmailConEspaciosLaterales_devuelveErrorDeFormato() throws Exception {
         mockMvc.perform(post("/api/auth/login")
                 .contentType(Objects.requireNonNull(MediaType.APPLICATION_JSON))
-                .content(Objects.requireNonNull(objectMapper.writeValueAsString(loginJson("  juan.perez@clinicks.com  ", "Clave123!")))))
+                .content(Objects.requireNonNull(
+                        objectMapper.writeValueAsString(loginJson("  juan.perez@clinicks.com  ", "Clave123!")))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.campos.email").value("El formato del email no es válido"));
     }
@@ -122,5 +126,6 @@ class AuthControllerTest {
         return new LoginJson(email, password);
     }
 
-    private record LoginJson(String email, String password) {}
+    private record LoginJson(String email, String password) {
+    }
 }
