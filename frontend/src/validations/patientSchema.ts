@@ -58,7 +58,7 @@ function tieneRepeticion(s: string): boolean {
  */
 const pisoOpcional = z.preprocess(
   (v) => (v === '' || v == null) ? undefined : Number(v),
-  z.number().int().min(1, 'El piso debe ser un número positivo').optional(),
+  z.number().int().min(1, 'El piso debe ser un número positivo').max(999, 'El piso no puede superar 999').optional(),
 )
 
 // ─── Esquema de validación del formulario de paciente ────────────────────────
@@ -95,8 +95,8 @@ export const patientSchema = z
       .string()
       .min(1, 'La fecha de nacimiento es obligatoria')
       .refine(
-        (d) => !!d && new Date(d) < new Date(new Date().toISOString().split('T')[0]),
-        'La fecha no puede ser igual o posterior a hoy',
+        (d) => !!d && new Date(d) <= new Date(new Date().toISOString().split('T')[0]),
+        'La fecha no puede ser posterior a hoy',
       )
       .refine(
         (d) => {
@@ -144,7 +144,8 @@ export const patientSchema = z
     numeroDireccion: z.coerce
       .number()
       .int('El número de domicilio debe ser un entero')
-      .min(1, 'El número de domicilio es obligatorio'),
+      .min(1, 'El número de domicilio es obligatorio')
+      .max(99999, 'El número de domicilio no puede superar 99999'),
 
     /** Piso opcional: '' → undefined. Si se ingresa debe ser >= 1. */
     piso: pisoOpcional,

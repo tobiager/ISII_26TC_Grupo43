@@ -567,6 +567,13 @@ class PacienteServiceImplTest {
         }
 
         @Test
+        void fechaNacimiento_hoyEsValida_paraRegistrarNeonatos() {
+            dtoValido.setFechaNacimiento(LocalDate.now());
+            var v = validator.validate(dtoValido);
+            assertThat(tieneViolacionEnCampo(v, "fechaNacimiento")).isFalse();
+        }
+
+        @Test
         void tipoSangre_obligatorio() {
             dtoValido.setTipoSangre(null);
             var v = validator.validate(dtoValido);

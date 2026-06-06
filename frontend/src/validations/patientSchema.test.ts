@@ -112,8 +112,9 @@ describe('fechaNacimiento', () => {
     expect(errorPaths({ ...validData, fechaNacimiento: '' })).toContain('fechaNacimiento')
   })
 
-  it('rechaza fecha de hoy', () => {
-    expect(errorPaths({ ...validData, fechaNacimiento: toDateStr(today) })).toContain('fechaNacimiento')
+  it('acepta fecha de hoy (neonatos)', () => {
+    const result = patientSchema.safeParse({ ...validData, fechaNacimiento: toDateStr(today) })
+    expect(result.success).toBe(true)
   })
 
   it('rechaza fecha futura', () => {
@@ -137,8 +138,17 @@ describe('numeroDireccion', () => {
     expect(errorPaths({ ...validData, numeroDireccion: -5 })).toContain('numeroDireccion')
   })
 
+  it('rechaza valor mayor a 99999', () => {
+    expect(errorPaths({ ...validData, numeroDireccion: 100000 })).toContain('numeroDireccion')
+  })
+
   it('acepta valor positivo', () => {
     const result = patientSchema.safeParse({ ...validData, numeroDireccion: 1 })
+    expect(result.success).toBe(true)
+  })
+
+  it('acepta valor límite 99999', () => {
+    const result = patientSchema.safeParse({ ...validData, numeroDireccion: 99999 })
     expect(result.success).toBe(true)
   })
 })
@@ -164,8 +174,19 @@ describe('piso', () => {
     expect(msgs[0]).toContain('positivo')
   })
 
+  it('rechaza piso mayor a 999', () => {
+    const msgs = errorMessages({ ...validData, piso: 1000 }, 'piso')
+    expect(msgs.length).toBeGreaterThan(0)
+    expect(msgs[0]).toContain('999')
+  })
+
   it('acepta piso positivo', () => {
     const result = patientSchema.safeParse({ ...validData, piso: 3 })
+    expect(result.success).toBe(true)
+  })
+
+  it('acepta piso límite 999', () => {
+    const result = patientSchema.safeParse({ ...validData, piso: 999 })
     expect(result.success).toBe(true)
   })
 })

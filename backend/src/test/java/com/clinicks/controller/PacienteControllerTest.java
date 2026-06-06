@@ -134,7 +134,7 @@ class PacienteControllerTest {
                                 null
                         )))))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.campos.fechaNacimiento").value("La fecha de nacimiento no puede ser futura"));
+                .andExpect(jsonPath("$.campos.fechaNacimiento").value("La fecha de nacimiento no puede ser posterior a hoy"));
     }
 
     @Test

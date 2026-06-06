@@ -303,12 +303,12 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
       setAfiliadoExists(false)
       return
     }
-    
+
     setCheckingAfiliado(true)
     try {
       const idObra = idObraSocialWatch === 'nueva' ? undefined : Number(idObraSocialWatch)
       const nombreObra = idObraSocialWatch === 'nueva' ? nombreObraSocialWatch : undefined
-      
+
       const existe = await patientService.checkAfiliado(nroAfiliadoWatch, idObra, nombreObra, patient?.id)
       setAfiliadoExists(existe)
     } catch {
@@ -680,8 +680,10 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
               Número <span className="text-red-500">*</span>
             </label>
             <input
-              type="number"
-              min={1}
+              type="text"
+              inputMode="numeric"
+              onKeyDown={blockNonDigits}
+              maxLength={5}
               {...register('numeroDireccion')}
               className={inputCls(!!errors.numeroDireccion)}
               placeholder="1234"
@@ -691,8 +693,10 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
           <div>
             <label className="block text-xs text-gray-600 mb-1">Piso (opcional)</label>
             <input
-              type="number"
-              min={0}
+              type="text"
+              inputMode="numeric"
+              onKeyDown={blockNonDigits}
+              maxLength={3}
               {...register('piso')}
               className={inputCls(!!errors.piso)}
               placeholder="3"
