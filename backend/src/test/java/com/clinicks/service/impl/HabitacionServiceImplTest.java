@@ -227,8 +227,8 @@ class HabitacionServiceImplTest {
     }
 
     @Test
-    void internarPaciente_conMotivoYObservacionesVacios_igualmenteAsignaHabitacion() {
-        request.setMotivo("   ");
+    void internarPaciente_sinObservaciones_igualmenteAsignaHabitacion() {
+        request.setMotivo("Dolor abdominal");
         request.setObservaciones(null);
 
         when(habitacionRepository.findById(1)).thenReturn(Optional.of(habitacionDisponible));

@@ -41,6 +41,7 @@ export default function HabitacionesPage() {
   const [internModal, setInternModal]           = useState<Habitacion | null>(null)
   const [internPatientId, setInternPatientId]   = useState<number | ''>('')
   const [internMotivo, setInternMotivo]         = useState('')
+  const [internObs, setInternObs]               = useState('')
   const [internLoading, setInternLoading]       = useState(false)
 
   // ── modal trasladar ───────────────────────────────────────────────
@@ -109,6 +110,7 @@ export default function HabitacionesPage() {
   const openInternar = (h: Habitacion) => {
     setInternPatientId('')
     setInternMotivo('')
+    setInternObs('')
     setInternModal(h)
   }
 
@@ -116,7 +118,7 @@ export default function HabitacionesPage() {
     if (!internModal || !internPatientId || !internMotivo.trim()) return
     setInternLoading(true)
     try {
-      await roomService.internar({ idPaciente: Number(internPatientId), idHabitacion: internModal.id, motivo: internMotivo })
+      await roomService.internar({ idPaciente: Number(internPatientId), idHabitacion: internModal.id, motivo: internMotivo, observaciones: internObs || undefined })
       toast.success('Paciente internado correctamente')
       setInternModal(null)
       fetch()
@@ -328,8 +330,20 @@ export default function HabitacionesPage() {
               <textarea
                 value={internMotivo}
                 onChange={e => setInternMotivo(e.target.value)}
-                rows={3}
+                maxLength={500}
+                rows={2}
                 placeholder="Describa el motivo de la internación..."
+                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 resize-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones <span className="text-gray-400 font-normal">(opcional)</span></label>
+              <textarea
+                value={internObs}
+                onChange={e => setInternObs(e.target.value)}
+                maxLength={500}
+                rows={2}
+                placeholder="Observaciones adicionales..."
                 className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 resize-none"
               />
             </div>
@@ -386,6 +400,7 @@ export default function HabitacionesPage() {
               <input
                 value={trasladoMotivo}
                 onChange={e => setTrasladoMotivo(e.target.value)}
+                maxLength={500}
                 placeholder="Motivo del traslado..."
                 className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
               />
@@ -395,6 +410,7 @@ export default function HabitacionesPage() {
               <textarea
                 value={trasladoObs}
                 onChange={e => setTrasladoObs(e.target.value)}
+                maxLength={500}
                 rows={2}
                 placeholder="Observaciones adicionales..."
                 className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 resize-none"
@@ -457,6 +473,7 @@ export default function HabitacionesPage() {
               <textarea
                 value={egresoObs}
                 onChange={e => setEgresoObs(e.target.value)}
+                maxLength={500}
                 rows={3}
                 placeholder="Motivo del egreso, indicaciones, etc..."
                 className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 resize-none"

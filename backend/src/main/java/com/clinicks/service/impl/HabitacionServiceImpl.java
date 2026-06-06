@@ -168,9 +168,9 @@ public class HabitacionServiceImpl implements HabitacionService {
         StringBuilder sb = new StringBuilder("Internación en habitación ").append(hab.getNumeroHabitacion())
                 .append(", piso ").append(hab.getPisoHabitacion()).append(".");
         if (dto.getMotivo() != null && !dto.getMotivo().isBlank())
-            sb.append(" Motivo: ").append(dto.getMotivo().trim()).append(".");
+            sb.append("\nMotivo: ").append(dto.getMotivo().trim()).append(".");
         if (dto.getObservaciones() != null && !dto.getObservaciones().isBlank())
-            sb.append(" Observaciones: ").append(dto.getObservaciones().trim()).append(".");
+            sb.append("\nObservaciones: ").append(dto.getObservaciones().trim()).append(".");
         return sb.toString();
     }
 
@@ -178,18 +178,18 @@ public class HabitacionServiceImpl implements HabitacionService {
         StringBuilder sb = new StringBuilder("Traslado de habitación ")
                 .append(origen.getNumeroHabitacion()).append(" (piso ").append(origen.getPisoHabitacion()).append(")")
                 .append(" a habitación ")
-                .append(destino.getNumeroHabitacion()).append(" (piso ").append(destino.getPisoHabitacion()).append(").");;
+                .append(destino.getNumeroHabitacion()).append(" (piso ").append(destino.getPisoHabitacion()).append(").");
         if (dto.getMotivo() != null && !dto.getMotivo().isBlank())
-            sb.append(" Motivo: ").append(dto.getMotivo().trim()).append(".");
+            sb.append("\nMotivo: ").append(dto.getMotivo().trim()).append(".");
         if (dto.getObservaciones() != null && !dto.getObservaciones().isBlank())
-            sb.append(" Observaciones: ").append(dto.getObservaciones().trim()).append(".");
+            sb.append("\nObservaciones: ").append(dto.getObservaciones().trim()).append(".");
         return sb.toString();
     }
 
     private String buildDescEgresar(EgresoRequestDTO dto) {
         StringBuilder sb = new StringBuilder("Alta médica.");
         if (dto.getObservaciones() != null && !dto.getObservaciones().isBlank())
-            sb.append(" Observaciones: ").append(dto.getObservaciones().trim()).append(".");
+            sb.append("\nObservaciones: ").append(dto.getObservaciones().trim()).append(".");
         return sb.toString();
     }
 
