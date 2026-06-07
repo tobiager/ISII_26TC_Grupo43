@@ -5,16 +5,16 @@
 > [!NOTE]
 > Este método registra un nuevo paciente en el sistema. Recibe un DTO con los datos personales, médicos, de contacto y residencia del paciente, junto con el ID del usuario que lo registra.
 
-| nombre | apellido | dni | fechaNacimiento | tipoSangre | telefono | Descripción | Resultado esperado |
-|---|---|---|---|---|---|---|---|
-| `"juan carlos"` | `"del valle"` | `12345678` | `1990-05-15` | `"A+"` | `"1123456789"` | Registro exitoso con datos mínimos válidos | Se crea el paciente y se devuelve un `PacienteResponseDTO` con DNI 12345678 |
-| `"JUAN carlos"` | `"del VALLE"` | `12345678` | `1990-05-15` | `"A+"` | `"1123456789"` | Registro con nombre en mayúsculas/minúsculas mixtas; se verifica la normalización | Se crea el paciente con nombre `"Juan Carlos"` y apellido `"Del Valle"` |
-| `"juan carlos"` | `"del valle"` | `12345678` *(ya existente)* | `1990-05-15` | `"A+"` | `"1123456789"` | Intento de registro con DNI ya existente en el sistema | Se lanza `DniDuplicadoException` con mensaje que contiene "12345678" |
-| `"juan carlos"` | `"del valle"` | `12345678` | `1990-05-15` | `"A+"` | `"1123456789"` *(ya existente en tabla teléfono)* | Intento de registro con teléfono ya registrado como teléfono personal de otro paciente | Se lanza `TelefonoDuplicadoException` con mensaje que contiene "1123456789" |
-| `"juan carlos"` | `"del valle"` | `12345678` | `1990-05-15` | `"A+"` | `"1123456789"` *(ya existente en contacto emergencia)* | Intento de registro con teléfono ya registrado como contacto de emergencia de otro paciente | Se lanza `TelefonoDuplicadoException` |
-| `"juan carlos"` | `"del valle"` | `12345678` | `1990-05-15` | `"A+"` | `"1123456789"` + contactos con tel repetido `"1187654321"` x2 | Intento de registro con dos contactos de emergencia que tienen el mismo número de teléfono | Se lanza `TelefonoDuplicadoException` con mensaje que contiene "1187654321" |
-| `"juan carlos"` | `"del valle"` | `12345678` | `1990-05-15` | `"A+"` | `"1123456789"` + obraSocial con nroAfiliado `"ABC123"` *(duplicado)* | Intento de registro con número de afiliado ya existente para la misma obra social | Se lanza `AfiliadoDuplicadoException` con mensaje que contiene "ABC123" |
-| `"juan carlos"` | `"del valle"` | `12345678` | `1990-05-15` | `"A+"` | `"1123456789"` + dirección `null` | Registro sin dirección, se verifica que use valor por defecto | Se crea el paciente con dirección `"Sin dirección"` |
+| nombre | apellido | dni | telefono | Descripción | Resultado esperado |
+|---|---|---|---|---|---|
+| `"juan carlos"` | `"del valle"` | `12345678` | `"1123456789"` | Registro exitoso con datos mínimos válidos | Se crea el paciente y se devuelve un `PacienteResponseDTO` con DNI 12345678 |
+| `"JUAN carlos"` | `"del VALLE"` | `12345678` | `"1123456789"` | Registro con nombre en mayúsculas/minúsculas mixtas; se verifica la normalización | Se crea el paciente con nombre `"Juan Carlos"` y apellido `"Del Valle"` |
+| `"juan carlos"` | `"del valle"` | `12345678` *(ya existente)* | `"1123456789"` | Intento de registro con DNI ya existente en el sistema | Se lanza `DniDuplicadoException` con mensaje que contiene "12345678" |
+| `"juan carlos"` | `"del valle"` | `12345678` | `"1123456789"` *(ya existente en tabla teléfono)* | Intento de registro con teléfono ya registrado como teléfono personal de otro paciente | Se lanza `TelefonoDuplicadoException` con mensaje que contiene "1123456789" |
+| `"juan carlos"` | `"del valle"` | `12345678` | `"1123456789"` *(ya existente en contacto emergencia)* | Intento de registro con teléfono ya registrado como contacto de emergencia de otro paciente | Se lanza `TelefonoDuplicadoException` |
+| `"juan carlos"` | `"del valle"` | `12345678` | `"1123456789"` + contactos con tel repetido `"1187654321"` x2 | Intento de registro con dos contactos de emergencia que tienen el mismo número de teléfono | Se lanza `TelefonoDuplicadoException` con mensaje que contiene "1187654321" |
+| `"juan carlos"` | `"del valle"` | `12345678` | `"1123456789"` + obraSocial con nroAfiliado `"ABC123"` *(duplicado)* | Intento de registro con número de afiliado ya existente para la misma obra social | Se lanza `AfiliadoDuplicadoException` con mensaje que contiene "ABC123" |
+| `"juan carlos"` | `"del valle"` | `12345678` | `"1123456789"` + dirección `null` | Registro sin dirección, se verifica que use valor por defecto | Se crea el paciente con dirección `"Sin dirección"` |
 
 ---
 
