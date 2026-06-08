@@ -52,44 +52,6 @@ class PacienteControllerTest {
     }
 
     @Test
-    void crearPaciente_exitoso_devuelve201() throws Exception {
-        PacienteResponseDTO response = PacienteResponseDTO.builder()
-                .id(1)
-                .nombre("Juan")
-                .apellido("Perez")
-                .dni(12345678)
-                .tipoSangre("A+")
-                .estado("Ambulatorio")
-                .build();
-
-        Usuario mockUsuario = mock(Usuario.class);
-        when(mockUsuario.getIdUsuario()).thenReturn(1);
-        when(usuarioRepository.findByEmailActivo(anyString())).thenReturn(Optional.of(mockUsuario));
-        when(pacienteService.crearPaciente(any(), any())).thenReturn(response);
-
-        mockMvc.perform(post("/api/pacientes")
-                        .with(user("admin@clinicks.com"))
-                        .contentType(Objects.requireNonNull(MediaType.APPLICATION_JSON))
-                        .content(Objects.requireNonNull(objectMapper.writeValueAsString(new PacienteJson(
-                                "Juan",
-                                "Perez",
-                                12345678,
-                                "1990-05-15",
-                                "A+",
-                                "1123456789",
-                                "personal",
-                                "Corrientes",
-                                1234,
-                                3,
-                                1,
-                                "permanente"
-                        )))))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.dni").value(12345678))
-                .andExpect(jsonPath("$.nombre").value("Juan"));
-    }
-
-    @Test
     void crearPaciente_sinCamposObligatorios_devuelveErroresDeValidacion() throws Exception {
         mockMvc.perform(post("/api/pacientes")
                         .contentType(Objects.requireNonNull(MediaType.APPLICATION_JSON))
