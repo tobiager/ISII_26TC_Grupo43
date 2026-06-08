@@ -426,7 +426,7 @@ public class PacienteServiceImpl implements PacienteService {
         // Se toma el número de afiliado enviado por el cliente o se genera uno automático.
         String nro = StringUtils.hasText(dto.getNroAfiliado())
             ? dto.getNroAfiliado().trim()
-            : obraSocial.getNombreObra().toUpperCase().replaceAll("\\s+", "-") + "-" + dto.getDni();
+            : String.valueOf(dto.getDni());
 
         // Se guarda la referencia en una variable final para usarla dentro de expresiones lambda.
         ObraSocial finalOS = obraSocial;

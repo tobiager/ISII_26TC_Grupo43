@@ -31,8 +31,8 @@ export const NOMBRE_OS_REGEX = /^[a-záéíóúüñA-ZÁÉÍÓÚÜÑ\s]+$/
 /** Teléfono: solo dígitos numéricos */
 export const TELEFONO_REGEX = /^\d+$/
 
-/** Nro. de Afiliado: estrictamente alfanumérico (sin espacios ni símbolos) */
-export const NRO_AFILIADO_REGEX = /^[a-zA-Z0-9]+$/
+/** Nro. de Afiliado: solo dígitos numéricos */
+export const NRO_AFILIADO_REGEX = /^\d+$/
 
 /** Calle: letras (con tildes), números, espacios y puntuación de dirección */
 export const CALLE_REGEX = /^[a-záéíóúüñA-ZÁÉÍÓÚÜÑ0-9\s.,\-#°]+$/
@@ -163,11 +163,12 @@ export const patientSchema = z
 
     /**
      * Localidad obligatoria.
-     * '' → 0 → falla min(1) → "La localidad es obligatoria"
+     * undefined/null/'' → 0 → falla min(1) → "La localidad es obligatoria"
      */
-    idLocalidad: z.coerce
-      .number()
-      .min(1, 'La localidad es obligatoria'),
+    idLocalidad: z.preprocess(
+      (v) => (v === '' || v == null) ? 0 : Number(v),
+      z.number().int().min(1, 'La localidad es obligatoria'),
+    ),
 
     // ── Obra Social ───────────────────────────────────────────────────────────
     /**
@@ -183,7 +184,7 @@ export const patientSchema = z
       .max(20, 'Máximo 20 caracteres')
       .refine(
         (v) => v === '' || NRO_AFILIADO_REGEX.test(v),
-        'Solo letras y números — sin espacios ni símbolos',
+        'Solo números — sin letras, espacios ni símbolos',
       )
       .refine(
         (v) => !tieneRepeticion(v),

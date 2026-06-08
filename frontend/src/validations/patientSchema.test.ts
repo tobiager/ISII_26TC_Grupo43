@@ -239,12 +239,12 @@ describe('obra social — nroAfiliado obligatorio cuando hay OS', () => {
   })
 
   it('rechaza nombreObraSocial vacío si la OS es nueva', () => {
-    const data = { ...validData, idObraSocial: 'nueva', nombreObraSocial: '', nroAfiliado: 'ABC123' }
+    const data = { ...validData, idObraSocial: 'nueva', nombreObraSocial: '', nroAfiliado: '123456' }
     expect(errorPaths(data)).toContain('nombreObraSocial')
   })
 
   it('rechaza nombreObraSocial con números', () => {
-    const data = { ...validData, idObraSocial: 'nueva', nombreObraSocial: 'OSDE123', nroAfiliado: 'ABC123' }
+    const data = { ...validData, idObraSocial: 'nueva', nombreObraSocial: 'OSDE123', nroAfiliado: '123456' }
     const msgs = errorMessages(data, 'nombreObraSocial')
     expect(msgs.length).toBeGreaterThan(0)
     expect(msgs[0]).toContain('letras')
@@ -255,7 +255,7 @@ describe('obra social — nroAfiliado obligatorio cuando hay OS', () => {
       ...validData,
       idObraSocial: 'nueva',
       nombreObraSocial: 'OSDE',
-      nroAfiliado: 'ABC123',
+      nroAfiliado: '123456',
     })
     expect(result.success).toBe(true)
   })
@@ -265,20 +265,25 @@ describe('obra social — nroAfiliado obligatorio cuando hay OS', () => {
 
 describe('nroAfiliado — formato', () => {
   it('rechaza nroAfiliado con espacios', () => {
-    const data = { ...validData, idObraSocial: '2', nroAfiliado: 'ABC 123' }
+    const data = { ...validData, idObraSocial: '2', nroAfiliado: '123 456' }
     expect(errorPaths(data)).toContain('nroAfiliado')
   })
 
-  it('rechaza nroAfiliado con 5+ caracteres repetidos', () => {
-    const data = { ...validData, idObraSocial: '2', nroAfiliado: 'AAAAA1' }
+  it('rechaza nroAfiliado con letras', () => {
+    const data = { ...validData, idObraSocial: '2', nroAfiliado: 'ABC123' }
     expect(errorPaths(data)).toContain('nroAfiliado')
   })
 
-  it('acepta nroAfiliado alfanumérico válido', () => {
+  it('rechaza nroAfiliado con 5+ dígitos repetidos', () => {
+    const data = { ...validData, idObraSocial: '2', nroAfiliado: '111111' }
+    expect(errorPaths(data)).toContain('nroAfiliado')
+  })
+
+  it('acepta nroAfiliado numérico válido', () => {
     const result = patientSchema.safeParse({
       ...validData,
       idObraSocial: '2',
-      nroAfiliado: 'OS12345',
+      nroAfiliado: '12345678',
     })
     expect(result.success).toBe(true)
   })

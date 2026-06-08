@@ -313,7 +313,7 @@ ORDER BY nro;
 -- Afiliaciones, salvo pacientes con "Sin obra social" (id_obra_social = 1)
 INSERT INTO afiliacion_obra_social (numero_afiliado, fecha_alta, fecha_vencimiento, id_obra_social)
 SELECT
-  'AF-' || LPAD(nro::text, 4, '0') || '-' || dni::text,
+  LPAD(nro::text, 4, '0') || dni::text,
   (CURRENT_DATE - ((nro * 37) || ' days')::interval)::date,
   CASE WHEN nro % 9 = 0 THEN (CURRENT_DATE + INTERVAL '180 days')::date ELSE NULL END,
   id_obra_social
@@ -352,7 +352,7 @@ SELECT
     ELSE (
       SELECT a.id_afiliacion
       FROM afiliacion_obra_social a
-      WHERE a.numero_afiliado = 'AF-' || LPAD(p.nro::text, 4, '0') || '-' || p.dni::text
+      WHERE a.numero_afiliado = LPAD(p.nro::text, 4, '0') || p.dni::text
       LIMIT 1
     )
   END AS id_afiliacion

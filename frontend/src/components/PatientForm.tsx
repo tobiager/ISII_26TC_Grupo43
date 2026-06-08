@@ -48,7 +48,7 @@ function blockInvalidPhone(e: React.KeyboardEvent<HTMLInputElement>) {
 
 function blockInvalidAfiliado(e: React.KeyboardEvent<HTMLInputElement>) {
   if (e.ctrlKey || e.metaKey) return
-  if (!ALLOWED_KEYS.includes(e.key) && !/^[a-zA-Z0-9]$/.test(e.key)) e.preventDefault()
+  if (!ALLOWED_KEYS.includes(e.key) && !/^\d$/.test(e.key)) e.preventDefault()
 }
 
 function blockNonLetters(e: React.KeyboardEvent<HTMLInputElement>) {
