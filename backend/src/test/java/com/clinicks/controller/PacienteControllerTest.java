@@ -12,10 +12,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
+import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -23,7 +25,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -68,7 +69,11 @@ class PacienteControllerTest {
         when(pacienteService.crearPaciente(any(), any())).thenReturn(response);
 
         mockMvc.perform(post("/api/pacientes")
-                        .with(user("admin@clinicks.com"))
+                        .with(request -> {
+                            request.setUserPrincipal(new UsernamePasswordAuthenticationToken(
+                                    "admin@clinicks.com", null, Collections.emptyList()));
+                            return request;
+                        })
                         .contentType(Objects.requireNonNull(MediaType.APPLICATION_JSON))
                         .content(Objects.requireNonNull(objectMapper.writeValueAsString(new PacienteJson(
                                 "Juan",
