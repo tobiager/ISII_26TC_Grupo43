@@ -21,7 +21,8 @@ class Usuario {
   - Persona persona
   + registrar(request : RegisterRequestDTO) LoginResponseDTO
   + autenticar(request : LoginRequestDTO) LoginResponseDTO
-  + esProtegido() : boolean
+  + obtenerUsuarioAutenticado(email : String) UsuarioAuthDTO
+  + esProtegido() boolean
   + cambiarPassword(email : String, request : CambiarPasswordRequestDTO) PerfilResponseDTO
   + cambiarEmail(emailActual : String, request : CambiarEmailRequestDTO) PerfilResponseDTO
 }
@@ -29,8 +30,8 @@ class Usuario {
 class Administrador  {
   <<rol>>
   - cambiarRol(idUsuario : Integer, request : CambiarRolRequestDTO) AdminUsuarioDTO
-  + listarUsuarios() : List<AdminUsuarioDTO>
-  + crearInvitacion(request : InvitacionRequestDTO, emailCreador : String) : InvitacionResponseDTO
+  + listarUsuarios() List<AdminUsuarioDTO>
+  + crearInvitacion(request : InvitacionRequestDTO, emailCreador : String) InvitacionResponseDTO
   + desactivarUsuario(idUsuario : Integer, emailSolicitante : String) AdminUsuarioDTO
   + activarUsuario(idUsuario : Integer) AdminUsuarioDTO
   + resetearPassword(idUsuario : Integer) ResetPasswordResponseDTO
@@ -48,12 +49,16 @@ class Paciente {
   - Residencia residencia
   - FichaMedica fichaMedica
   - AfiliacionObraSocial afiliacion
-  + crearPaciente(PacienteRequestDTO dto, Integer idUsuario) : PacienteResponseDTO
-  + existeDni(dni : Integer, excluirId : Integer) : boolean
-  + listarPacientes() : List<PacienteResponseDTO>
-  + listarPacientesEliminados() : List<PacienteResponseDTO>
+  + crearPaciente(PacienteRequestDTO dto, Integer idUsuario) PacienteResponseDTO
+  + existeDni(dni : Integer, excluirId : Integer) boolean
+  - obtenerPacienteActivo(idPaciente : Integer) Paciente
+  + filtrarPacientes(criterioBusqueda : String) List<PacienteResponseDTO>
+  - validarTelefonoUnico(numero : String, excluirPacienteId : Integer) void
+  - validarTelefonosSolicitud(telefono : String, contactos : List<ContactoEmergenciaDTO>, excluirPacienteId : Integer) void
+  + listarPacientes() List<PacienteResponseDTO>
+  + listarPacientesEliminados() List<PacienteResponseDTO>
   + actualizarDatos(idPaciente : Integer, dto : PacienteRequestDTO) PacienteResponseDTO
-  + eliminarLogicamente(idPaciente : Integer) void
+  + eliminarPaciente(idPaciente : Integer) void
   + restaurarPaciente(idPaciente : Integer) void
   - agregarTelefono(paciente : Paciente, numero : String, tipo : String) void
   - agregarContactoEmergencia(paciente : Paciente, contactos : List<ContactoEmergencia>) void
@@ -87,6 +92,7 @@ class Provincia {
 class ObraSocial {
   - String nombreObra
   - estaActiva(dto : PacienteRequestDTO) boolean
+  + obtenerObraSocialPaciente(idPaciente : Integer) ObraSocial
 }
 
 class AfiliacionObraSocial {
@@ -106,6 +112,7 @@ class FichaMedica {
   - Set<Alergia> alergias
   - Set<EnfermedadCronica> enfermedadesCronicas
   - Set<AntecedenteFamiliar> antecedentesFamiliares
+  + crearFichaMedica(tipoSangre : String, alergias : List<String>, enfermedadesCronicas : List<String>, antecedentesFamiliares : List<String>) FichaMedica
   - agregarAlergia(ficha : FichaMedica, nombres : List<String>) void
   - agregarEnfermedadCronica(ficha : FichaMedica, nombres : List<String>) void
   - agregarAntecedenteFamiliar(ficha : FichaMedica, nombres : List<String>) void
@@ -140,31 +147,45 @@ class ContactoEmergencia {
   - actualizarContacto(paciente : Paciente, contactos : List<ContactoEmergencia>) void
 }
 
-class HistorialMedico {
-  - LocalDateTime fechaCreacion
-  - LocalDateTime fechaActualizacion
-  - String observaciones
-  - String estadoHistorial
-  - Paciente paciente
-  - List<RegistroClinico> registros
-  - List<Internacion> internaciones
-  + registrarEvento(idPaciente : Integer, dto : RegistroClinicoRequestDTO, idUsuario : Integer) void
-  + agregarInternacion(idHabitacion : Integer, dto : InternacionRequestDTO, idUsuario : Integer) void
-  + abrir(idPaciente : Integer) void
-}
+namespace Patron_Builder {
+  class HistorialMedico {
+    <<Builder>>
+    - LocalDateTime fechaCreacion
+    - LocalDateTime fechaActualizacion
+    - String observaciones
+    - String estadoHistorial
+    - Paciente paciente
+    - List<RegistroClinico> registros
+    - List<Internacion> internaciones
+    + crearHistorialMedico(idPaciente : Integer, fechaCreacion : LocalDateTime, estado : String) HistorialMedico
+    + obtenerHistorialMedico(idPaciente : Integer) HistorialMedico
+    + registrarEvento(idPaciente : Integer, dto : RegistroClinicoRequestDTO, idUsuario : Integer) void
+    + agregarInternacion(idHabitacion : Integer, dto : InternacionRequestDTO, idUsuario : Integer) void
+    + abrir(idPaciente : Integer) void
+    - actualizarFechaModificacion(fechaActual : LocalDateTime) void
+    + builder() Builder$
+  }
 
-class TipoProcedimiento {
-  - String nombreTipoProcedimiento
-}
+  class TipoProcedimiento {
+    - String nombreTipoProcedimiento
+    + obtenerTipoProcedimiento(idTipoProcedimiento : Integer) TipoProcedimiento
+  }
 
-class RegistroClinico {
-  - String descripcion
-  - LocalDateTime fechaRegistro
-  - HistorialMedico historial
-  - TipoProcedimiento tipoProcedimiento
-  - Usuario usuario
-  + esAmbulatorio(idPaciente : Integer) boolean
+  class RegistroClinico {
+    <<Builder>>
+    - String descripcion
+    - LocalDateTime fechaRegistro
+    - HistorialMedico historial
+    - TipoProcedimiento tipoProcedimiento
+    - Usuario usuario
+    + crearRegistroClinico(descripcion : String, fechaActual : LocalDateTime, idHistorial : Integer, idTipoProcedimiento : Integer, idUsuario : Integer) RegistroClinico
+    + registrarEventoInicial(nombreTipo : String, idHistorial : Integer, idUsuario : Integer) void
+    + esAmbulatorio(idPaciente : Integer) boolean
+    + builder() Builder$
+  }
 }
+note for HistorialMedico "Patrón Builder: permite construir el historial con estado, fecha de creación, actualización y paciente."
+note for RegistroClinico "Patrón Builder: permite crear registros clínicos completos con descripción, fecha, historial, tipo y usuario."
 
 class Internacion {
   - LocalDateTime fechaInicio
@@ -172,9 +193,11 @@ class Internacion {
   - Integer cantidadTraslados
   - HistorialMedico historial
   - HabitacionInternacion habitacion
+  + crearInternacion(fechaInicio : LocalDateTime, idHistorial : Integer, idHabitacion : Integer) Internacion
+  + verificarInternacionActiva(idPaciente : Integer) boolean
+  + consultarEstadoPaciente(idPaciente : Integer) String
   + trasladar(idInternacion : Integer, dto : TrasladoRequestDTO, idUsuario : Integer) void
   + egresar(idInternacion : Integer, dto : EgresoRequestDTO, idUsuario : Integer) void
-  + cambiarEstadoHabitacion(idHabitacion : Integer, nuevoEstado : String) void
   - finalizar(dto : EgresoRequestDTO) String
 }
 
@@ -182,8 +205,10 @@ class HabitacionInternacion {
   - String numeroHabitacion
   - Integer pisoHabitacion
   - String estadoHabitacion
+  + obtenerHabitaciones() List<HabitacionResponseDTO>
   - estaDisponible(idHabitacion : Integer) boolean
   - ocupar(idHabitacion : Integer, nuevoEstado : String) void
+  + actualizarEstadoHabitacion(idHabitacion : Integer, nuevoEstado : String) void
   + liberar(idHabitacion : Integer, nuevoEstado : String) void
 }
 
