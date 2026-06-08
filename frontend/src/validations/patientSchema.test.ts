@@ -261,6 +261,126 @@ describe('obra social — nroAfiliado obligatorio cuando hay OS', () => {
   })
 })
 
+// ─── Tipo de sangre ───────────────────────────────────────────────────────────
+
+describe('tipoSangre', () => {
+  it('rechaza valor vacío', () => {
+    expect(errorPaths({ ...validData, tipoSangre: '' })).toContain('tipoSangre')
+  })
+
+  it('rechaza valor no permitido (XY)', () => {
+    expect(errorPaths({ ...validData, tipoSangre: 'XY' })).toContain('tipoSangre')
+  })
+
+  it('rechaza valor no permitido (C+)', () => {
+    expect(errorPaths({ ...validData, tipoSangre: 'C+' })).toContain('tipoSangre')
+  })
+
+  it('acepta A+', () => {
+    expect(patientSchema.safeParse({ ...validData, tipoSangre: 'A+' }).success).toBe(true)
+  })
+
+  it('acepta A-', () => {
+    expect(patientSchema.safeParse({ ...validData, tipoSangre: 'A-' }).success).toBe(true)
+  })
+
+  it('acepta B+', () => {
+    expect(patientSchema.safeParse({ ...validData, tipoSangre: 'B+' }).success).toBe(true)
+  })
+
+  it('acepta B-', () => {
+    expect(patientSchema.safeParse({ ...validData, tipoSangre: 'B-' }).success).toBe(true)
+  })
+
+  it('acepta AB+', () => {
+    expect(patientSchema.safeParse({ ...validData, tipoSangre: 'AB+' }).success).toBe(true)
+  })
+
+  it('acepta AB-', () => {
+    expect(patientSchema.safeParse({ ...validData, tipoSangre: 'AB-' }).success).toBe(true)
+  })
+
+  it('acepta O+', () => {
+    expect(patientSchema.safeParse({ ...validData, tipoSangre: 'O+' }).success).toBe(true)
+  })
+
+  it('acepta O-', () => {
+    expect(patientSchema.safeParse({ ...validData, tipoSangre: 'O-' }).success).toBe(true)
+  })
+})
+
+// ─── Teléfono ─────────────────────────────────────────────────────────────────
+
+describe('telefono', () => {
+  it('acepta campo vacío (opcional)', () => {
+    expect(patientSchema.safeParse({ ...validData, telefono: '' }).success).toBe(true)
+  })
+
+  it('acepta formato local de 10 dígitos (1123456789)', () => {
+    expect(patientSchema.safeParse({ ...validData, telefono: '1123456789' }).success).toBe(true)
+  })
+
+  it('acepta formato con código de país 54 (541123456789)', () => {
+    expect(patientSchema.safeParse({ ...validData, telefono: '541123456789' }).success).toBe(true)
+  })
+
+  it('acepta formato con código de país 549 (5491123456789)', () => {
+    expect(patientSchema.safeParse({ ...validData, telefono: '5491123456789' }).success).toBe(true)
+  })
+
+  it('rechaza teléfono con letras', () => {
+    expect(errorPaths({ ...validData, telefono: 'abc123' })).toContain('telefono')
+  })
+
+  it('rechaza teléfono con longitud inválida (solo 6 dígitos)', () => {
+    expect(errorPaths({ ...validData, telefono: '123456' })).toContain('telefono')
+  })
+
+  it('rechaza teléfono con más de 13 caracteres', () => {
+    expect(errorPaths({ ...validData, telefono: '54912345678901' })).toContain('telefono')
+  })
+})
+
+// ─── Tipo de teléfono ─────────────────────────────────────────────────────────
+
+describe('tipoTelefono', () => {
+  it('acepta personal', () => {
+    expect(patientSchema.safeParse({ ...validData, tipoTelefono: 'personal' }).success).toBe(true)
+  })
+
+  it('acepta emergencia', () => {
+    expect(patientSchema.safeParse({ ...validData, tipoTelefono: 'emergencia' }).success).toBe(true)
+  })
+
+  it('rechaza laboral', () => {
+    expect(errorPaths({ ...validData, tipoTelefono: 'laboral' })).toContain('tipoTelefono')
+  })
+
+  it('rechaza hogar', () => {
+    expect(errorPaths({ ...validData, tipoTelefono: 'hogar' })).toContain('tipoTelefono')
+  })
+})
+
+// ─── Tipo de residencia ───────────────────────────────────────────────────────
+
+describe('tipoResidencia', () => {
+  it('acepta permanente', () => {
+    expect(patientSchema.safeParse({ ...validData, tipoResidencia: 'permanente' }).success).toBe(true)
+  })
+
+  it('acepta transitorio', () => {
+    expect(patientSchema.safeParse({ ...validData, tipoResidencia: 'transitorio' }).success).toBe(true)
+  })
+
+  it('rechaza fijo', () => {
+    expect(errorPaths({ ...validData, tipoResidencia: 'fijo' })).toContain('tipoResidencia')
+  })
+
+  it('rechaza temporal', () => {
+    expect(errorPaths({ ...validData, tipoResidencia: 'temporal' })).toContain('tipoResidencia')
+  })
+})
+
 // ─── Nro. de Afiliado — formato ───────────────────────────────────────────────
 
 describe('nroAfiliado — formato', () => {

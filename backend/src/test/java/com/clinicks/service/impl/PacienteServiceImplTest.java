@@ -227,14 +227,14 @@ class PacienteServiceImplTest {
             @Test
             void crearPaciente_lanzaAfiliadoDuplicadoException_siNroAfiliadoYaExiste() {
                 dtoValido.setIdObraSocial(1);
-                dtoValido.setNroAfiliado("ABC123");
+                dtoValido.setNroAfiliado("12345678");
 
                 when(pacienteRepository.existePorDni(12345678)).thenReturn(false);
-                when(pacienteRepository.existePorAfiliacionYObraSocialId("ABC123", 1, null)).thenReturn(true);
+                when(pacienteRepository.existePorAfiliacionYObraSocialId("12345678", 1, null)).thenReturn(true);
 
                 assertThatThrownBy(() -> service.crearPaciente(dtoValido, 1))
                         .isInstanceOf(AfiliadoDuplicadoException.class)
-                        .hasMessageContaining("ABC123");
+                        .hasMessageContaining("12345678");
             }
 
             // ─── crearPaciente: Sin dirección usa valor por defecto ─────────────────────
@@ -461,22 +461,22 @@ class PacienteServiceImplTest {
 
             @Test
             void existeAfiliado_conIdObraSocial_buscaPorId() {
-                when(pacienteRepository.existePorAfiliacionYObraSocialId("ABC123", 1, null)).thenReturn(true);
+                when(pacienteRepository.existePorAfiliacionYObraSocialId("12345678", 1, null)).thenReturn(true);
 
-                boolean resultado = service.existeAfiliado("ABC123", 1, null, null);
+                boolean resultado = service.existeAfiliado("12345678", 1, null, null);
 
                 assertThat(resultado).isTrue();
-                verify(pacienteRepository).existePorAfiliacionYObraSocialId("ABC123", 1, null);
+                verify(pacienteRepository).existePorAfiliacionYObraSocialId("12345678", 1, null);
             }
 
             @Test
             void existeAfiliado_conNombreObraSocial_buscaPorNombre() {
-                when(pacienteRepository.existePorAfiliacionYObraSocialNombre("ABC123", "OSDE", null)).thenReturn(true);
+                when(pacienteRepository.existePorAfiliacionYObraSocialNombre("12345678", "OSDE", null)).thenReturn(true);
 
-                boolean resultado = service.existeAfiliado("ABC123", null, "OSDE", null);
+                boolean resultado = service.existeAfiliado("12345678", null, "OSDE", null);
 
                 assertThat(resultado).isTrue();
-                verify(pacienteRepository).existePorAfiliacionYObraSocialNombre("ABC123", "OSDE", null);
+                verify(pacienteRepository).existePorAfiliacionYObraSocialNombre("12345678", "OSDE", null);
             }
 
             @Test
