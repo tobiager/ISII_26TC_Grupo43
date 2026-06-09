@@ -130,17 +130,6 @@ Todos los usuarios del seed tienen la misma contraseña: **`Admin123456`**
 | `claudia@hospital.com` | Médico | Debe cambiar contraseña en el primer login |
 | `enfermera@hospital.com` | Enfermero | Debe cambiar contraseña en el primer login |
 
-### Invitaciones de demo activas
-
-Estas invitaciones se insertan en el seed y se pueden usar para registrar nuevos usuarios:
-
-| Link de invitación | Rol asignado |
-|---|---|
-| `/register?token=INV-DEMO-MEDICO-001` | Médico |
-| `/register?token=INV-DEMO-ENF-001` | Enfermero |
-
----
-
 ## Roles y Permisos
 
 | Permiso | Administrador | Médico | Enfermero | Administrativo |
@@ -168,35 +157,6 @@ Estas invitaciones se insertan en el seed y se pueden usar para registrar nuevos
 | `/habitaciones` | Mapa de habitaciones por piso | Todos los roles |
 | `/historial` | Listado de historiales clínicos | Todos los roles |
 | `/admin` | Panel de administración de usuarios | Solo Administrador |
-
----
-
-## API REST — Endpoints principales
-
-| Método | Endpoint | Descripción | Acceso |
-|---|---|---|---|
-| POST | `/api/auth/login` | Autenticación JWT | Público |
-| POST | `/api/auth/register` | Registro por invitación | Público |
-| GET | `/api/auth/invitations/validate` | Validar token de invitación | Público |
-| POST | `/api/auth/invitations` | Crear invitación | Solo Admin |
-| GET | `/api/admin/usuarios` | Listar usuarios | Solo Admin |
-| PATCH | `/api/admin/usuarios/{id}/rol` | Cambiar rol de usuario | Solo Admin |
-| PATCH | `/api/admin/usuarios/{id}/estado` | Activar/desactivar usuario | Solo Admin |
-| GET | `/api/profile` | Obtener perfil del usuario autenticado | Autenticado |
-| PATCH | `/api/profile/password` | Cambiar contraseña | Autenticado |
-| PATCH | `/api/profile/email` | Cambiar email | Autenticado |
-| PATCH | `/api/profile/basic-data` | Cambiar nombre/apellido | Autenticado |
-| GET | `/api/pacientes` | Listar pacientes | Autenticado |
-| POST | `/api/pacientes` | Crear paciente | Admin |
-| PUT | `/api/pacientes/{id}` | Editar paciente | Admin |
-| DELETE | `/api/pacientes/{id}` | Baja lógica de paciente | Admin |
-| GET | `/api/habitaciones` | Listar habitaciones | Autenticado |
-| POST | `/api/habitaciones/internar` | Internar paciente | Admin + Enfermero |
-| POST | `/api/habitaciones/trasladar` | Trasladar paciente | Admin + Enfermero |
-| POST | `/api/habitaciones/egresar` | Egresar paciente | Admin + Enfermero |
-| PATCH | `/api/habitaciones/{id}/estado` | Cambiar estado habitación | Admin + Enfermero |
-| GET | `/api/historial/{pacienteId}` | Ver historial de un paciente | Autenticado |
-| POST | `/api/historial/{pacienteId}/registros` | Agregar registro clínico | Admin + Médico + Enfermero |
 
 ---
 
