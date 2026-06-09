@@ -1,5 +1,7 @@
 import { AlertTriangle, BedDouble, Pencil, Trash2, LogOut, Eye } from 'lucide-react'
 import type { Patient } from '../types/patient'
+import { useAuth } from '../contexts/AuthContext'
+import { canEditPatients, canDeletePatients } from '../utils/permissions'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
@@ -13,7 +15,6 @@ interface PatientTableProps {
 const estadoBadge: Record<string, string> = {
   Ambulatorio: 'bg-green-100 text-green-700',
   Internado:   'bg-blue-100 text-blue-700',
-  Egresado:    'bg-gray-100 text-gray-600',
 }
 
 function formatDate(dateStr: string | null | undefined) {
@@ -23,6 +24,11 @@ function formatDate(dateStr: string | null | undefined) {
 }
 
 export default function PatientTable({ patients, onView, onEdit, onDelete }: PatientTableProps) {
+  const { user } = useAuth()
+  const role = user!.rol
+  const canEdit   = canEditPatients(role)
+  const canDelete = canDeletePatients(role)
+
   if (patients.length === 0) {
     return (
       <div className="text-center py-16 text-gray-400">
@@ -58,18 +64,13 @@ export default function PatientTable({ patients, onView, onEdit, onDelete }: Pat
                         {p.nombre[0]}{p.apellido[0]}
                       </div>
                       {alergiasList.length > 0 && (
-                        <AlertTriangle
-                          size={13}
-                          className="absolute -top-1 -right-1 text-red-500 bg-white rounded-full"
-                        />
+                        <AlertTriangle size={13} className="absolute -top-1 -right-1 text-red-500 bg-white rounded-full" />
                       )}
                     </div>
                     <div>
                       <p className="font-medium text-gray-900">{p.apellido} {p.nombre}</p>
                       {alergiasList.length > 0 && (
-                        <p className="text-xs text-red-500 mt-0.5">
-                          Alergias: {alergiasList.join(', ')}
-                        </p>
+                        <p className="text-xs text-red-500 mt-0.5">Alergias: {alergiasList.join(', ')}</p>
                       )}
                     </div>
                   </div>
@@ -79,9 +80,7 @@ export default function PatientTable({ patients, onView, onEdit, onDelete }: Pat
                 <td className="py-4 pr-4 text-gray-700">{p.edad} años</td>
 
                 <td className="py-4 pr-4">
-                  <span className="bg-gray-100 text-gray-700 text-xs font-medium px-2 py-1 rounded-md">
-                    {p.tipoSangre}
-                  </span>
+                  <span className="bg-gray-100 text-gray-700 text-xs font-medium px-2 py-1 rounded-md">{p.tipoSangre}</span>
                 </td>
 
                 <td className="py-4 pr-4 text-gray-700">{p.obraSocial ?? '—'}</td>
@@ -104,12 +103,7 @@ export default function PatientTable({ patients, onView, onEdit, onDelete }: Pat
 
                 <td className="py-4">
                   <div className="flex items-center gap-1">
-                    {p.estado === 'Internado' && (
-                      <span className="flex items-center gap-1 text-xs text-amber-600 border border-amber-200 bg-amber-50 px-2 py-1 rounded-md font-medium mr-1">
-                        <LogOut size={12} />
-                        Alta
-                      </span>
-                    )}
+                    {/* Botón Ver — siempre activo */}
                     <button
                       onClick={() => onView(p)}
                       className="p-1.5 rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
@@ -117,20 +111,52 @@ export default function PatientTable({ patients, onView, onEdit, onDelete }: Pat
                     >
                       <Eye size={15} />
                     </button>
-                    <button
-                      onClick={() => onEdit(p)}
-                      className="p-1.5 rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
-                      title="Editar paciente"
-                    >
-                      <Pencil size={15} />
-                    </button>
-                    <button
-                      onClick={() => onDelete(p)}
-                      className="p-1.5 rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
-                      title="Dar de baja"
-                    >
-                      <Trash2 size={15} />
-                    </button>
+
+                    {/* Botón Editar — según permiso */}
+                    {canEdit ? (
+                      <button
+                        onClick={() => onEdit(p)}
+                        className="p-1.5 rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+                        title="Editar paciente"
+                      >
+                        <Pencil size={15} />
+                      </button>
+                    ) : (
+                      <button
+                        disabled
+                        title="No tenés permisos para modificar pacientes."
+                        className="p-1.5 rounded-lg text-gray-300 cursor-not-allowed"
+                      >
+                        <Pencil size={15} />
+                      </button>
+                    )}
+
+                    {/* Botón Baja — según permiso e internación */}
+                    {canDelete && p.estado !== 'Internado' ? (
+                      <button
+                        onClick={() => onDelete(p)}
+                        className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        title="Dar de baja"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    ) : (
+                      <button
+                        disabled
+                        title={p.estado === 'Internado' ? 'No se puede dar de baja a un paciente internado.' : 'No tenés permisos para dar de baja pacientes.'}
+                        className="p-1.5 rounded-lg text-gray-300 cursor-not-allowed"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    )}
+
+                    {/* Badge alta — solo informativo */}
+                    {p.estado === 'Internado' && (
+                      <span className="flex items-center gap-1 text-xs text-amber-600 border border-amber-200 bg-amber-50 px-2 py-1 rounded-md font-medium ml-1">
+                        <LogOut size={12} />
+                        Internado
+                      </span>
+                    )}
                   </div>
                 </td>
               </tr>

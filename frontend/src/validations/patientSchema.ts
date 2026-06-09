@@ -28,11 +28,11 @@ export const SOLO_LETRAS = /^[a-záéíóúüñA-ZÁÉÍÓÚÜÑ\s''`-]+$/
 /** Nombre de obra social: solo letras (con tildes y ñ) y espacios — sin números ni símbolos */
 export const NOMBRE_OS_REGEX = /^[a-záéíóúüñA-ZÁÉÍÓÚÜÑ\s]+$/
 
-/** Teléfono: dígitos, espacios, guiones, paréntesis, + y punto */
-export const TELEFONO_REGEX = /^[\d\s\-()+.]+$/
+/** Teléfono: solo dígitos numéricos */
+export const TELEFONO_REGEX = /^\d+$/
 
-/** Nro. de Afiliado: estrictamente alfanumérico (sin espacios ni símbolos) */
-export const NRO_AFILIADO_REGEX = /^[a-zA-Z0-9]+$/
+/** Nro. de Afiliado: solo dígitos numéricos */
+export const NRO_AFILIADO_REGEX = /^\d+$/
 
 /** Calle: letras (con tildes), números, espacios y puntuación de dirección */
 export const CALLE_REGEX = /^[a-záéíóúüñA-ZÁÉÍÓÚÜÑ0-9\s.,\-#°]+$/
@@ -40,7 +40,7 @@ export const CALLE_REGEX = /^[a-záéíóúüñA-ZÁÉÍÓÚÜÑ0-9\s.,\-#°]+$/
 /** Límites de longitud para campos de contactos de emergencia */
 export const CONTACT_NOMBRE_MAX = 200
 export const CONTACT_PARENTESCO_MAX = 100
-export const CONTACT_TELEFONO_MAX = 25
+export const CONTACT_TELEFONO_MAX = 13
 
 // ─── Helper interno ───────────────────────────────────────────────────────────
 
@@ -58,7 +58,7 @@ function tieneRepeticion(s: string): boolean {
  */
 const pisoOpcional = z.preprocess(
   (v) => (v === '' || v == null) ? undefined : Number(v),
-  z.number().int().min(1, 'El piso debe ser un número positivo').optional(),
+  z.number().int().min(1, 'El piso debe ser un número positivo').max(999, 'El piso no puede superar 999').optional(),
 )
 
 // ─── Esquema de validación del formulario de paciente ────────────────────────
@@ -95,8 +95,8 @@ export const patientSchema = z
       .string()
       .min(1, 'La fecha de nacimiento es obligatoria')
       .refine(
-        (d) => !!d && new Date(d) < new Date(new Date().toISOString().split('T')[0]),
-        'La fecha no puede ser igual o posterior a hoy',
+        (d) => !!d && new Date(d) <= new Date(new Date().toISOString().split('T')[0]),
+        'La fecha no puede ser posterior a hoy',
       )
       .refine(
         (d) => {
@@ -116,10 +116,10 @@ export const patientSchema = z
     // ── Teléfono ──────────────────────────────────────────────────────────────
     telefono: z
       .string()
-      .max(25, 'Máximo 25 caracteres')
+      .max(13, 'Máximo 13 caracteres')
       .refine(
-        (v) => v === '' || TELEFONO_REGEX.test(v),
-        'Formato inválido — solo números, espacios, guiones o paréntesis',
+        (v) => v === '' || /^\d+$/.test(v),
+        'Formato inválido — solo números',
       )
       .refine(
         (v) => esTelefonoArgentinoValido(v),
@@ -144,7 +144,8 @@ export const patientSchema = z
     numeroDireccion: z.coerce
       .number()
       .int('El número de domicilio debe ser un entero')
-      .min(1, 'El número de domicilio es obligatorio'),
+      .min(1, 'El número de domicilio es obligatorio')
+      .max(99999, 'El número de domicilio no puede superar 99999'),
 
     /** Piso opcional: '' → undefined. Si se ingresa debe ser >= 1. */
     piso: pisoOpcional,
@@ -162,11 +163,12 @@ export const patientSchema = z
 
     /**
      * Localidad obligatoria.
-     * '' → 0 → falla min(1) → "La localidad es obligatoria"
+     * undefined/null/'' → 0 → falla min(1) → "La localidad es obligatoria"
      */
-    idLocalidad: z.coerce
-      .number()
-      .min(1, 'La localidad es obligatoria'),
+    idLocalidad: z.preprocess(
+      (v) => (v === '' || v == null) ? 0 : Number(v),
+      z.number().int().min(1, 'La localidad es obligatoria'),
+    ),
 
     // ── Obra Social ───────────────────────────────────────────────────────────
     /**
@@ -182,7 +184,7 @@ export const patientSchema = z
       .max(20, 'Máximo 20 caracteres')
       .refine(
         (v) => v === '' || NRO_AFILIADO_REGEX.test(v),
-        'Solo letras y números — sin espacios ni símbolos',
+        'Solo números — sin letras, espacios ni símbolos',
       )
       .refine(
         (v) => !tieneRepeticion(v),

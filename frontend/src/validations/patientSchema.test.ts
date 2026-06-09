@@ -112,8 +112,9 @@ describe('fechaNacimiento', () => {
     expect(errorPaths({ ...validData, fechaNacimiento: '' })).toContain('fechaNacimiento')
   })
 
-  it('rechaza fecha de hoy', () => {
-    expect(errorPaths({ ...validData, fechaNacimiento: toDateStr(today) })).toContain('fechaNacimiento')
+  it('acepta fecha de hoy (neonatos)', () => {
+    const result = patientSchema.safeParse({ ...validData, fechaNacimiento: toDateStr(today) })
+    expect(result.success).toBe(true)
   })
 
   it('rechaza fecha futura', () => {
@@ -137,8 +138,17 @@ describe('numeroDireccion', () => {
     expect(errorPaths({ ...validData, numeroDireccion: -5 })).toContain('numeroDireccion')
   })
 
+  it('rechaza valor mayor a 99999', () => {
+    expect(errorPaths({ ...validData, numeroDireccion: 100000 })).toContain('numeroDireccion')
+  })
+
   it('acepta valor positivo', () => {
     const result = patientSchema.safeParse({ ...validData, numeroDireccion: 1 })
+    expect(result.success).toBe(true)
+  })
+
+  it('acepta valor límite 99999', () => {
+    const result = patientSchema.safeParse({ ...validData, numeroDireccion: 99999 })
     expect(result.success).toBe(true)
   })
 })
@@ -164,8 +174,19 @@ describe('piso', () => {
     expect(msgs[0]).toContain('positivo')
   })
 
+  it('rechaza piso mayor a 999', () => {
+    const msgs = errorMessages({ ...validData, piso: 1000 }, 'piso')
+    expect(msgs.length).toBeGreaterThan(0)
+    expect(msgs[0]).toContain('999')
+  })
+
   it('acepta piso positivo', () => {
     const result = patientSchema.safeParse({ ...validData, piso: 3 })
+    expect(result.success).toBe(true)
+  })
+
+  it('acepta piso límite 999', () => {
+    const result = patientSchema.safeParse({ ...validData, piso: 999 })
     expect(result.success).toBe(true)
   })
 })
@@ -218,12 +239,12 @@ describe('obra social — nroAfiliado obligatorio cuando hay OS', () => {
   })
 
   it('rechaza nombreObraSocial vacío si la OS es nueva', () => {
-    const data = { ...validData, idObraSocial: 'nueva', nombreObraSocial: '', nroAfiliado: 'ABC123' }
+    const data = { ...validData, idObraSocial: 'nueva', nombreObraSocial: '', nroAfiliado: '123456' }
     expect(errorPaths(data)).toContain('nombreObraSocial')
   })
 
   it('rechaza nombreObraSocial con números', () => {
-    const data = { ...validData, idObraSocial: 'nueva', nombreObraSocial: 'OSDE123', nroAfiliado: 'ABC123' }
+    const data = { ...validData, idObraSocial: 'nueva', nombreObraSocial: 'OSDE123', nroAfiliado: '123456' }
     const msgs = errorMessages(data, 'nombreObraSocial')
     expect(msgs.length).toBeGreaterThan(0)
     expect(msgs[0]).toContain('letras')
@@ -234,9 +255,129 @@ describe('obra social — nroAfiliado obligatorio cuando hay OS', () => {
       ...validData,
       idObraSocial: 'nueva',
       nombreObraSocial: 'OSDE',
-      nroAfiliado: 'ABC123',
+      nroAfiliado: '123456',
     })
     expect(result.success).toBe(true)
+  })
+})
+
+// ─── Tipo de sangre ───────────────────────────────────────────────────────────
+
+describe('tipoSangre', () => {
+  it('rechaza valor vacío', () => {
+    expect(errorPaths({ ...validData, tipoSangre: '' })).toContain('tipoSangre')
+  })
+
+  it('rechaza valor no permitido (XY)', () => {
+    expect(errorPaths({ ...validData, tipoSangre: 'XY' })).toContain('tipoSangre')
+  })
+
+  it('rechaza valor no permitido (C+)', () => {
+    expect(errorPaths({ ...validData, tipoSangre: 'C+' })).toContain('tipoSangre')
+  })
+
+  it('acepta A+', () => {
+    expect(patientSchema.safeParse({ ...validData, tipoSangre: 'A+' }).success).toBe(true)
+  })
+
+  it('acepta A-', () => {
+    expect(patientSchema.safeParse({ ...validData, tipoSangre: 'A-' }).success).toBe(true)
+  })
+
+  it('acepta B+', () => {
+    expect(patientSchema.safeParse({ ...validData, tipoSangre: 'B+' }).success).toBe(true)
+  })
+
+  it('acepta B-', () => {
+    expect(patientSchema.safeParse({ ...validData, tipoSangre: 'B-' }).success).toBe(true)
+  })
+
+  it('acepta AB+', () => {
+    expect(patientSchema.safeParse({ ...validData, tipoSangre: 'AB+' }).success).toBe(true)
+  })
+
+  it('acepta AB-', () => {
+    expect(patientSchema.safeParse({ ...validData, tipoSangre: 'AB-' }).success).toBe(true)
+  })
+
+  it('acepta O+', () => {
+    expect(patientSchema.safeParse({ ...validData, tipoSangre: 'O+' }).success).toBe(true)
+  })
+
+  it('acepta O-', () => {
+    expect(patientSchema.safeParse({ ...validData, tipoSangre: 'O-' }).success).toBe(true)
+  })
+})
+
+// ─── Teléfono ─────────────────────────────────────────────────────────────────
+
+describe('telefono', () => {
+  it('acepta campo vacío (opcional)', () => {
+    expect(patientSchema.safeParse({ ...validData, telefono: '' }).success).toBe(true)
+  })
+
+  it('acepta formato local de 10 dígitos (1123456789)', () => {
+    expect(patientSchema.safeParse({ ...validData, telefono: '1123456789' }).success).toBe(true)
+  })
+
+  it('acepta formato con código de país 54 (541123456789)', () => {
+    expect(patientSchema.safeParse({ ...validData, telefono: '541123456789' }).success).toBe(true)
+  })
+
+  it('acepta formato con código de país 549 (5491123456789)', () => {
+    expect(patientSchema.safeParse({ ...validData, telefono: '5491123456789' }).success).toBe(true)
+  })
+
+  it('rechaza teléfono con letras', () => {
+    expect(errorPaths({ ...validData, telefono: 'abc123' })).toContain('telefono')
+  })
+
+  it('rechaza teléfono con longitud inválida (solo 6 dígitos)', () => {
+    expect(errorPaths({ ...validData, telefono: '123456' })).toContain('telefono')
+  })
+
+  it('rechaza teléfono con más de 13 caracteres', () => {
+    expect(errorPaths({ ...validData, telefono: '54912345678901' })).toContain('telefono')
+  })
+})
+
+// ─── Tipo de teléfono ─────────────────────────────────────────────────────────
+
+describe('tipoTelefono', () => {
+  it('acepta personal', () => {
+    expect(patientSchema.safeParse({ ...validData, tipoTelefono: 'personal' }).success).toBe(true)
+  })
+
+  it('acepta emergencia', () => {
+    expect(patientSchema.safeParse({ ...validData, tipoTelefono: 'emergencia' }).success).toBe(true)
+  })
+
+  it('rechaza laboral', () => {
+    expect(errorPaths({ ...validData, tipoTelefono: 'laboral' })).toContain('tipoTelefono')
+  })
+
+  it('rechaza hogar', () => {
+    expect(errorPaths({ ...validData, tipoTelefono: 'hogar' })).toContain('tipoTelefono')
+  })
+})
+
+// ─── Tipo de residencia ───────────────────────────────────────────────────────
+
+describe('tipoResidencia', () => {
+  it('acepta permanente', () => {
+    expect(patientSchema.safeParse({ ...validData, tipoResidencia: 'permanente' }).success).toBe(true)
+  })
+
+  it('acepta transitorio', () => {
+    expect(patientSchema.safeParse({ ...validData, tipoResidencia: 'transitorio' }).success).toBe(true)
+  })
+
+  it('rechaza fijo', () => {
+    expect(errorPaths({ ...validData, tipoResidencia: 'fijo' })).toContain('tipoResidencia')
+  })
+
+  it('rechaza temporal', () => {
+    expect(errorPaths({ ...validData, tipoResidencia: 'temporal' })).toContain('tipoResidencia')
   })
 })
 
@@ -244,20 +385,25 @@ describe('obra social — nroAfiliado obligatorio cuando hay OS', () => {
 
 describe('nroAfiliado — formato', () => {
   it('rechaza nroAfiliado con espacios', () => {
-    const data = { ...validData, idObraSocial: '2', nroAfiliado: 'ABC 123' }
+    const data = { ...validData, idObraSocial: '2', nroAfiliado: '123 456' }
     expect(errorPaths(data)).toContain('nroAfiliado')
   })
 
-  it('rechaza nroAfiliado con 5+ caracteres repetidos', () => {
-    const data = { ...validData, idObraSocial: '2', nroAfiliado: 'AAAAA1' }
+  it('rechaza nroAfiliado con letras', () => {
+    const data = { ...validData, idObraSocial: '2', nroAfiliado: 'ABC123' }
     expect(errorPaths(data)).toContain('nroAfiliado')
   })
 
-  it('acepta nroAfiliado alfanumérico válido', () => {
+  it('rechaza nroAfiliado con 5+ dígitos repetidos', () => {
+    const data = { ...validData, idObraSocial: '2', nroAfiliado: '111111' }
+    expect(errorPaths(data)).toContain('nroAfiliado')
+  })
+
+  it('acepta nroAfiliado numérico válido', () => {
     const result = patientSchema.safeParse({
       ...validData,
       idObraSocial: '2',
-      nroAfiliado: 'OS12345',
+      nroAfiliado: '12345678',
     })
     expect(result.success).toBe(true)
   })

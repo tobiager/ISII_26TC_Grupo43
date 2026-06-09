@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Plus, X, Loader2, Trash2, Info } from 'lucide-react'
+import CustomSelect from './CustomSelect'
+import SingleDatePicker from './SingleDatePicker'
 import { toast } from 'sonner'
 import type { EmergencyContact, Patient, PatientRequest } from '../types/patient'
 import { BLOOD_TYPES } from '../types/patient'
@@ -46,7 +48,7 @@ function blockInvalidPhone(e: React.KeyboardEvent<HTMLInputElement>) {
 
 function blockInvalidAfiliado(e: React.KeyboardEvent<HTMLInputElement>) {
   if (e.ctrlKey || e.metaKey) return
-  if (!ALLOWED_KEYS.includes(e.key) && !/^[a-zA-Z0-9]$/.test(e.key)) e.preventDefault()
+  if (!ALLOWED_KEYS.includes(e.key) && !/^\d$/.test(e.key)) e.preventDefault()
 }
 
 function blockNonLetters(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -122,7 +124,7 @@ function validateContactos(list: EmergencyContact[], patientPhone: string): Reco
     } else if (c.telefono.trim().length > CONTACT_TELEFONO_MAX) {
       errs[`${i}_telefono`] = `Máximo ${CONTACT_TELEFONO_MAX} caracteres`
     } else if (!TELEFONO_REGEX.test(c.telefono)) {
-      errs[`${i}_telefono`] = 'Solo números, espacios, guiones o paréntesis'
+      errs[`${i}_telefono`] = 'Solo números'
     } else if (!esTelefonoArgentinoValido(c.telefono)) {
       errs[`${i}_telefono`] = 'Formato argentino inválido (ej: 1123456789 ó 5491123456789)'
     } else {
@@ -182,6 +184,7 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
     reset,
     watch,
     setValue,
+    control,
     formState: { errors, isValid, isSubmitted },
   } = useForm<PatientFormValues>({
     resolver: zodResolver(patientSchema) as any,
@@ -300,12 +303,12 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
       setAfiliadoExists(false)
       return
     }
-    
+
     setCheckingAfiliado(true)
     try {
       const idObra = idObraSocialWatch === 'nueva' ? undefined : Number(idObraSocialWatch)
       const nombreObra = idObraSocialWatch === 'nueva' ? nombreObraSocialWatch : undefined
-      
+
       const existe = await patientService.checkAfiliado(nroAfiliadoWatch, idObra, nombreObra, patient?.id)
       setAfiliadoExists(existe)
     } catch {
@@ -361,7 +364,7 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
         const norm = normalizarTelefono(value)
         const patientNorm = normalizarTelefono(telefonoWatch ?? '')
         if (value && !TELEFONO_REGEX.test(value)) {
-          next[key] = 'Solo números, espacios, guiones o paréntesis'
+          next[key] = 'Solo números'
         } else if (value && !esTelefonoArgentinoValido(value)) {
           next[key] = 'Formato argentino inválido (ej: 1123456789)'
         } else if (value && patientNorm && norm === patientNorm) {
@@ -517,11 +520,19 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Fecha de Nacimiento <span className="text-red-500">*</span>
           </label>
-          <input
-            type="date"
-            max={today}
-            {...register('fechaNacimiento')}
-            className={inputCls(!!errors.fechaNacimiento)}
+          <Controller
+            name="fechaNacimiento"
+            control={control}
+            render={({ field }) => (
+              <SingleDatePicker
+                value={field.value ?? ''}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                max={today}
+                hasError={!!errors.fechaNacimiento}
+                placeholder="dd/mm/aaaa"
+              />
+            )}
           />
           <FieldError msg={errors.fechaNacimiento?.message} />
         </div>
@@ -533,10 +544,22 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Tipo de Sangre <span className="text-red-500">*</span>
           </label>
-          <select {...register('tipoSangre')} className={inputCls(!!errors.tipoSangre)}>
-            <option value="">Seleccionar...</option>
-            {BLOOD_TYPES.map(bt => <option key={bt} value={bt}>{bt}</option>)}
-          </select>
+          <Controller
+            name="tipoSangre"
+            control={control}
+            render={({ field }) => (
+              <CustomSelect
+                value={field.value ?? ''}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                options={[
+                  { value: '', label: 'Seleccionar...' },
+                  ...BLOOD_TYPES.map(bt => ({ value: bt, label: bt })),
+                ]}
+                hasError={!!errors.tipoSangre}
+              />
+            )}
+          />
           <FieldError msg={errors.tipoSangre?.message} />
         </div>
       </div>
@@ -549,20 +572,32 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
             <label className="block text-xs text-gray-600 mb-1">Número</label>
             <input
               {...register('telefono')}
-              onKeyDown={blockInvalidPhone}
-              maxLength={25}
+              onKeyDown={blockNonDigits}
+              maxLength={13}
               className={inputCls(!!errors.telefono)}
-              placeholder="11-1234-5678"
+              placeholder="1112345678"
               inputMode="tel"
             />
             <FieldError msg={errors.telefono?.message} />
           </div>
           <div>
             <label className="block text-xs text-gray-600 mb-1">Tipo de Teléfono</label>
-            <select {...register('tipoTelefono')} className={inputCls(!!errors.tipoTelefono)}>
-              <option value="personal">Personal</option>
-              <option value="emergencia">Emergencia</option>
-            </select>
+            <Controller
+              name="tipoTelefono"
+              control={control}
+              render={({ field }) => (
+                <CustomSelect
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  options={[
+                    { value: 'personal', label: 'Personal' },
+                    { value: 'emergencia', label: 'Emergencia' },
+                  ]}
+                  hasError={!!errors.tipoTelefono}
+                />
+              )}
+            />
             <FieldError msg={errors.tipoTelefono?.message} />
           </div>
         </div>
@@ -578,35 +613,51 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs text-gray-600 mb-1">Provincia</label>
-            <select {...register('idProvincia')} value={idProvinciaWatch || ''} className={inputCls()}>
-              <option value="">- Seleccionar provincia -</option>
-              {provincias.map(p => (
-                <option key={p.id} value={p.id}>{p.nombre}</option>
-              ))}
-            </select>
+            <Controller
+              name="idProvincia"
+              control={control}
+              render={({ field }) => (
+                <CustomSelect
+                  value={field.value != null ? String(field.value) : ''}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  options={[
+                    { value: '', label: '- Seleccionar provincia -' },
+                    ...provincias.map(p => ({ value: String(p.id), label: p.nombre })),
+                  ]}
+                />
+              )}
+            />
           </div>
           <div>
             <label className="block text-xs text-gray-600 mb-1">
               Localidad <span className="text-red-500">*</span>
               {loadingLoc && <Loader2 size={11} className="inline ml-1 animate-spin text-blue-500" />}
             </label>
-            <select
-              {...register('idLocalidad')}
-              value={idLocalidadWatch || ''}
-              className={inputCls(!!errors.idLocalidad)}
-              disabled={!idProvinciaWatch || loadingLoc}
-            >
-              <option value="">
-                {!idProvinciaWatch
-                  ? '- Primero elegí una provincia -'
-                  : loadingLoc
-                    ? 'Cargando...'
-                    : '- Seleccionar localidad -'}
-              </option>
-              {localidades.map(l => (
-                <option key={l.id} value={l.id}>{l.nombre} ({l.codigoPostal})</option>
-              ))}
-            </select>
+            <Controller
+              name="idLocalidad"
+              control={control}
+              render={({ field }) => (
+                <CustomSelect
+                  value={field.value != null ? String(field.value) : ''}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  disabled={!idProvinciaWatch || loadingLoc}
+                  options={[
+                    {
+                      value: '',
+                      label: !idProvinciaWatch
+                        ? '- Primero elegí una provincia -'
+                        : loadingLoc
+                          ? 'Cargando...'
+                          : '- Seleccionar localidad -',
+                    },
+                    ...localidades.map(l => ({ value: String(l.id), label: `${l.nombre} (${l.codigoPostal})` })),
+                  ]}
+                  hasError={!!errors.idLocalidad}
+                />
+              )}
+            />
             <FieldError msg={errors.idLocalidad?.message} />
           </div>
         </div>
@@ -629,8 +680,10 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
               Número <span className="text-red-500">*</span>
             </label>
             <input
-              type="number"
-              min={1}
+              type="text"
+              inputMode="numeric"
+              onKeyDown={blockNonDigits}
+              maxLength={5}
               {...register('numeroDireccion')}
               className={inputCls(!!errors.numeroDireccion)}
               placeholder="1234"
@@ -640,8 +693,10 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
           <div>
             <label className="block text-xs text-gray-600 mb-1">Piso (opcional)</label>
             <input
-              type="number"
-              min={0}
+              type="text"
+              inputMode="numeric"
+              onKeyDown={blockNonDigits}
+              maxLength={3}
               {...register('piso')}
               className={inputCls(!!errors.piso)}
               placeholder="3"
@@ -655,10 +710,22 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
           <label className="block text-xs text-gray-600 mb-1">
             Tipo de Residencia <span className="text-red-500">*</span>
           </label>
-          <select {...register('tipoResidencia')} className={inputCls(!!errors.tipoResidencia)}>
-            <option value="permanente">Permanente</option>
-            <option value="transitorio">Transitorio</option>
-          </select>
+          <Controller
+            name="tipoResidencia"
+            control={control}
+            render={({ field }) => (
+              <CustomSelect
+                value={field.value ?? ''}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                options={[
+                  { value: 'permanente', label: 'Permanente' },
+                  { value: 'transitorio', label: 'Transitorio' },
+                ]}
+                hasError={!!errors.tipoResidencia}
+              />
+            )}
+          />
           <FieldError msg={errors.tipoResidencia?.message} />
         </div>
       </div>
@@ -782,7 +849,7 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
                 <input
                   value={contacto.telefono}
                   onChange={e => updateContacto(idx, 'telefono', e.target.value)}
-                  onKeyDown={blockInvalidPhone}
+                  onKeyDown={blockNonDigits}
                   inputMode="tel"
                   maxLength={CONTACT_TELEFONO_MAX}
                   className={cls(
@@ -791,7 +858,7 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
                       ? 'border-red-400 focus:border-red-500'
                       : 'border-yellow-200 focus:border-yellow-400',
                   )}
-                  placeholder="11-9999-8888"
+                  placeholder="1199998888"
                 />
                 {contactosErr[`${idx}_telefono`] && (
                   <p className="mt-0.5 text-xs text-red-600 flex items-center gap-1"><Info size={10} /> {contactosErr[`${idx}_telefono`]}</p>
@@ -827,13 +894,22 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs text-gray-600 mb-1">Seleccionar</label>
-            <select {...register('idObraSocial')} value={idObraSocialWatch || ''} className={inputCls()}>
-              <option value="">Sin obra social</option>
-              {obrasSociales.map(os => (
-                <option key={os.id} value={os.id}>{os.nombre}</option>
-              ))}
-              <option value="nueva">+ Otra (ingresar nombre)</option>
-            </select>
+            <Controller
+              name="idObraSocial"
+              control={control}
+              render={({ field }) => (
+                <CustomSelect
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  options={[
+                    { value: '', label: 'Sin obra social' },
+                    ...obrasSociales.map(os => ({ value: String(os.id), label: os.nombre })),
+                    { value: 'nueva', label: '+ Otra (ingresar nombre)' },
+                  ]}
+                />
+              )}
+            />
           </div>
 
           {String(idObraSocialWatch) === 'nueva' ? (
@@ -908,11 +984,19 @@ export default function PatientForm({ patient, onSubmit, onCancel, isLoading }: 
         {/* Fecha de vencimiento */}
         <div>
           <label className="block text-xs text-gray-600 mb-1">Fecha de Vencimiento de la Afiliación</label>
-          <input
-            type="date"
-            min={today}
-            {...register('fechaVencimientoAfiliacion')}
-            className={inputCls(!!errors.fechaVencimientoAfiliacion)}
+          <Controller
+            name="fechaVencimientoAfiliacion"
+            control={control}
+            render={({ field }) => (
+              <SingleDatePicker
+                value={field.value ?? ''}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                min={today}
+                hasError={!!errors.fechaVencimientoAfiliacion}
+                placeholder="Seleccionar fecha"
+              />
+            )}
           />
           <FieldError msg={errors.fechaVencimientoAfiliacion?.message} />
         </div>

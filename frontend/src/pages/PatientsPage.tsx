@@ -1,27 +1,41 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   Users, UserCheck, BedDouble, ClipboardList,
-  Search, ChevronDown, UserPlus, Stethoscope, LogOut, UserX, X, Eye, RotateCcw,
+  Search, ChevronDown, UserPlus, Stethoscope, UserX, X, Eye, RotateCcw, Shield,
 } from 'lucide-react'
+import CustomSelect from '../components/CustomSelect'
 import Modal from '../components/Modal'
 import PatientForm from '../components/PatientForm'
 import PatientTable from '../components/PatientTable'
 import PatientDetailModal from '../components/PatientDetailModal'
 import StatCard from '../components/StatCard'
-import FeatureInProgress from '../components/FeatureInProgress'
+import UserMenu from '../components/UserMenu'
+import CambiarPasswordModal from '../components/CambiarPasswordModal'
 import { patientService } from '../services/patientService'
-import { locationService, type AdminUser } from '../services/locationService'
+import { useAuth } from '../contexts/AuthContext'
+import { canEditPatients, canDeletePatients, canAccessAdmin } from '../utils/permissions'
 import type { Patient, PatientRequest } from '../types/patient'
 
 const OBRAS_SOCIALES = ['Todas las Obras Sociales', 'OSDE', 'Swiss Medical', 'PAMI', 'Galeno', 'Medicus']
-const ESTADOS = ['Todos los estados', 'Ambulatorio', 'Internado', 'Egresado']
+const ESTADOS = ['Todos los estados', 'Ambulatorio', 'Internado']
 
 export default function PatientsPage() {
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const role = user!.rol
+  const [forcePasswordModal, setForcePasswordModal] = useState(false)
+
+  useEffect(() => {
+    if (user?.mustChangePassword) {
+      setForcePasswordModal(true)
+    }
+  }, [user?.mustChangePassword])
+
   const [patients, setPatients] = useState<Patient[]>([])
   const [loading, setLoading] = useState(true)
   const [formLoading, setFormLoading] = useState(false)
-  const [adminUser, setAdminUser] = useState<AdminUser | null>(null)
 
   const [search, setSearch] = useState('')
   const [filterOS, setFilterOS] = useState('Todas las Obras Sociales')
@@ -35,14 +49,6 @@ export default function PatientsPage() {
   const [deletedPatients, setDeletedPatients] = useState<Patient[]>([])
   const [loadingDeleted, setLoadingDeleted] = useState(false)
   const [fetchError, setFetchError] = useState(false)
-
-  useEffect(() => {
-    const ctrl = new AbortController()
-    locationService.getPerfil(ctrl.signal)
-      .then(setAdminUser)
-      .catch(() => {})
-    return () => ctrl.abort()
-  }, [])
 
   const fetchPatients = useCallback(async () => {
     try {
@@ -121,7 +127,6 @@ export default function PatientsPage() {
     try {
       await patientService.restaurar(p.id)
       toast.success(`${p.nombreCompleto} fue restaurado correctamente`)
-      // Actualizar lista de eliminados
       setDeletedPatients(prev => prev.filter(x => x.id !== p.id))
       fetchPatients()
     } catch {
@@ -149,6 +154,7 @@ export default function PatientsPage() {
     }
   }
 
+  // marcar paciente como dado de baja (sin eliminarlo realmente)
   const handleDelete = async () => {
     if (!deleteConfirm) return
     try {
@@ -156,8 +162,9 @@ export default function PatientsPage() {
       toast.success(`${deleteConfirm.nombreCompleto} fue dado de baja`)
       setDeleteConfirm(null)
       fetchPatients()
-    } catch {
-      toast.error('No se pudo dar de baja al paciente')
+    } catch (err: any) {
+      const msg = err?.response?.data?.error ?? 'No se pudo dar de baja al paciente'
+      toast.error(msg)
     }
   }
 
@@ -178,30 +185,32 @@ export default function PatientsPage() {
               <Users size={15} />
               Pacientes
             </button>
-            <FeatureInProgress featureName="camas">
-              <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors">
-                <BedDouble size={15} />
-                Habitaciones
+            <button
+              onClick={() => navigate('/habitaciones')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors"
+            >
+              <BedDouble size={15} />
+              Habitaciones
+            </button>
+            <button
+              onClick={() => navigate('/historial')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors"
+            >
+              <ClipboardList size={15} />
+              Historial
+            </button>
+            {canAccessAdmin(role) && (
+              <button
+                onClick={() => navigate('/admin')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors"
+              >
+                <Shield size={15} />
+                Admin
               </button>
-            </FeatureInProgress>
+            )}
           </nav>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white text-xs font-bold">
-            {adminUser?.iniciales ?? '…'}
-          </div>
-          <div className="text-right">
-            <p className="text-sm font-medium text-gray-900">
-              {adminUser ? `Adm. ${adminUser.nombreCompleto}` : '…'}
-            </p>
-            <p className="text-xs text-gray-500">{adminUser?.rol ?? ''}</p>
-          </div>
-          <FeatureInProgress featureName="cerrar sesión">
-            <button className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors ml-1">
-              <LogOut size={16} />
-            </button>
-          </FeatureInProgress>
-        </div>
+        <UserMenu />
       </header>
 
       {/* ─── CONTENT ─────────────────────────────────────────────────────────── */}
@@ -213,7 +222,7 @@ export default function PatientsPage() {
             <Stethoscope size={22} className="text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Panel Administrativo</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Panel Médico</h1>
             <p className="text-sm text-gray-500">Sistema de Gestión Hospitalaria</p>
           </div>
         </div>
@@ -239,27 +248,31 @@ export default function PatientsPage() {
                 <p className="text-xs text-gray-500 mt-0.5">
                   {filtered.length} de {patients.length} pacientes
                   {stats.internados > 0 && ` (${stats.internados} internados`}
-                  {stats.total - stats.internados - patients.filter(p => p.estado === 'Egresado').length > 0
-                    && `, ${stats.total - stats.internados - patients.filter(p => p.estado === 'Egresado').length} ambulatorios`}
+                  {stats.total - stats.internados > 0
+                    && `, ${stats.total - stats.internados} ambulatorios`}
                   {stats.internados > 0 && ')'}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={openDeleted}
-                className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-600 text-sm font-medium rounded-xl hover:bg-gray-50 transition-colors"
-              >
-                <UserX size={16} />
-                Ver Desactivados
-              </button>
-              <button
-                onClick={openCreate}
-                className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors"
-              >
-                <UserPlus size={16} />
-                Registrar Paciente
-              </button>
+              {canDeletePatients(role) && (
+                <button
+                  onClick={openDeleted}
+                  className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-600 text-sm font-medium rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  <UserX size={16} />
+                  Ver Desactivados
+                </button>
+              )}
+              {canEditPatients(role) && (
+                <button
+                  onClick={openCreate}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors"
+                >
+                  <UserPlus size={16} />
+                  Registrar Paciente
+                </button>
+              )}
             </div>
           </div>
 
@@ -274,26 +287,18 @@ export default function PatientsPage() {
                 className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
               />
             </div>
-            <div className="relative">
-              <select
-                value={filterOS}
-                onChange={e => setFilterOS(e.target.value)}
-                className="appearance-none pr-8 pl-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-blue-400 bg-white"
-              >
-                {OBRAS_SOCIALES.map(os => <option key={os}>{os}</option>)}
-              </select>
-              <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            </div>
-            <div className="relative">
-              <select
-                value={filterEstado}
-                onChange={e => setFilterEstado(e.target.value)}
-                className="appearance-none pr-8 pl-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-blue-400 bg-white"
-              >
-                {ESTADOS.map(e => <option key={e}>{e}</option>)}
-              </select>
-              <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            </div>
+            <CustomSelect
+              value={filterOS}
+              onChange={setFilterOS}
+              options={OBRAS_SOCIALES.map(os => ({ value: os, label: os }))}
+              className="pl-3 pr-2 py-2 text-sm border border-gray-200 rounded-lg bg-white cursor-pointer"
+            />
+            <CustomSelect
+              value={filterEstado}
+              onChange={setFilterEstado}
+              options={ESTADOS.map(e => ({ value: e, label: e }))}
+              className="pl-3 pr-2 py-2 text-sm border border-gray-200 rounded-lg bg-white cursor-pointer"
+            />
           </div>
 
           {/* Contenido tabla */}
@@ -365,7 +370,6 @@ export default function PatientsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowDeleted(false)} />
           <div className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[80vh] flex flex-col">
-            {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-gray-100 rounded-xl">
@@ -384,7 +388,6 @@ export default function PatientsPage() {
               </button>
             </div>
 
-            {/* Contenido */}
             <div className="overflow-y-auto flex-1 px-6 py-4">
               {loadingDeleted ? (
                 <div className="text-center py-12">
@@ -415,9 +418,7 @@ export default function PatientsPage() {
                             <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500 flex-shrink-0">
                               {p.nombre?.[0]}{p.apellido?.[0]}
                             </div>
-                            <span className="font-medium text-gray-900">
-                              {p.nombreCompleto}
-                            </span>
+                            <span className="font-medium text-gray-900">{p.nombreCompleto}</span>
                           </div>
                         </td>
                         <td className="py-3 pr-4 text-gray-900 font-mono">{p.dni}</td>
@@ -449,7 +450,6 @@ export default function PatientsPage() {
               )}
             </div>
 
-            {/* Footer */}
             <div className="px-6 py-3 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
               <p className="text-xs text-gray-400 text-center">
                 {deletedPatients.length} paciente{deletedPatients.length !== 1 ? 's' : ''} desactivado{deletedPatients.length !== 1 ? 's' : ''}
@@ -464,8 +464,12 @@ export default function PatientsPage() {
         patient={viewingPatient}
         onClose={() => setViewingPatient(null)}
       />
+
+      {/* ─── CAMBIO DE CONTRASEÑA OBLIGATORIO ───────────────────────────────── */}
+      <CambiarPasswordModal
+        open={forcePasswordModal}
+        onClose={() => setForcePasswordModal(false)}
+      />
     </div>
   )
 }
-
-

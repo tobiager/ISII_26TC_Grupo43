@@ -1,0 +1,252 @@
+classDiagram
+direction TB
+
+
+class Persona {
+  - String nombrePersona
+  - String apellidoPersona
+  - LocalDate fechaNacimiento
+  - LocalDate fechaFallecimiento
+  - getNombreCompleto(u : Usuario) String
+  + cambiarNombre(nombre : String, apellido : String) void
+}
+
+class Usuario {
+  - String email
+  - String passwordHash
+  - String autorizacion
+  - boolean mustChangePassword
+  - OffsetDateTime deletedAt
+  - Rol rol
+  - Persona persona
+  + registrar(request : RegisterRequestDTO) LoginResponseDTO
+  + autenticar(request : LoginRequestDTO) LoginResponseDTO
+  + obtenerUsuarioAutenticado(email : String) UsuarioAuthDTO
+  + esProtegido() boolean
+  + cambiarPassword(email : String, request : CambiarPasswordRequestDTO) PerfilResponseDTO
+  + cambiarEmail(emailActual : String, request : CambiarEmailRequestDTO) PerfilResponseDTO
+}
+
+class Administrador  {
+  <<rol>>
+  - cambiarRol(idUsuario : Integer, request : CambiarRolRequestDTO) AdminUsuarioDTO
+  + listarUsuarios() List<AdminUsuarioDTO>
+  + crearInvitacion(request : InvitacionRequestDTO, emailCreador : String) InvitacionResponseDTO
+  + desactivarUsuario(idUsuario : Integer, emailSolicitante : String) AdminUsuarioDTO
+  + activarUsuario(idUsuario : Integer) AdminUsuarioDTO
+  + resetearPassword(idUsuario : Integer) ResetPasswordResponseDTO
+}
+
+class Rol {
+  - String nombreRol
+  + tienePermiso(permiso : String) boolean
+}
+
+class Paciente {
+  - Integer dni
+  - OffsetDateTime deletedAt
+  - Persona persona
+  - Residencia residencia
+  - FichaMedica fichaMedica
+  - AfiliacionObraSocial afiliacion
+  + crearPaciente(PacienteRequestDTO dto, Integer idUsuario) PacienteResponseDTO
+  + existeDni(dni : Integer, excluirId : Integer) boolean
+  - obtenerPacienteActivo(idPaciente : Integer) Paciente
+  + filtrarPacientes(criterioBusqueda : String) List<PacienteResponseDTO>
+  - validarTelefonoUnico(numero : String, excluirPacienteId : Integer) void
+  - validarTelefonosSolicitud(telefono : String, contactos : List<ContactoEmergenciaDTO>, excluirPacienteId : Integer) void
+  + listarPacientes() List<PacienteResponseDTO>
+  + listarPacientesEliminados() List<PacienteResponseDTO>
+  + actualizarDatos(idPaciente : Integer, dto : PacienteRequestDTO) PacienteResponseDTO
+  + eliminarPaciente(idPaciente : Integer) void
+  + restaurarPaciente(idPaciente : Integer) void
+  - agregarTelefono(paciente : Paciente, numero : String, tipo : String) void
+  - agregarContactoEmergencia(paciente : Paciente, contactos : List<ContactoEmergencia>) void
+}
+
+class Residencia {
+  - String tipoResidencia
+  - Domicilio domicilio
+  + cambiarDomicilio(idPaciente : Integer, dto : PacienteRequestDTO) Residencia
+}
+
+class Domicilio {
+  - String calle
+  - Integer numero
+  - Integer piso
+  - Localidad localidad
+  + actualizarUbicacion(idPaciente : Integer, dto : PacienteRequestDTO) Domicilio
+}
+
+class Localidad {
+  - String nombreLocalidad
+  - Integer codigoPostal
+  - Provincia provincia
+  + actualizarLocalidad(idPaciente : Integer, dto : PacienteRequestDTO) Localidad
+}
+
+class Provincia {
+  - String nombreProvincia
+}
+
+class ObraSocial {
+  - String nombreObra
+  - estaActiva(dto : PacienteRequestDTO) boolean
+  + obtenerObraSocialPaciente(idPaciente : Integer) ObraSocial
+}
+
+class AfiliacionObraSocial {
+  - String numeroAfiliado
+  - LocalDate fechaAlta
+  - LocalDate fechaVencimiento
+  - LocalDate fechaBaja
+  - ObraSocial obraSocial
+  - estaVigente(dto : PacienteRequestDTO) boolean
+  - darDeBaja(dto : PacienteRequestDTO) void
+  - renovar(dto : PacienteRequestDTO) AfiliacionObraSocial
+}
+
+class FichaMedica {
+  - String tipoSangre
+  - String antecedentesText
+  - Set<Alergia> alergias
+  - Set<EnfermedadCronica> enfermedadesCronicas
+  - Set<AntecedenteFamiliar> antecedentesFamiliares
+  + crearFichaMedica(tipoSangre : String, alergias : List<String>, enfermedadesCronicas : List<String>, antecedentesFamiliares : List<String>) FichaMedica
+  - agregarAlergia(ficha : FichaMedica, nombres : List<String>) void
+  - agregarEnfermedadCronica(ficha : FichaMedica, nombres : List<String>) void
+  - agregarAntecedenteFamiliar(ficha : FichaMedica, nombres : List<String>) void
+  + actualizarAntecedentes(idPaciente : Integer, dto : PacienteRequestDTO) PacienteResponseDTO
+}
+
+class Alergia {
+  - String nombreAlergia
+}
+
+class EnfermedadCronica {
+  - String nombreEnfermedad
+}
+
+class AntecedenteFamiliar {
+  - String nombreEnfermedad
+}
+
+class Telefono {
+  - String numeroTelefono
+  - String tipoTelefono
+  - Paciente paciente
+  - cambiarNumero(paciente : Paciente, numero : String, tipo : String) void
+  - normalizarTelefono(telefono : String) String
+}
+
+class ContactoEmergencia {
+  - String nombreCompleto
+  - String parentesco
+  - String telefonoCelular
+  - Paciente paciente
+  - actualizarContacto(paciente : Paciente, contactos : List<ContactoEmergencia>) void
+}
+
+namespace Patron_Builder {
+  class HistorialMedico {
+    <<Builder>>
+    - LocalDateTime fechaCreacion
+    - LocalDateTime fechaActualizacion
+    - String observaciones
+    - String estadoHistorial
+    - Paciente paciente
+    - List<RegistroClinico> registros
+    - List<Internacion> internaciones
+    + crearHistorialMedico(idPaciente : Integer, fechaCreacion : LocalDateTime, estado : String) HistorialMedico
+    + obtenerHistorialMedico(idPaciente : Integer) HistorialMedico
+    + registrarEvento(idPaciente : Integer, dto : RegistroClinicoRequestDTO, idUsuario : Integer) void
+    + agregarInternacion(idHabitacion : Integer, dto : InternacionRequestDTO, idUsuario : Integer) void
+    + abrir(idPaciente : Integer) void
+    - actualizarFechaModificacion(fechaActual : LocalDateTime) void
+    + builder() Builder$
+  }
+
+  class TipoProcedimiento {
+    - String nombreTipoProcedimiento
+    + obtenerTipoProcedimiento(idTipoProcedimiento : Integer) TipoProcedimiento
+  }
+
+  class RegistroClinico {
+    <<Builder>>
+    - String descripcion
+    - LocalDateTime fechaRegistro
+    - HistorialMedico historial
+    - TipoProcedimiento tipoProcedimiento
+    - Usuario usuario
+    + crearRegistroClinico(descripcion : String, fechaActual : LocalDateTime, idHistorial : Integer, idTipoProcedimiento : Integer, idUsuario : Integer) RegistroClinico
+    + registrarEventoInicial(nombreTipo : String, idHistorial : Integer, idUsuario : Integer) void
+    + esAmbulatorio(idPaciente : Integer) boolean
+    + builder() Builder$
+  }
+}
+note for HistorialMedico "Patrón Builder: permite construir el historial con estado, fecha de creación, actualización y paciente."
+note for RegistroClinico "Patrón Builder: permite crear registros clínicos completos con descripción, fecha, historial, tipo y usuario."
+
+class Internacion {
+  - LocalDateTime fechaInicio
+  - LocalDateTime fechaFin
+  - Integer cantidadTraslados
+  - HistorialMedico historial
+  - HabitacionInternacion habitacion
+  + crearInternacion(fechaInicio : LocalDateTime, idHistorial : Integer, idHabitacion : Integer) Internacion
+  + verificarInternacionActiva(idPaciente : Integer) boolean
+  + consultarEstadoPaciente(idPaciente : Integer) String
+  + trasladar(idInternacion : Integer, dto : TrasladoRequestDTO, idUsuario : Integer) void
+  + egresar(idInternacion : Integer, dto : EgresoRequestDTO, idUsuario : Integer) void
+  - finalizar(dto : EgresoRequestDTO) String
+}
+
+class HabitacionInternacion {
+  - String numeroHabitacion
+  - Integer pisoHabitacion
+  - String estadoHabitacion
+  + obtenerHabitaciones() List<HabitacionResponseDTO>
+  - estaDisponible(idHabitacion : Integer) boolean
+  - ocupar(idHabitacion : Integer, nuevoEstado : String) void
+  + actualizarEstadoHabitacion(idHabitacion : Integer, nuevoEstado : String) void
+  + liberar(idHabitacion : Integer, nuevoEstado : String) void
+}
+
+class InvitacionRegistro {
+  - String email
+  - String token
+  - Rol rol
+  - Usuario usuarioCreador
+  - LocalDateTime fechaCreacion
+  - LocalDateTime fechaExpiracion
+  - LocalDateTime fechaUso
+  - OffsetDateTime deletedAt
+  + estaVigente(token : String) boolean
+  + aceptar(token : String) LoginResponseDTO
+}
+
+
+Usuario "*" --> "1" Rol : rol
+Usuario "1" --> "1" Persona : persona
+Usuario "1" --> "0..1" Administrador : administrador
+Paciente "1" --> "1" Persona : persona
+Paciente "1" *-- "1" Residencia : residencia
+Paciente "1" *-- "1" FichaMedica : fichaMedica
+Paciente "*" --> "0..1" AfiliacionObraSocial : afiliacion
+Paciente "1" --> "*" Telefono : telefonos
+Paciente "1" --> "*" ContactoEmergencia : contactos
+Paciente "1" --> "1" HistorialMedico : historiales
+Residencia "1" *-- "1" Domicilio : domicilio
+Domicilio "*" --> "1" Localidad : localidad
+Localidad "*" --> "1" Provincia : provincia
+AfiliacionObraSocial "*" --> "1" ObraSocial : obraSocial
+FichaMedica "*" --> "*" Alergia : alergias
+FichaMedica "*" --> "*" EnfermedadCronica : enfermedadesCronicas
+FichaMedica "*" --> "*" AntecedenteFamiliar : antecedentesFamiliares
+HistorialMedico "1" --> "*" RegistroClinico : registros
+HistorialMedico "1" --> "*" Internacion : internaciones
+RegistroClinico "*" --> "1" TipoProcedimiento : tipoProcedimiento
+RegistroClinico "*" --> "1" Usuario : usuario
+Internacion "*" --> "1" HabitacionInternacion : habitacion
+InvitacionRegistro "*" --> "1" Rol : rol
+InvitacionRegistro "*" --> "1" Usuario : usuarioCreador

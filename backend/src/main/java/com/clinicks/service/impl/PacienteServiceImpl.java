@@ -5,6 +5,7 @@ import com.clinicks.dto.PacienteRequestDTO;
 import com.clinicks.dto.PacienteResponseDTO;
 import com.clinicks.exception.AfiliadoDuplicadoException;
 import com.clinicks.exception.DniDuplicadoException;
+import com.clinicks.exception.OperacionNoPermitidaException;
 import com.clinicks.exception.PacienteNoEncontradoException;
 import com.clinicks.exception.TelefonoDuplicadoException;
 import com.clinicks.model.*;
@@ -40,6 +41,10 @@ public class PacienteServiceImpl implements PacienteService {
     private final ContactoEmergenciaRepository   contactoEmergenciaRepository;
     private final LocalidadRepository            localidadRepository;
     private final HistorialMedicoRepository      historialMedicoRepository;
+    private final RegistroClinicoRepository      registroClinicoRepository;
+    private final TipoProcedimientoRepository    tipoProcedimientoRepository;
+    private final UsuarioRepository              usuarioRepository;
+    private final InternacionRepository          internacionRepository;
 
     // ─── LISTAR ────────────────────────────────────────────────────────────────
 
@@ -100,7 +105,7 @@ public class PacienteServiceImpl implements PacienteService {
 
     @Override
     @Transactional
-    public PacienteResponseDTO crearPaciente(PacienteRequestDTO dto) {
+    public PacienteResponseDTO crearPaciente(PacienteRequestDTO dto, Integer idUsuario) {
         if (pacienteRepository.existePorDni(dto.getDni())) {
             throw new DniDuplicadoException(dto.getDni());
         }
@@ -156,13 +161,21 @@ public class PacienteServiceImpl implements PacienteService {
         guardarTelefono(saved, dto.getTelefono(), dto.getTipoTelefono());
         guardarContactosEmergencia(saved, dto.getContactosEmergencia());
 
-        if (!historialMedicoRepository.existePorPaciente(saved)) {
-            historialMedicoRepository.save(HistorialMedico.builder()
-                    .paciente(saved)
-                    .estadoHistorial("activo")
-                    .fechaCreacion(LocalDateTime.now())
-                    .fechaActualizacion(LocalDateTime.now())
-                    .build());
+        HistorialMedico historial = historialMedicoRepository.encontrarPorIdPaciente(saved.getIdPaciente())
+                .orElseGet(() -> historialMedicoRepository.save(HistorialMedico.builder()
+                        .paciente(saved)
+                        .estadoHistorial("activo")
+                        .fechaCreacion(LocalDateTime.now())
+                        .fechaActualizacion(LocalDateTime.now())
+                        .build()));
+
+        // Auto-crear eventos iniciales del historial
+        registrarEventoInicial("Apertura de historial", buildDescApertura(saved), historial, idUsuario);
+        if (ficha != null && !ficha.getAlergias().isEmpty()) {
+            registrarEventoInicial("Registro administrativo", buildDescAlergias(ficha), historial, idUsuario);
+        }
+        if (tieneAntecedentes(ficha)) {
+            registrarEventoInicial("Registro administrativo", buildDescAntecedentes(ficha), historial, idUsuario);
         }
 
         return mapearPacienteADTO(saved);
@@ -242,6 +255,10 @@ public class PacienteServiceImpl implements PacienteService {
     @Transactional
     public void eliminarPaciente(Integer id) {
         Paciente paciente = obtenerPacienteActivo(id);
+        if (internacionRepository.encontrarActivaPorPaciente(id).isPresent()) {
+            throw new OperacionNoPermitidaException(
+                "No se puede dar de baja al paciente porque está internado/a actualmente.");
+        }
         paciente.setDeletedAt(OffsetDateTime.now());
         pacienteRepository.save(paciente);
     }
@@ -277,6 +294,14 @@ public class PacienteServiceImpl implements PacienteService {
     }
 
     /**
+     * Elimina todos los caracteres que no sean dígitos numéricos.
+     */
+    private String normalizarTelefono(String telefono) {
+        if (!StringUtils.hasText(telefono)) return telefono;
+        return telefono.replaceAll("[^\\d]", "");
+    }
+
+    /**
      * Validates that a single phone number does not exist in the Telefono or
      * ContactoEmergencia tables for any patient other than {@code excluirPacienteId}.
      */
@@ -305,7 +330,7 @@ public class PacienteServiceImpl implements PacienteService {
         Set<String> vistos = new HashSet<>();
 
         if (StringUtils.hasText(telefono)) {
-            String t = telefono.trim();
+            String t = normalizarTelefono(telefono.trim());
             vistos.add(t);
             validarTelefonoUnico(t, excluirPacienteId);
         }
@@ -313,7 +338,7 @@ public class PacienteServiceImpl implements PacienteService {
         if (contactos == null) return;
         for (ContactoEmergenciaDTO c : contactos) {
             if (!StringUtils.hasText(c.getTelefono())) continue;
-            String t = c.getTelefono().trim();
+            String t = normalizarTelefono(c.getTelefono().trim());
             if (!vistos.add(t)) {
                 throw new TelefonoDuplicadoException(t);
             }
@@ -364,49 +389,73 @@ public class PacienteServiceImpl implements PacienteService {
         return localidadRepository.findAll().stream().findFirst().orElse(null);
     }
 
-    private AfiliacionObraSocial resolverAfiliacion(PacienteRequestDTO dto) {
+        /**
+         * Resuelve y persiste la afiliación a una obra social a partir de los datos
+         * recibidos en el DTO.
+         *
+         * <p>Flujo general:</p>
+         * <ul>
+         *   <li>Primero intenta obtener la obra social por ID.</li>
+         *   <li>Si no viene ID, busca por nombre ignorando mayúsculas/minúsculas.</li>
+         *   <li>Si no existe, crea una nueva obra social.</li>
+         *   <li>Luego determina el número de afiliado, usando el enviado o generando uno.</li>
+         *   <li>Finalmente, actualiza una afiliación existente o crea una nueva.</li>
+         * </ul>
+         */
+        private AfiliacionObraSocial resolverAfiliacion(PacienteRequestDTO dto) {
+        // Obra social que se asociará a la afiliación.
         ObraSocial obraSocial = null;
 
+        // Si se recibió un ID, se busca la obra social existente en la base de datos.
         if (dto.getIdObraSocial() != null) {
             obraSocial = obraSocialRepository.findById(dto.getIdObraSocial()).orElse(null);
         } else if (StringUtils.hasText(dto.getNombreObraSocial())) {
+            // Si no hay ID, se usa el nombre para buscarla sin distinguir mayúsculas/minúsculas.
             String nombre = dto.getNombreObraSocial().trim();
             obraSocial = obraSocialRepository
-                    .encontrarPorNombreIgnorandoMayusculas(nombre)
-                    .orElseGet(() -> obraSocialRepository.save(
-                            ObraSocial.builder().nombreObra(nombre).build()
-                    ));
+                .encontrarPorNombreIgnorandoMayusculas(nombre)
+                // Si no existe, se crea una nueva obra social con el nombre recibido.
+                .orElseGet(() -> obraSocialRepository.save(
+                    ObraSocial.builder().nombreObra(nombre).build()
+                ));
         }
 
+        // Si no se pudo resolver la obra social, no se puede continuar con la afiliación.
         if (obraSocial == null) return null;
 
+        // Se toma el número de afiliado enviado por el cliente o se genera uno automático.
         String nro = StringUtils.hasText(dto.getNroAfiliado())
-                ? dto.getNroAfiliado().trim()
-                : obraSocial.getNombreObra().toUpperCase().replaceAll("\\s+", "-") + "-" + dto.getDni();
+            ? dto.getNroAfiliado().trim()
+            : String.valueOf(dto.getDni());
 
+        // Se guarda la referencia en una variable final para usarla dentro de expresiones lambda.
         ObraSocial finalOS = obraSocial;
+
+        // Fecha de vencimiento de la afiliación recibida desde el DTO.
         LocalDate vencimiento = dto.getFechaVencimientoAfiliacion();
 
+        // Si ya existe una afiliación con ese número y obra social, se actualiza la fecha de vencimiento.
+        // Si no existe, se crea una nueva afiliación con la fecha de alta actual.
         return afiliacionRepository.encontrarPorNumeroAfiliadoYObraSocial(nro, finalOS)
-                .map(existing -> {
-                    existing.setFechaVencimiento(vencimiento);
-                    return afiliacionRepository.save(existing);
-                })
-                .orElseGet(() -> afiliacionRepository.save(
-                        AfiliacionObraSocial.builder()
-                                .numeroAfiliado(nro)
-                                .fechaAlta(LocalDate.now())
-                                .fechaVencimiento(vencimiento)
-                                .obraSocial(finalOS)
-                                .build()
-                ));
-    }
+            .map(existing -> {
+                existing.setFechaVencimiento(vencimiento);
+                return afiliacionRepository.save(existing);
+            })
+            .orElseGet(() -> afiliacionRepository.save(
+                AfiliacionObraSocial.builder()
+                    .numeroAfiliado(nro)
+                    .fechaAlta(LocalDate.now())
+                    .fechaVencimiento(vencimiento)
+                    .obraSocial(finalOS)
+                    .build()
+            ));
+        }
 
     private void guardarTelefono(Paciente paciente, String numero, String tipo) {
         if (!StringUtils.hasText(numero)) return;
         String tipoFinal = StringUtils.hasText(tipo) ? tipo : "personal";
         telefonoRepository.save(Telefono.builder()
-                .numeroTelefono(numero.trim())
+                .numeroTelefono(normalizarTelefono(numero.trim()))
                 .tipoTelefono(tipoFinal)
                 .paciente(paciente)
                 .build());
@@ -420,9 +469,75 @@ public class PacienteServiceImpl implements PacienteService {
                     .paciente(paciente)
                     .nombreCompleto(StringUtils.hasText(c.getNombre()) ? c.getNombre().trim() : "Sin nombre")
                     .parentesco(StringUtils.hasText(c.getParentesco()) ? c.getParentesco().trim() : "Sin parentesco")
-                    .telefonoCelular(StringUtils.hasText(c.getTelefono()) ? c.getTelefono().trim() : "Sin teléfono")
+                    .telefonoCelular(StringUtils.hasText(c.getTelefono()) ? normalizarTelefono(c.getTelefono().trim()) : "Sin teléfono")
                     .build());
         }
+    }
+
+    // ─── AUTO-EVENTOS DE APERTURA ──────────────────────────────────────────────
+
+    private void registrarEventoInicial(String nombreTipo, String descripcion,
+                                        HistorialMedico historial, Integer idUsuario) {
+        tipoProcedimientoRepository.findByNombreTipoProcedimiento(nombreTipo).ifPresent(tipo ->
+            usuarioRepository.findById(idUsuario).ifPresent(usuario -> {
+                registroClinicoRepository.save(RegistroClinico.builder()
+                        .descripcion(descripcion)
+                        .fechaRegistro(LocalDateTime.now())
+                        .historial(historial)
+                        .tipoProcedimiento(tipo)
+                        .usuario(usuario)
+                        .build());
+                historial.setFechaActualizacion(LocalDateTime.now());
+                historialMedicoRepository.save(historial);
+            })
+        );
+    }
+
+    private String buildDescApertura(Paciente paciente) {
+        StringBuilder sb = new StringBuilder("Apertura de historial clínico. Se registran datos personales");
+        if (paciente.getResidencia() != null) sb.append(", domicilio");
+        if (paciente.getAfiliacion() != null && paciente.getAfiliacion().getObraSocial() != null) {
+            sb.append(", obra social (")
+              .append(paciente.getAfiliacion().getObraSocial().getNombreObra())
+              .append(")");
+        }
+        sb.append(" y ficha médica inicial.");
+        return sb.toString();
+    }
+
+    private String buildDescAlergias(FichaMedica ficha) {
+        String lista = ficha.getAlergias().stream()
+                .map(Alergia::getNombreAlergia)
+                .collect(Collectors.joining(", "));
+        return "Actualización de ficha médica: se registra alergia a " + lista + ".";
+    }
+
+    private String buildDescAntecedentes(FichaMedica ficha) {
+        StringBuilder sb = new StringBuilder("Actualización de ficha médica:");
+        if (!ficha.getEnfermedadesCronicas().isEmpty()) {
+            String ecs = ficha.getEnfermedadesCronicas().stream()
+                    .map(EnfermedadCronica::getNombreEnfermedad)
+                    .collect(Collectors.joining(", "));
+            sb.append(" enfermedades crónicas: ").append(ecs).append(";");
+        }
+        if (!ficha.getAntecedentesFamiliares().isEmpty()) {
+            String afs = ficha.getAntecedentesFamiliares().stream()
+                    .map(AntecedenteFamiliar::getNombreEnfermedad)
+                    .collect(Collectors.joining(", "));
+            sb.append(" antecedentes familiares: ").append(afs).append(";");
+        }
+        if (StringUtils.hasText(ficha.getAntecedentesText())) {
+            sb.append(" observaciones: ").append(ficha.getAntecedentesText().trim()).append(";");
+        }
+        return sb.toString().trim().replaceAll(";$", ".").replace(";", ",");
+    }
+
+    private boolean tieneAntecedentes(FichaMedica ficha) {
+        return ficha != null && (
+                !ficha.getEnfermedadesCronicas().isEmpty() ||
+                !ficha.getAntecedentesFamiliares().isEmpty() ||
+                StringUtils.hasText(ficha.getAntecedentesText())
+        );
     }
 
     // ─── MAPPERS ───────────────────────────────────────────────────────────────

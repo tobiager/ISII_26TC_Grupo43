@@ -1,12 +1,40 @@
-import { X, Phone, MapPin, AlertTriangle, Heart, Users, CreditCard, Calendar, Droplets, Home } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import {
+  X, Phone, MapPin, AlertTriangle, Heart, Users, CreditCard,
+  Calendar, Droplets, Home, ClipboardList, ChevronDown,
+  ArrowRightLeft, LogOut, BedDouble, Activity, Plus,
+} from 'lucide-react'
+import { toast } from 'sonner'
 import type { Patient } from '../types/patient'
+import type {
+  HistorialMedicoDetalle,
+  InternacionHistorial,
+  RegistroClinico,
+  TipoProcedimiento,
+} from '../types/history'
+import { historialService } from '../services/historialService'
+import { useAuth } from '../contexts/AuthContext'
+import { canEditMedicalHistory } from '../utils/permissions'
+import { formatArgentinePhone } from '../utils/formatters'
+import { getTipoColor, TIPOS_AUTOMATICOS } from '../utils/clinickEventColors'
+import CustomSelect from './CustomSelect'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+
+interface RoomActions {
+  onTrasladar?: () => void
+  onEgresar?: () => void
+}
 
 interface PatientDetailModalProps {
   patient: Patient | null
   onClose: () => void
+  defaultTab?: Tab
+  roomActions?: RoomActions
 }
+
+type Tab = 'info' | 'historial'
 
 function formatDate(dateStr: string | null | undefined) {
   if (!dateStr) return '—'
@@ -14,242 +42,598 @@ function formatDate(dateStr: string | null | undefined) {
   catch { return '—' }
 }
 
-const tipoSangreColors: Record<string, string> = {
-  'A+': 'bg-red-100 text-red-700',
-  'A-': 'bg-red-100 text-red-700',
-  'B+': 'bg-orange-100 text-orange-700',
-  'B-': 'bg-orange-100 text-orange-700',
-  'AB+': 'bg-purple-100 text-purple-700',
-  'AB-': 'bg-purple-100 text-purple-700',
-  'O+': 'bg-blue-100 text-blue-700',
-  'O-': 'bg-blue-100 text-blue-700',
+function formatDateTime(dateStr: string | null | undefined) {
+  if (!dateStr) return '—'
+  try { return format(new Date(dateStr), "d MMM yyyy · HH:mm", { locale: es }) }
+  catch { return '—' }
 }
 
-export default function PatientDetailModal({ patient, onClose }: PatientDetailModalProps) {
+const tipoSangreColors: Record<string, string> = {
+  'A+': 'bg-red-100 text-red-700', 'A-': 'bg-red-100 text-red-700',
+  'B+': 'bg-orange-100 text-orange-700', 'B-': 'bg-orange-100 text-orange-700',
+  'AB+': 'bg-purple-100 text-purple-700', 'AB-': 'bg-purple-100 text-purple-700',
+  'O+': 'bg-blue-100 text-blue-700', 'O-': 'bg-blue-100 text-blue-700',
+}
+
+function groupClinicalEventsByContext(historial: HistorialMedicoDetalle): {
+  ambulatorios: RegistroClinico[]
+  internaciones: InternacionHistorial[]
+} {
+  const ALTA_TIPOS = new Set(['Alta médica', 'Egreso hospitalario'])
+  const intByFechaFin = new Map<string, number>()
+  historial.internaciones.forEach((int, idx) => {
+    if (int.estado === 'EGRESADA' && int.fechaFin) {
+      intByFechaFin.set(int.fechaFin.substring(0, 16), idx)
+    }
+  })
+  const ambulatorios: RegistroClinico[] = []
+  const altasPorInternacion = new Map<number, RegistroClinico[]>()
+  historial.eventosAmbulatorios.forEach(event => {
+    if (ALTA_TIPOS.has(event.tipoProcedimiento)) {
+      const eventMin = event.fechaRegistro.substring(0, 16)
+      const intIdx = intByFechaFin.get(eventMin)
+      if (intIdx !== undefined) {
+        if (!altasPorInternacion.has(intIdx)) altasPorInternacion.set(intIdx, [])
+        altasPorInternacion.get(intIdx)!.push(event)
+        return
+      }
+    }
+    ambulatorios.push(event)
+  })
+  const internaciones = historial.internaciones.map((int, idx) => {
+    const extras = altasPorInternacion.get(idx) ?? []
+    if (extras.length === 0) return int
+    return { ...int, eventos: [...int.eventos, ...extras] }
+  })
+  return { ambulatorios, internaciones }
+}
+
+export default function PatientDetailModal({ patient, onClose, defaultTab, roomActions }: PatientDetailModalProps) {
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const canEdit = user ? canEditMedicalHistory(user.rol) : false
+  const isRoomView = !!roomActions
+
+  const [tab, setTab] = useState<Tab>('info')
+  const [historial, setHistorial]               = useState<HistorialMedicoDetalle | null>(null)
+  const [historialLoading, setHistorialLoading] = useState(false)
+
+  // Room-view state
+  const [tipos, setTipos]         = useState<TipoProcedimiento[]>([])
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newTipo, setNewTipo]     = useState<number | ''>('')
+  const [newDesc, setNewDesc]     = useState('')
+  const [addLoading, setAddLoading] = useState(false)
+
+  // Reset on patient change
+  useEffect(() => {
+    if (!patient) return
+    setHistorial(null)
+    setShowAddForm(false)
+    setNewTipo('')
+    setNewDesc('')
+    if (!isRoomView) setTab(defaultTab ?? 'info')
+  }, [patient])
+
+  // Room view: load historial eagerly
+  useEffect(() => {
+    if (!patient || !isRoomView) return
+    setHistorialLoading(true)
+    const ctrl = new AbortController()
+    historialService.getByPaciente(patient.id, ctrl.signal)
+      .then(setHistorial)
+      .catch(err => { if (err?.name !== 'CanceledError') toast.error('No se pudo cargar el historial') })
+      .finally(() => setHistorialLoading(false))
+    return () => ctrl.abort()
+  }, [patient, isRoomView])
+
+  // Room view: load tipos once (for registration form)
+  useEffect(() => {
+    if (!isRoomView || !canEdit) return
+    historialService.getTiposProcedimiento().then(setTipos).catch(() => {})
+  }, [isRoomView, canEdit])
+
+  // Non-room view: lazy load historial on tab switch
+  useEffect(() => {
+    if (!patient || isRoomView || tab !== 'historial') return
+    setHistorialLoading(true)
+    const ctrl = new AbortController()
+    historialService.getByPaciente(patient.id, ctrl.signal)
+      .then(setHistorial)
+      .catch(err => { if (err?.name !== 'CanceledError') toast.error('No se pudo cargar el historial') })
+      .finally(() => setHistorialLoading(false))
+    return () => ctrl.abort()
+  }, [patient, tab])
+
+  const grouped = useMemo(() => {
+    if (!historial) return { ambulatorios: [] as RegistroClinico[], internaciones: [] as InternacionHistorial[] }
+    return groupClinicalEventsByContext(historial)
+  }, [historial])
+
+  const activeInternacion = useMemo(() =>
+    grouped.internaciones.find(i => i.estado === 'ACTIVA') ?? null
+  , [grouped])
+
+  const handleAddRegistro = async () => {
+    if (!patient || !newTipo || !newDesc.trim()) return
+    setAddLoading(true)
+    try {
+      await historialService.registrarEvento({
+        idPaciente: patient.id,
+        idTipoProcedimiento: Number(newTipo),
+        descripcion: newDesc.trim(),
+      })
+      toast.success('Evento registrado correctamente')
+      setNewTipo('')
+      setNewDesc('')
+      setShowAddForm(false)
+      const h = await historialService.getByPaciente(patient.id)
+      setHistorial(h)
+    } catch {
+      toast.error('No se pudo registrar el evento')
+    } finally {
+      setAddLoading(false)
+    }
+  }
+
   if (!patient) return null
 
-  const alergiasList      = Array.isArray(patient.alergias) ? patient.alergias : []
-  const contactosList     = Array.isArray(patient.contactosEmergencia) ? patient.contactosEmergencia : []
-  const iniciales         = `${patient.nombre?.[0] ?? ''}${patient.apellido?.[0] ?? ''}`
+  const alergiasList  = Array.isArray(patient.alergias) ? patient.alergias : []
+  const contactosList = Array.isArray(patient.contactosEmergencia) ? patient.contactosEmergencia : []
+  const iniciales     = `${patient.nombre?.[0] ?? ''}${patient.apellido?.[0] ?? ''}`
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-xl mx-4 max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="relative z-10 bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col overflow-hidden">
 
-        {/* Header con avatar */}
-        <div className="bg-gradient-to-br from-indigo-600 to-blue-500 px-6 py-5 text-white">
+        {/* Alergias banner */}
+        {alergiasList.length > 0 && (
+          <div className="bg-red-600 px-6 py-2.5 flex items-center gap-3 flex-shrink-0">
+            <AlertTriangle size={16} className="text-white flex-shrink-0" />
+            <span className="text-white text-xs font-bold uppercase tracking-wide mr-1">Alergias:</span>
+            <div className="flex flex-wrap gap-1.5">
+              {alergiasList.map(a => (
+                <span key={a} className="bg-white/20 text-white text-xs font-semibold px-2 py-0.5 rounded-full uppercase tracking-wide">
+                  {a}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Header */}
+        <div className="px-6 py-5 border-b border-gray-100 flex-shrink-0">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-white font-bold text-xl flex-shrink-0">
+              <div className="w-14 h-14 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xl flex-shrink-0">
                 {iniciales}
               </div>
               <div>
-                <h2 className="text-lg font-bold">{patient.apellido}, {patient.nombre}</h2>
-                <p className="text-blue-100 text-sm mt-0.5">DNI {patient.dni}</p>
-                <div className="flex items-center gap-2 mt-2">
-                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-                    tipoSangreColors[patient.tipoSangre] ?? 'bg-white/20 text-white'
-                  }`}>
-                    <Droplets size={10} className="inline mr-1" />
-                    {patient.tipoSangre}
-                  </span>
-                  <span className="text-xs bg-white/20 px-2.5 py-1 rounded-full">
-                    {patient.edad} años
-                  </span>
-                  <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                    patient.estado === 'Internado' ? 'bg-white text-blue-700'
-                    : patient.estado === 'Egresado' ? 'bg-white/20 text-white'
-                    : 'bg-green-400/30 text-white'
-                  }`}>
-                    {patient.estado}
-                  </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-lg font-bold text-gray-900">{patient.apellido}, {patient.nombre}</h2>
+                  <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${
+                    patient.estado === 'Internado' ? 'bg-blue-100 text-blue-700'
+                    : 'bg-green-100 text-green-700'
+                  }`}>{patient.estado}</span>
                 </div>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/20 transition-colors"
-            >
-              <X size={18} />
-            </button>
-          </div>
-        </div>
-
-        {/* Cuerpo */}
-        <div className="overflow-y-auto flex-1 p-6 space-y-5">
-
-          {/* Datos personales */}
-          <section>
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <Calendar size={13} />
-              Datos Personales
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
-              <InfoRow label="Fecha de nacimiento" value={formatDate(patient.fechaNacimiento)} />
-              <InfoRow label="Edad" value={`${patient.edad} años`} />
-              <InfoRow
-                label={`Teléfono${patient.tipoTelefono ? ` (${patient.tipoTelefono})` : ''}`}
-                value={patient.telefono}
-                icon={<Phone size={13} />}
-              />
-              <InfoRow label="Tipo de sangre" value={patient.tipoSangre} />
-            </div>
-          </section>
-
-          {/* Dirección */}
-          {(patient.direccion || patient.nombreLocalidad) && (
-            <section>
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <MapPin size={13} />
-                Dirección
-              </h3>
-              <div className="bg-gray-50 rounded-xl p-3 text-sm text-gray-700 space-y-1">
-                {patient.direccion && (
-                  <p>
-                    {patient.direccion}
-                    {patient.numeroDireccion ? ` ${patient.numeroDireccion}` : ''}
-                    {patient.piso != null ? `, Piso ${patient.piso}` : ''}
-                  </p>
-                )}
-                {patient.nombreLocalidad && (
-                  <p className="text-gray-500">
-                    {patient.nombreLocalidad}{patient.nombreProvincia ? `, ${patient.nombreProvincia}` : ''}
-                  </p>
-                )}
-                {patient.tipoResidencia && (
-                  <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full mt-1 ${
-                    patient.tipoResidencia === 'permanente'
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'bg-orange-100 text-orange-700'
-                  }`}>
-                    <Home size={10} className="inline mr-1" />
-                    {patient.tipoResidencia === 'permanente' ? 'Residencia permanente' : 'Residencia transitoria'}
+                <p className="text-sm text-gray-500 mt-0.5">{patient.edad} años</p>
+                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${tipoSangreColors[patient.tipoSangre] ?? 'bg-gray-100 text-gray-700'}`}>
+                    <Droplets size={10} /> {patient.tipoSangre}
                   </span>
-                )}
-              </div>
-            </section>
-          )}
-
-          {/* Alergias */}
-          <section>
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <AlertTriangle size={13} />
-              Alergias
-            </h3>
-            {alergiasList.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {alergiasList.map(a => (
-                  <span key={a} className="bg-red-100 text-red-700 text-xs font-medium px-3 py-1.5 rounded-full">
-                    {a}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-400 italic">Sin alergias registradas</p>
-            )}
-          </section>
-
-          {/* Antecedentes Médicos */}
-          {((patient.enfermedadesCronicas?.length ?? 0) > 0 ||
-            (patient.antecedentesFamiliares?.length ?? 0) > 0 ||
-            patient.antecedentesText) && (
-            <section>
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <Heart size={13} />
-                Antecedentes Médicos
-              </h3>
-              <div className="space-y-2">
-                {(patient.enfermedadesCronicas?.length ?? 0) > 0 && (
-                  <div className="bg-amber-50 border border-amber-100 rounded-xl p-3">
-                    <p className="text-xs font-medium text-amber-700 mb-2">Enfermedades crónicas</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {patient.enfermedadesCronicas!.map(e => (
-                        <span key={e} className="bg-amber-100 text-amber-800 text-xs font-medium px-2.5 py-1 rounded-full">{e}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {(patient.antecedentesFamiliares?.length ?? 0) > 0 && (
-                  <div className="bg-purple-50 border border-purple-100 rounded-xl p-3">
-                    <p className="text-xs font-medium text-purple-700 mb-2">Antecedentes familiares</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {patient.antecedentesFamiliares!.map(a => (
-                        <span key={a} className="bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-1 rounded-full">{a}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {patient.antecedentesText && (
-                  <div className="bg-purple-50 border border-purple-100 rounded-xl p-3">
-                    <p className="text-xs font-medium text-purple-700 mb-1">Observaciones</p>
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{patient.antecedentesText}</p>
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
-
-          {/* Contactos de Emergencia */}
-          {contactosList.length > 0 && (
-            <section>
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <Users size={13} />
-                Contactos de Emergencia
-              </h3>
-              <div className="space-y-2">
-                {contactosList.map((c, idx) => (
-                  <div key={idx} className="bg-yellow-50 border border-yellow-100 rounded-xl p-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-800">{c.nombre}</p>
-                        {c.parentesco && (
-                          <p className="text-xs text-yellow-700 mt-0.5">{c.parentesco}</p>
-                        )}
-                      </div>
-                      {c.telefono && (
-                        <span className="flex items-center gap-1 text-xs text-gray-600 bg-white border border-yellow-200 px-2 py-1 rounded-lg">
-                          <Phone size={11} />
-                          {c.telefono}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Obra Social */}
-          <section>
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <CreditCard size={13} />
-              Obra Social
-            </h3>
-            {patient.obraSocial ? (
-              <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-indigo-800">{patient.obraSocial}</p>
-                  {patient.nroAfiliado && (
-                    <span className="text-xs text-indigo-600 bg-indigo-100 px-2.5 py-1 rounded-lg font-mono">
-                      {patient.nroAfiliado}
+                  <span className="text-xs text-gray-500">DNI: <span className="font-mono font-medium text-gray-800">{patient.dni}</span></span>
+                  {patient.telefono && (
+                    <span className="text-xs text-gray-500 flex items-center gap-1"><Phone size={10} />{formatArgentinePhone(patient.telefono)}</span>
+                  )}
+                  {!isRoomView && patient.ultimaVisita && (
+                    <span className="text-xs text-gray-400 flex items-center gap-1">
+                      <Calendar size={10} />Última visita: {formatDate(patient.ultimaVisita)}
                     </span>
                   )}
                 </div>
-                {patient.fechaVencimientoAfiliacion && (
-                  <p className="text-xs text-indigo-500">
-                    Vence: {formatDate(patient.fechaVencimientoAfiliacion)}
-                  </p>
+
+                {/* Room view: internacion + room info */}
+                {isRoomView && activeInternacion && (
+                  <div className="flex items-center gap-2 mt-2 flex-wrap text-xs">
+                    <span className="flex items-center gap-1 bg-blue-50 border border-blue-100 text-blue-700 px-2.5 py-1 rounded-lg font-medium">
+                      <BedDouble size={11} />
+                      Hab. {activeInternacion.numeroHabitacion} — Piso {activeInternacion.pisoHabitacion}
+                    </span>
+                    <span className="text-gray-400">·</span>
+                    <span className="text-gray-500 flex items-center gap-1">
+                      <Calendar size={10} />
+                      Desde {formatDateTime(activeInternacion.fechaInicio)}
+                    </span>
+                    {patient.ultimaVisita && (
+                      <>
+                        <span className="text-gray-300">·</span>
+                        <span className="text-gray-400 flex items-center gap-1">
+                          <Calendar size={10} />Últ. visita: {formatDate(patient.ultimaVisita)}
+                        </span>
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
-            ) : (
-              <p className="text-sm text-gray-400 italic">Sin obra social</p>
+            </div>
+            <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors flex-shrink-0">
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* OS y contacto */}
+          <div className="grid grid-cols-2 gap-3 mt-4">
+            {patient.obraSocial && (
+              <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 flex items-start gap-2">
+                <CreditCard size={15} className="text-indigo-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-xs text-indigo-500 font-medium">Obra Social</p>
+                  <p className="text-sm font-semibold text-indigo-800">{patient.obraSocial}</p>
+                  {patient.nroAfiliado && (
+                    <p className="text-xs text-indigo-500 mt-0.5">Afiliado: {patient.nroAfiliado}</p>
+                  )}
+                </div>
+              </div>
             )}
-          </section>
+            {contactosList[0] && (
+              <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 flex items-start gap-2">
+                <Heart size={15} className="text-amber-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-xs text-amber-600 font-medium">Contacto de Emergencia</p>
+                  <p className="text-sm font-semibold text-amber-900">{contactosList[0].nombre}</p>
+                  {contactosList[0].parentesco && <p className="text-xs text-amber-600">{contactosList[0].parentesco}</p>}
+                  {contactosList[0].telefono && (
+                    <p className="text-xs text-amber-700 flex items-center gap-1 mt-0.5"><Phone size={10} />{formatArgentinePhone(contactosList[0].telefono)}</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Tabs — solo en vista normal (no room view) */}
+        {!isRoomView && (
+          <div className="flex border-b border-gray-100 flex-shrink-0">
+            <button
+              onClick={() => setTab('info')}
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+                tab === 'info' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Users size={15} />
+              Información
+            </button>
+            <button
+              onClick={() => setTab('historial')}
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+                tab === 'historial' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <ClipboardList size={15} />
+              Historial Clínico
+            </button>
+          </div>
+        )}
+
+        {/* Body */}
+        <div className="overflow-y-auto flex-1 p-6">
+
+          {/* ── ROOM VIEW ──────────────────────────────────────────────────────── */}
+          {isRoomView ? (
+            <div>
+              {/* Botón / formulario para registrar procedimiento */}
+              {canEdit && (
+                <div className="mb-5">
+                  {!showAddForm ? (
+                    <button
+                      onClick={() => setShowAddForm(true)}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium text-blue-700 border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors"
+                    >
+                      <Plus size={14} />
+                      Registrar procedimiento
+                    </button>
+                  ) : (
+                    <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                      <p className="text-sm font-semibold text-blue-900 mb-3">Nuevo evento de internación</p>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Tipo de procedimiento</label>
+                          <CustomSelect
+                            value={String(newTipo)}
+                            onChange={v => setNewTipo(v === '' ? '' : Number(v))}
+                            options={[
+                              { value: '', label: 'Seleccionar tipo...' },
+                              ...tipos
+                                .filter(t => !TIPOS_AUTOMATICOS.has(t.nombre))
+                                .map(t => ({ value: String(t.id), label: t.nombre })),
+                            ]}
+                            className="w-full py-2 px-3 text-sm border border-gray-200 rounded-xl bg-white cursor-pointer"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Descripción</label>
+                          <textarea
+                            value={newDesc}
+                            onChange={e => setNewDesc(e.target.value)}
+                            rows={3}
+                            placeholder="Descripción del evento clínico..."
+                            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl outline-none focus:border-blue-400 resize-none"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => { setShowAddForm(false); setNewTipo(''); setNewDesc('') }}
+                            className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50"
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            onClick={handleAddRegistro}
+                            disabled={!newTipo || !newDesc.trim() || addLoading}
+                            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {addLoading ? 'Guardando...' : 'Guardar evento'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Historial de internación actual */}
+              <div className="flex items-center gap-2 mb-3">
+                <ClipboardList size={13} className="text-blue-600" />
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Eventos de internación
+                </span>
+                {activeInternacion && (
+                  <span className="text-xs text-gray-400">({activeInternacion.eventos.length})</span>
+                )}
+              </div>
+
+              {historialLoading ? (
+                <div className="text-center py-10">
+                  <div className="inline-block w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                  <p className="text-xs text-gray-400 mt-2">Cargando eventos...</p>
+                </div>
+              ) : !activeInternacion ? (
+                <div className="text-center py-10 text-gray-400">
+                  <BedDouble size={32} className="mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">Sin internación activa registrada.</p>
+                </div>
+              ) : activeInternacion.eventos.length === 0 ? (
+                <p className="text-sm text-gray-400 italic text-center py-6">
+                  Sin eventos registrados durante esta internación.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {activeInternacion.eventos.map(r => (
+                    <RegistroCard key={r.id} registro={r} />
+                  ))}
+                </div>
+              )}
+
+              {/* Enlace al historial completo */}
+              <button
+                onClick={() => { navigate(`/historial/${patient.id}`); onClose() }}
+                className="w-full mt-5 flex items-center justify-center gap-1.5 py-2 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors"
+              >
+                <ClipboardList size={12} />
+                Ver historial clínico completo
+              </button>
+            </div>
+
+          ) : (
+          /* ── VISTA NORMAL: tabs ───────────────────────────────────────────── */
+            <>
+              {tab === 'info' && (
+                <div className="space-y-5">
+                  {/* Datos personales */}
+                  <section>
+                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                      <Calendar size={13} /> Datos Personales
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <InfoRow label="Fecha de nacimiento" value={formatDate(patient.fechaNacimiento)} />
+                      <InfoRow label="Tipo de sangre" value={patient.tipoSangre} />
+                      <InfoRow label={`Teléfono${patient.tipoTelefono ? ` (${patient.tipoTelefono})` : ''}`} value={formatArgentinePhone(patient.telefono)} icon={<Phone size={13} />} />
+                      <InfoRow label="Edad" value={`${patient.edad} años`} />
+                    </div>
+                  </section>
+
+                  {/* Dirección */}
+                  {(patient.direccion || patient.nombreLocalidad) && (
+                    <section>
+                      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <MapPin size={13} /> Dirección
+                      </h3>
+                      <div className="bg-gray-50 rounded-xl p-3 text-sm text-gray-700 space-y-1">
+                        {patient.direccion && (
+                          <p>{patient.direccion}{patient.numeroDireccion ? ` ${patient.numeroDireccion}` : ''}{patient.piso != null ? `, Piso ${patient.piso}` : ''}</p>
+                        )}
+                        {patient.nombreLocalidad && (
+                          <p className="text-gray-500">{patient.nombreLocalidad}{patient.nombreProvincia ? `, ${patient.nombreProvincia}` : ''}</p>
+                        )}
+                        {patient.tipoResidencia && (
+                          <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full mt-1 ${patient.tipoResidencia === 'permanente' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
+                            <Home size={10} className="inline mr-1" />
+                            {patient.tipoResidencia === 'permanente' ? 'Residencia permanente' : 'Residencia transitoria'}
+                          </span>
+                        )}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Antecedentes médicos */}
+                  {((patient.enfermedadesCronicas?.length ?? 0) > 0 ||
+                    (patient.antecedentesFamiliares?.length ?? 0) > 0 ||
+                    patient.antecedentesText) && (
+                    <section>
+                      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <Heart size={13} /> Antecedentes Médicos
+                      </h3>
+                      <div className="space-y-2">
+                        {(patient.enfermedadesCronicas?.length ?? 0) > 0 && (
+                          <div className="bg-amber-50 border border-amber-100 rounded-xl p-3">
+                            <p className="text-xs font-medium text-amber-700 mb-2">Enfermedades crónicas</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {patient.enfermedadesCronicas!.map(e => (
+                                <span key={e} className="bg-amber-100 text-amber-800 text-xs font-medium px-2.5 py-1 rounded-full">{e}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {(patient.antecedentesFamiliares?.length ?? 0) > 0 && (
+                          <div className="bg-purple-50 border border-purple-100 rounded-xl p-3">
+                            <p className="text-xs font-medium text-purple-700 mb-2">Antecedentes familiares</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {patient.antecedentesFamiliares!.map(a => (
+                                <span key={a} className="bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-1 rounded-full">{a}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {patient.antecedentesText && (
+                          <div className="bg-purple-50 border border-purple-100 rounded-xl p-3">
+                            <p className="text-xs font-medium text-purple-700 mb-1">Observaciones</p>
+                            <p className="text-sm text-gray-700 whitespace-pre-wrap">{patient.antecedentesText}</p>
+                          </div>
+                        )}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Contactos de emergencia adicionales */}
+                  {contactosList.length > 1 && (
+                    <section>
+                      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <Users size={13} /> Contactos de Emergencia
+                      </h3>
+                      <div className="space-y-2">
+                        {contactosList.slice(1).map((c, idx) => (
+                          <div key={idx} className="bg-yellow-50 border border-yellow-100 rounded-xl p-3">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <p className="text-sm font-medium text-gray-800">{c.nombre}</p>
+                                {c.parentesco && <p className="text-xs text-yellow-700 mt-0.5">{c.parentesco}</p>}
+                              </div>
+                              {c.telefono && (
+                                <span className="flex items-center gap-1 text-xs text-gray-600 bg-white border border-yellow-200 px-2 py-1 rounded-lg">
+                                  <Phone size={11} /> {formatArgentinePhone(c.telefono)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+                </div>
+              )}
+
+              {tab === 'historial' && (
+                <div>
+                  <div className="flex items-center justify-between mb-5">
+                    <div>
+                      <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                        <ClipboardList size={16} className="text-blue-600" />
+                        Historial Clínico
+                      </h3>
+                      {historial && (
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {historial.registros.length} registro{historial.registros.length !== 1 ? 's' : ''} encontrado{historial.registros.length !== 1 ? 's' : ''}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => { navigate(`/historial/${patient.id}`); onClose() }}
+                      className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white text-xs font-medium rounded-xl hover:bg-blue-700 transition-colors"
+                    >
+                      <ClipboardList size={13} />
+                      Ver historial completo
+                    </button>
+                  </div>
+
+                  {historialLoading ? (
+                    <div className="text-center py-12">
+                      <div className="inline-block w-7 h-7 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                      <p className="text-sm text-gray-400 mt-3">Cargando historial...</p>
+                    </div>
+                  ) : !historial || (historial.registros.length === 0 && !(historial.internaciones?.length)) ? (
+                    <div className="text-center py-12 text-gray-400">
+                      <ClipboardList size={36} className="mx-auto mb-3 opacity-40" />
+                      <p className="text-sm">Sin registros clínicos</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {grouped.ambulatorios.length > 0 && (
+                        <section>
+                          <div className="flex items-center gap-2 mb-3">
+                            <Activity size={13} className="text-green-600" />
+                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                              Atenciones ambulatorias
+                            </span>
+                            <span className="text-xs text-gray-400">({grouped.ambulatorios.length})</span>
+                          </div>
+                          <div className="space-y-3">
+                            {grouped.ambulatorios.map(r => (
+                              <RegistroCard key={r.id} registro={r} />
+                            ))}
+                          </div>
+                        </section>
+                      )}
+
+                      {grouped.internaciones.map((internacion, idx) => {
+                        const total = grouped.internaciones.length
+                        const label = internacion.estado === 'ACTIVA'
+                          ? 'Internación actual'
+                          : `Internación #${total - idx}`
+                        return (
+                          <InternacionBlock key={internacion.idInternacion} internacion={internacion} label={label} />
+                        )
+                      })}
+
+                      {!grouped.internaciones.length && !grouped.ambulatorios.length && (
+                        <div className="space-y-3">
+                          {historial.registros.map(r => (
+                            <RegistroCard key={r.id} registro={r} />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50">
+        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0">
+          {roomActions && (roomActions.onTrasladar || roomActions.onEgresar) && (
+            <div className="flex gap-2 mb-3">
+              {roomActions.onTrasladar && (
+                <button
+                  onClick={roomActions.onTrasladar}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium text-blue-700 border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors"
+                >
+                  <ArrowRightLeft size={14} />
+                  Trasladar
+                </button>
+              )}
+              {roomActions.onEgresar && (
+                <button
+                  onClick={roomActions.onEgresar}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium text-amber-700 border border-amber-200 bg-amber-50 hover:bg-amber-100 transition-colors"
+                >
+                  <LogOut size={14} />
+                  Egresar
+                </button>
+              )}
+            </div>
+          )}
           <button
             onClick={onClose}
             className="w-full py-2.5 rounded-xl text-sm font-medium text-gray-700 border border-gray-200 hover:bg-gray-100 transition-colors"
@@ -265,11 +649,104 @@ export default function PatientDetailModal({ patient, onClose }: PatientDetailMo
 function InfoRow({ label, value, icon }: { label: string; value?: string | null; icon?: React.ReactNode }) {
   return (
     <div className="bg-gray-50 rounded-xl p-3">
-      <p className="text-xs text-gray-400 mb-1 flex items-center gap-1">
-        {icon}
-        {label}
-      </p>
+      <p className="text-xs text-gray-400 mb-1 flex items-center gap-1">{icon}{label}</p>
       <p className="text-sm font-medium text-gray-800">{value ?? '—'}</p>
     </div>
+  )
+}
+
+function RegistroCard({ registro: r }: { registro: RegistroClinico }) {
+  const cardClass = getTipoColor(r.tipoProcedimiento)
+  return (
+    <div className={`rounded-xl p-4 ${cardClass}`}>
+      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+        {r.tipoProcedimiento}
+      </span>
+      <p className="text-sm text-gray-800 whitespace-pre-wrap mt-1">{r.descripcion}</p>
+      <div className="flex items-center gap-3 mt-2 text-xs text-gray-400 flex-wrap">
+        <span className="flex items-center gap-1">
+          <Calendar size={11} />
+          {formatDateTime(r.fechaRegistro)}
+        </span>
+        <span>•</span>
+        <span>{r.usuarioNombre}</span>
+        <span className="bg-white/60 px-1.5 py-0.5 rounded text-gray-500">{r.usuarioRol}</span>
+      </div>
+    </div>
+  )
+}
+
+function InternacionBlock({ internacion, label }: { internacion: InternacionHistorial; label: string }) {
+  const isActiva = internacion.estado === 'ACTIVA'
+  const [open, setOpen] = useState(isActiva)
+
+  return (
+    <section className={`rounded-xl border overflow-hidden ${isActiva ? 'border-blue-100' : 'border-gray-100'}`}>
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className={`w-full text-left px-4 py-3 flex items-start justify-between gap-3 transition-colors ${
+          isActiva ? 'bg-blue-50 hover:bg-blue-100/70' : 'bg-gray-50 hover:bg-gray-100/70'
+        }`}
+      >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <BedDouble size={13} className={isActiva ? 'text-blue-600' : 'text-gray-500'} />
+            <span className={`text-xs font-semibold uppercase tracking-wider ${isActiva ? 'text-blue-700' : 'text-gray-600'}`}>
+              {label}
+            </span>
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${isActiva ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-600'}`}>
+              {isActiva ? 'Internado' : 'Con alta'}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 mt-1.5 text-xs text-gray-500 flex-wrap">
+            <BedDouble size={10} className="flex-shrink-0" />
+            <span>Hab. {internacion.numeroHabitacion} — Piso {internacion.pisoHabitacion}</span>
+            <span className="text-gray-300">·</span>
+            <span>{formatDateTime(internacion.fechaInicio)}</span>
+            <span className="text-gray-300">→</span>
+            <span className={isActiva ? 'font-medium text-blue-600' : ''}>
+              {internacion.fechaFin ? formatDateTime(internacion.fechaFin) : 'Actual'}
+            </span>
+            {internacion.cantidadTraslados > 0 && (
+              <>
+                <span className="text-gray-300">·</span>
+                <span className="flex items-center gap-1">
+                  <ArrowRightLeft size={10} />
+                  {internacion.cantidadTraslados} traslado{internacion.cantidadTraslados !== 1 ? 's' : ''}
+                </span>
+              </>
+            )}
+            {!open && (
+              <>
+                <span className="text-gray-300">·</span>
+                <span className="flex items-center gap-1">
+                  <ClipboardList size={10} />
+                  {internacion.eventos.length} evento{internacion.eventos.length !== 1 ? 's' : ''}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+        <ChevronDown
+          size={15}
+          className={`flex-shrink-0 mt-1 transition-transform duration-200 ${open ? 'rotate-0' : '-rotate-90'} ${isActiva ? 'text-blue-400' : 'text-gray-400'}`}
+        />
+      </button>
+
+      {open && (
+        <div className="px-4 py-4 bg-white space-y-3">
+          {internacion.eventos.length === 0 ? (
+            <p className="text-sm text-gray-400 italic text-center py-3">
+              Sin eventos registrados durante esta internación.
+            </p>
+          ) : (
+            internacion.eventos.map(r => (
+              <RegistroCard key={r.id} registro={r} />
+            ))
+          )}
+        </div>
+      )}
+    </section>
   )
 }

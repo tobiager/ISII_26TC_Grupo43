@@ -24,7 +24,7 @@ public class PacienteRequestDTO {
     private Integer dni;
 
     @NotNull(message = "La fecha de nacimiento es obligatoria")
-    @Past(message = "La fecha de nacimiento no puede ser futura")
+    @PastOrPresent(message = "La fecha de nacimiento no puede ser posterior a hoy")
     private LocalDate fechaNacimiento;
 
     @NotBlank(message = "El tipo de sangre es obligatorio")
