@@ -64,9 +64,9 @@ psql "postgresql://<user>:<pass>@<host>/<db>" -f database/reset_and_seed.sql
 | Email                  | Contraseña inicial | Rol            | must_change_password |
 |------------------------|--------------------|----------------|----------------------|
 | `admin@clinicks.com`   | Admin123456        | ADMINISTRADOR  | FALSE                |
-| `admin@hospital.com`   | Admin123456        | ADMINISTRATIVO | TRUE                 |
+| `admin@hospital.com`   | administrativo     | ADMINISTRATIVO | TRUE                 |
 | `claudia@hospital.com` | Admin123456        | MEDICO         | TRUE                 |
-| `enfermera@hospital.com` | Admin123456        | ENFERMERO      | TRUE                 |
+| `enfermera@hospital.com` | Enfermera123        | ENFERMERO      | TRUE                 |
 
 Los usuarios de prueba tienen `must_change_password=TRUE` y deben cambiar su contraseña en el primer login.
 
