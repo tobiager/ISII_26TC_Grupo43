@@ -5,8 +5,8 @@ direction TB
 class Persona {
   - String nombrePersona
   - String apellidoPersona
-  - LocalDate fechaNacimiento
-  - LocalDate fechaFallecimiento
+  - LocalDateTime fechaNacimiento
+  - LocalDateTime fechaFallecimiento
   - getNombreCompleto(u : Usuario) String
   + cambiarNombre(nombre : String, apellido : String) void
 }
@@ -19,22 +19,26 @@ class Usuario {
   - OffsetDateTime deletedAt
   - Rol rol
   - Persona persona
-  + registrar(request : RegisterRequestDTO) LoginResponseDTO
-  + autenticar(request : LoginRequestDTO) LoginResponseDTO
-  + obtenerUsuarioAutenticado(email : String) UsuarioAuthDTO
+  + registrar(request : Register) Login
+  + autenticar(request : Login) Login
+  + obtenerUsuarioAutenticado(email : String) Usuario
+  + obtenerPerfil(email : String) Perfil
   + esProtegido() boolean
-  + cambiarPassword(email : String, request : CambiarPasswordRequestDTO) PerfilResponseDTO
-  + cambiarEmail(emailActual : String, request : CambiarEmailRequestDTO) PerfilResponseDTO
+  + cambiarPassword(email : String, request : CambiarPassword) Perfil
+  + cambiarEmail(emailActual : String, request : CambiarEmail) Perfil
+  + cambiarDatosBasicos(email : String, request : DatosBasicos) Perfil
 }
 
 class Administrador  {
   <<rol>>
-  - cambiarRol(idUsuario : Integer, request : CambiarRolRequestDTO) AdminUsuarioDTO
-  + listarUsuarios() List<AdminUsuarioDTO>
-  + crearInvitacion(request : InvitacionRequestDTO, emailCreador : String) InvitacionResponseDTO
-  + desactivarUsuario(idUsuario : Integer, emailSolicitante : String) AdminUsuarioDTO
-  + activarUsuario(idUsuario : Integer) AdminUsuarioDTO
-  + resetearPassword(idUsuario : Integer) ResetPasswordResponseDTO
+  - cambiarRol(idUsuario : Integer, request : CambiarRol) AdminUsuario
+  + listarUsuarios() List<AdminUsuario>
+  + listarInvitaciones() List<Invitacion>
+  + crearInvitacion(request : Invitacion, emailCreador : String) Invitacion
+  + validarToken(token : String) Token
+  + desactivarUsuario(idUsuario : Integer, emailSolicitante : String) AdminUsuario
+  + activarUsuario(idUsuario : Integer) AdminUsuario
+  + resetearPassword(idUsuario : Integer) Password
 }
 
 class Rol {
@@ -49,15 +53,17 @@ class Paciente {
   - Residencia residencia
   - FichaMedica fichaMedica
   - AfiliacionObraSocial afiliacion
-  + crearPaciente(PacienteRequestDTO dto, Integer idUsuario) PacienteResponseDTO
+  + crearPaciente(dto : Paciente, idUsuario : Integer) Paciente
   + existeDni(dni : Integer, excluirId : Integer) boolean
   - obtenerPacienteActivo(idPaciente : Integer) Paciente
-  + filtrarPacientes(criterioBusqueda : String) List<PacienteResponseDTO>
+  + filtrarPacientes(criterioBusqueda : String) List<Paciente>
   - validarTelefonoUnico(numero : String, excluirPacienteId : Integer) void
-  - validarTelefonosSolicitud(telefono : String, contactos : List<ContactoEmergenciaDTO>, excluirPacienteId : Integer) void
-  + listarPacientes() List<PacienteResponseDTO>
-  + listarPacientesEliminados() List<PacienteResponseDTO>
-  + actualizarDatos(idPaciente : Integer, dto : PacienteRequestDTO) PacienteResponseDTO
+  - validarTelefonosSolicitud(telefono : String, contactos : List<ContactoEmergencia>, excluirPacienteId : Integer) void
+  + listarPacientes() List<Paciente>
+  + obtenerPacientePorId(id : Integer) Paciente
+  + listarPacientesEliminados() List<Paciente>
+  + actualizarDatos(idPaciente : Integer, dto : Paciente) Paciente
+  + existeAfiliado(nroAfiliado : String, idObraSocial : Integer, nombreObraSocial : String, excluirId : Integer) boolean
   + eliminarPaciente(idPaciente : Integer) void
   + restaurarPaciente(idPaciente : Integer) void
   - agregarTelefono(paciente : Paciente, numero : String, tipo : String) void
@@ -67,7 +73,7 @@ class Paciente {
 class Residencia {
   - String tipoResidencia
   - Domicilio domicilio
-  + cambiarDomicilio(idPaciente : Integer, dto : PacienteRequestDTO) Residencia
+  + cambiarDomicilio(idPaciente : Integer, dto : Paciente) Residencia
 }
 
 class Domicilio {
@@ -75,14 +81,14 @@ class Domicilio {
   - Integer numero
   - Integer piso
   - Localidad localidad
-  + actualizarUbicacion(idPaciente : Integer, dto : PacienteRequestDTO) Domicilio
+  + actualizarUbicacion(idPaciente : Integer, dto : Paciente) Domicilio
 }
 
 class Localidad {
   - String nombreLocalidad
   - Integer codigoPostal
   - Provincia provincia
-  + actualizarLocalidad(idPaciente : Integer, dto : PacienteRequestDTO) Localidad
+  + actualizarLocalidad(idPaciente : Integer, dto : Paciente) Localidad
 }
 
 class Provincia {
@@ -91,7 +97,7 @@ class Provincia {
 
 class ObraSocial {
   - String nombreObra
-  - estaActiva(dto : PacienteRequestDTO) boolean
+  - estaActiva(dto : Paciente) boolean
   + obtenerObraSocialPaciente(idPaciente : Integer) ObraSocial
 }
 
@@ -101,9 +107,9 @@ class AfiliacionObraSocial {
   - LocalDate fechaVencimiento
   - LocalDate fechaBaja
   - ObraSocial obraSocial
-  - estaVigente(dto : PacienteRequestDTO) boolean
-  - darDeBaja(dto : PacienteRequestDTO) void
-  - renovar(dto : PacienteRequestDTO) AfiliacionObraSocial
+  - estaVigente(dto : Paciente) boolean
+  - darDeBaja(dto : Paciente) void
+  - renovar(dto : Paciente) AfiliacionObraSocial
 }
 
 class FichaMedica {
@@ -116,7 +122,7 @@ class FichaMedica {
   - agregarAlergia(ficha : FichaMedica, nombres : List<String>) void
   - agregarEnfermedadCronica(ficha : FichaMedica, nombres : List<String>) void
   - agregarAntecedenteFamiliar(ficha : FichaMedica, nombres : List<String>) void
-  + actualizarAntecedentes(idPaciente : Integer, dto : PacienteRequestDTO) PacienteResponseDTO
+  + actualizarAntecedentes(idPaciente : Integer, dto : Paciente) Paciente
 }
 
 class Alergia {
@@ -159,8 +165,8 @@ namespace Patron_Builder {
     - List<Internacion> internaciones
     + crearHistorialMedico(idPaciente : Integer, fechaCreacion : LocalDateTime, estado : String) HistorialMedico
     + obtenerHistorialMedico(idPaciente : Integer) HistorialMedico
-    + registrarEvento(idPaciente : Integer, dto : RegistroClinicoRequestDTO, idUsuario : Integer) void
-    + agregarInternacion(idHabitacion : Integer, dto : InternacionRequestDTO, idUsuario : Integer) void
+    + registrarEvento(idPaciente : Integer, dto : RegistroClinico, idUsuario : Integer) void
+    + agregarInternacion(idHabitacion : Integer, dto : Internacion, idUsuario : Integer) void
     + abrir(idPaciente : Integer) void
     - actualizarFechaModificacion(fechaActual : LocalDateTime) void
     + builder() Builder$
@@ -169,6 +175,7 @@ namespace Patron_Builder {
   class TipoProcedimiento {
     - String nombreTipoProcedimiento
     + obtenerTipoProcedimiento(idTipoProcedimiento : Integer) TipoProcedimiento
+    + listarTiposProcedimiento() List<TipoProcedimiento>
   }
 
   class RegistroClinico {
@@ -196,16 +203,16 @@ class Internacion {
   + crearInternacion(fechaInicio : LocalDateTime, idHistorial : Integer, idHabitacion : Integer) Internacion
   + verificarInternacionActiva(idPaciente : Integer) boolean
   + consultarEstadoPaciente(idPaciente : Integer) String
-  + trasladar(idInternacion : Integer, dto : TrasladoRequestDTO, idUsuario : Integer) void
-  + egresar(idInternacion : Integer, dto : EgresoRequestDTO, idUsuario : Integer) void
-  - finalizar(dto : EgresoRequestDTO) String
+  + trasladar(idInternacion : Integer, dto : Traslado, idUsuario : Integer) void
+  + egresar(idInternacion : Integer, dto : Egreso, idUsuario : Integer) void
+  - finalizar(dto : Egreso) String
 }
 
 class HabitacionInternacion {
   - String numeroHabitacion
   - Integer pisoHabitacion
   - String estadoHabitacion
-  + obtenerHabitaciones() List<HabitacionResponseDTO>
+  + obtenerHabitaciones() List<HabitacionInternacion>
   - estaDisponible(idHabitacion : Integer) boolean
   - ocupar(idHabitacion : Integer, nuevoEstado : String) void
   + actualizarEstadoHabitacion(idHabitacion : Integer, nuevoEstado : String) void
@@ -222,7 +229,7 @@ class InvitacionRegistro {
   - LocalDateTime fechaUso
   - OffsetDateTime deletedAt
   + estaVigente(token : String) boolean
-  + aceptar(token : String) LoginResponseDTO
+  + aceptar(token : String) Login
 }
 
 
