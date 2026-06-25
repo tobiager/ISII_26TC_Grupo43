@@ -2,11 +2,11 @@
 
 ## Qué representa este documento
 
-Este documento explica el diagrama de clases lógico del sistema, donde cada clase resume un concepto de negocio y no una capa técnica. Aquí se describen:
+Este documento explica el diagrama de clases lógico del sistema, donde cada clase resume un concepto de negocio. Aquí se describen:
 
 - Los atributos que forman cada concepto.
 - Los métodos del diagrama y el lugar del código donde se implementan.
-- Las relaciones principales entre conceptos del dominio.
+- Las relaciones principales.
 
 El diagrama fuente está en [diagrama de clases/diagrama-clases.mermaid](diagrama%20de%20clases/diagrama-clases.mermaid).
 
@@ -439,7 +439,3 @@ Este diagrama muestra una sola clase por concepto de negocio. Las relaciones pri
 - Atributos: `email`, `token`, `rol`, `usuarioCreador`, `fechaCreacion`, `fechaExpiracion`, `fechaUso`, `deletedAt` → [../backend/src/main/java/com/clinicks/model/InvitacionRegistro.java#L21](../backend/src/main/java/com/clinicks/model/InvitacionRegistro.java#L21)
 - `estaVigente(token : String)` → [../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L165](../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L165)
 - `aceptar(token : String)` → [../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L64](../backend/src/main/java/com/clinicks/service/impl/AuthServiceImpl.java#L64) (Retorna `Login`)
-
-## Nota final
-
-El documento describe el modelo lógico del negocio y enlaza cada concepto con el código real donde se define o se ejecuta. Los enlaces con `#L...` abren el archivo en la línea de la declaración o de la implementación principal.
