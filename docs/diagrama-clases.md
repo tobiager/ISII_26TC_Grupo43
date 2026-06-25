@@ -7,6 +7,7 @@ Este documento explica el diagrama de clases lógico del sistema, donde cada cla
 - Los atributos que forman cada concepto.
 - Los métodos del diagrama y el lugar del código donde se implementan.
 - Las relaciones principales.
+- Tiene incluido un ejemplo del patron Builder usado.
 
 El diagrama fuente está en [diagrama de clases/diagrama-clases.mermaid](diagrama%20de%20clases/diagrama-clases.mermaid).
 
