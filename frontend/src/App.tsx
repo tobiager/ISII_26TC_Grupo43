@@ -60,11 +60,11 @@ export default function App() {
             }
           />
 
-          {/* Rutas protegidas — solo ADMINISTRADOR */}
+          {/* Rutas protegidas — ADMINISTRADOR (gestión) y VISITANTE (solo lectura) */}
           <Route
             path="/admin"
             element={
-              <ProtectedRoute allowedRoles={['ADMINISTRADOR']}>
+              <ProtectedRoute allowedRoles={['ADMINISTRADOR', 'VISITANTE']}>
                 <AdminPage />
               </ProtectedRoute>
             }

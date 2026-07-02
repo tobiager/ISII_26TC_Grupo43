@@ -14,11 +14,13 @@ export const canChangeRoomStatus  = (role: Rol) => role === 'ADMINISTRADOR' || r
 export const canViewMedicalHistory  = (_role: Rol) => true
 export const canEditMedicalHistory  = (role: Rol) => role === 'ADMINISTRADOR' || role === 'MEDICO' || role === 'ENFERMERO'
 
-export const canAccessAdmin = (role: Rol) => role === 'ADMINISTRADOR'
+export const canAccessAdmin = (role: Rol) => role === 'ADMINISTRADOR' || role === 'VISITANTE'
+export const canManageAdmin = (role: Rol) => role === 'ADMINISTRADOR'
 
 export const ROLE_LABELS: Record<Rol, string> = {
   ADMINISTRADOR: 'Administrador',
   ADMINISTRATIVO: 'Administrativo',
   MEDICO: 'Médico',
   ENFERMERO: 'Enfermero',
+  VISITANTE: 'Visitante',
 }

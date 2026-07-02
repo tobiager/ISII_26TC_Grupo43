@@ -1,4 +1,4 @@
-export type Rol = 'ADMINISTRADOR' | 'ADMINISTRATIVO' | 'MEDICO' | 'ENFERMERO'
+export type Rol = 'ADMINISTRADOR' | 'ADMINISTRATIVO' | 'MEDICO' | 'ENFERMERO' | 'VISITANTE'
 
 export interface AuthUser {
   idUsuario: number

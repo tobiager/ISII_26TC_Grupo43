@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { Stethoscope, Eye, EyeOff } from 'lucide-react'
+import { Stethoscope, Eye, EyeOff, Info } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { isDemoMode, DEMO_CREDENTIALS } from '../mocks/demoMode'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -58,6 +59,20 @@ export default function LoginPage() {
           </div>
           <span className="font-bold text-gray-900 text-2xl">Clinicks</span>
         </div>
+
+        {/* Cuenta demo */}
+        {isDemoMode && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+            <div className="flex items-start gap-2">
+              <Info size={16} className="text-amber-600 mt-0.5 flex-shrink-0" />
+              <div className="text-xs text-amber-800">
+                <p className="font-semibold mb-1">Cuenta demo (solo lectura)</p>
+                <p>Email: <span className="font-mono">{DEMO_CREDENTIALS.email}</span></p>
+                <p>Contraseña: <span className="font-mono">{DEMO_CREDENTIALS.password}</span></p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">

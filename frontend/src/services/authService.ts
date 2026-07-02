@@ -19,7 +19,7 @@ import { apiClient } from './apiClient'
 const BASE = import.meta.env.VITE_API_URL ?? '/api'
 
 // Instancia pública sin interceptores de auth para login/register
-const publicApi = axios.create({ baseURL: BASE })
+export const publicApi = axios.create({ baseURL: BASE })
 
 export const authService = {
   login: (data: LoginRequest): Promise<LoginResponse> =>

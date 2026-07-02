@@ -8,6 +8,9 @@ import {
 import { authService } from '../services/authService'
 import UserMenu from '../components/UserMenu'
 import CustomSelect from '../components/CustomSelect'
+import ReadOnlyBadge from '../components/ReadOnlyBadge'
+import { useAuth } from '../contexts/AuthContext'
+import { canManageAdmin } from '../utils/permissions'
 import type { AdminUsuario, InvitacionResponse, Rol } from '../types/auth'
 
 const ADMIN_EMAIL = 'admin@clinicks.com'
@@ -17,12 +20,15 @@ const ROL_LABELS: Record<Rol, string> = {
   ADMINISTRATIVO: 'Administrativo',
   MEDICO: 'Médico',
   ENFERMERO: 'Enfermero',
+  VISITANTE: 'Visitante',
 }
 
 type Tab = 'usuarios' | 'invitaciones'
 
 export default function AdminPage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const canManage = user ? canManageAdmin(user.rol) : false
   const [tab, setTab] = useState<Tab>('usuarios')
 
   // ── Estado usuarios ──────────────────────────────────────────────────────
@@ -70,6 +76,7 @@ export default function AdminPage() {
   useEffect(() => { fetchInvitaciones() }, [fetchInvitaciones])
 
   const handleCambiarRol = async (u: AdminUsuario, nuevoRol: Rol) => {
+    if (!canManage) return
     try {
       await authService.cambiarRol(u.idUsuario, nuevoRol)
       toast.success(`Rol de ${u.nombreCompleto} actualizado a ${ROL_LABELS[nuevoRol]}`)
@@ -82,6 +89,7 @@ export default function AdminPage() {
 
   // Activar/desactivar usuario (sin eliminarlo realmente)
   const handleToggleActivo = async (u: AdminUsuario) => {
+    if (!canManage) return
     try {
       if (u.activo) {
         await authService.desactivarUsuario(u.idUsuario)
@@ -97,6 +105,7 @@ export default function AdminPage() {
   }
 
   const handleResetPassword = async (u: AdminUsuario) => {
+    if (!canManage) return
     try {
       const res = await authService.resetearPassword(u.idUsuario)
       toast.success(`Contraseña reseteada. Temporal: ${res.temporaryPassword}`, { duration: 8000 })
@@ -109,6 +118,7 @@ export default function AdminPage() {
 
   const handleCrearInvitacion = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!canManage) return
     if (!invEmail) return toast.error('El email es obligatorio')
     setInvLoading(true)
     try {
@@ -187,7 +197,10 @@ export default function AdminPage() {
             <Shield size={22} className="text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Panel de Administración</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-gray-900">Panel de Administración</h1>
+              {!canManage && <ReadOnlyBadge message="Tu rol no permite gestionar usuarios ni invitaciones." />}
+            </div>
             <p className="text-sm text-gray-500">Gestión de usuarios e invitaciones</p>
           </div>
         </div>
@@ -273,7 +286,7 @@ export default function AdminPage() {
                           </td>
                           <td className="px-6 py-4 text-gray-500">{u.email}</td>
                           <td className="px-6 py-4">
-                            {esAdminProtegido ? (
+                            {esAdminProtegido || !canManage ? (
                               <span className="text-xs font-medium px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg">
                                 {ROL_LABELS[u.rol] ?? u.rol}
                               </span>
@@ -297,7 +310,10 @@ export default function AdminPage() {
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-2">
-                              {!esAdminProtegido && (
+                              {!esAdminProtegido && !canManage && (
+                                <ReadOnlyBadge message="Tu rol no permite gestionar usuarios." />
+                              )}
+                              {!esAdminProtegido && canManage && (
                                 <>
                                   <button
                                     onClick={() => handleToggleActivo(u)}
@@ -360,51 +376,54 @@ export default function AdminPage() {
                     <Send size={18} className="text-blue-600" />
                   </div>
                   <h2 className="font-semibold text-gray-900">Nueva invitación</h2>
+                  {!canManage && <ReadOnlyBadge message="Tu rol no permite crear invitaciones." />}
                 </div>
 
-                <form onSubmit={handleCrearInvitacion} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
-                    <input
-                      type="email"
-                      value={invEmail}
-                      onChange={e => setInvEmail(e.target.value)}
-                      placeholder="usuario@clinicks.com"
-                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                    />
-                  </div>
+                <fieldset disabled={!canManage} className="disabled:opacity-60">
+                  <form onSubmit={handleCrearInvitacion} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                      <input
+                        type="email"
+                        value={invEmail}
+                        onChange={e => setInvEmail(e.target.value)}
+                        placeholder="usuario@clinicks.com"
+                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                      />
+                    </div>
 
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Rol</label>
-                    <CustomSelect
-                      value={invRol}
-                      onChange={val => setInvRol(val as Rol)}
-                      options={ROLES.map(r => ({ value: r, label: ROL_LABELS[r] }))}
-                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white cursor-pointer"
-                    />
-                  </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Rol</label>
+                      <CustomSelect
+                        value={invRol}
+                        onChange={val => setInvRol(val as Rol)}
+                        options={ROLES.map(r => ({ value: r, label: ROL_LABELS[r] }))}
+                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white cursor-pointer"
+                      />
+                    </div>
 
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Expiración <span className="text-gray-400">(opcional, default 7 días)</span>
-                    </label>
-                    <input
-                      type="datetime-local"
-                      value={invExpiracion}
-                      onChange={e => setInvExpiracion(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                    />
-                  </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Expiración <span className="text-gray-400">(opcional, default 7 días)</span>
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={invExpiracion}
+                        onChange={e => setInvExpiracion(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                      />
+                    </div>
 
-                  <button
-                    type="submit"
-                    disabled={invLoading}
-                    className="w-full py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-60 transition-colors flex items-center justify-center gap-2"
-                  >
-                    {invLoading && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-                    {invLoading ? 'Creando...' : 'Crear invitación'}
-                  </button>
-                </form>
+                    <button
+                      type="submit"
+                      disabled={invLoading || !canManage}
+                      className="w-full py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-60 transition-colors flex items-center justify-center gap-2"
+                    >
+                      {invLoading && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                      {invLoading ? 'Creando...' : 'Crear invitación'}
+                    </button>
+                  </form>
+                </fieldset>
 
                 {/* Link generado */}
                 {invCreada && (

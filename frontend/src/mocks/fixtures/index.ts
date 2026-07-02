@@ -1,0 +1,5 @@
+export { MOCK_PATIENTS } from './patients'
+export { MOCK_ROOMS } from './rooms'
+export { MOCK_HISTORIAL, MOCK_TIPOS_PROCEDIMIENTO } from './historial'
+export { MOCK_PROVINCIAS, MOCK_LOCALIDADES, MOCK_OBRAS_SOCIALES } from './locations'
+export { MOCK_DEMO_USER, MOCK_DEMO_TOKEN, MOCK_ADMIN_USUARIOS } from './users'
